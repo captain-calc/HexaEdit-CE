@@ -15,7 +15,7 @@ After extracting the Mental_Math_CE.zip file, send the following file to your ca
 
 #### Building
 
-As of July 4, 2020, this repository does not include two files, namely, *easter_eggs.h* and *easter_eggs.c*. These files will be added to the repository by July 18, 2020. If you wish to build the repository before that time, you should remove the calls to *easter_egg_one()* and *easter_egg_two()* from *main.c* and *editor.c*.
+As of July 4, 2020, this repository does not include two files, namely, *easter_eggs.h* and *easter_eggs.c*. These files will be added to the repository by July 18, 2020. In their place are two dummy files that allow the program to be built, but without the easter eggs.
 
 #### Technical Info
 

@@ -23,7 +23,7 @@
 
 #define PROGRAM_NAME		"HexaEdit "
 #define PROGRAM_VERSION		"1.0.0"
-#define RECENT_FILES_APPVAR		"HXAEDRCF"
+#define RECENT_FILES_APPVAR	"HXAEDRCF"
 
 typedef struct {
 	uint8_t asm_prgms;

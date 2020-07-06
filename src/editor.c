@@ -334,7 +334,7 @@ uint8_t get_keypress(void) {
 	if (key_row_two & kb_Recip)		return 13;
 	
 	key_row_three = kb_Data[3];
-	if (key_row_three & kb_Apps)	return 11;
+	if (key_row_three & kb_Apps)		return 11;
 	if (key_row_three & kb_Sin)		return 14;
 	if (key_row_three & kb_7)		return 7;
 	if (key_row_three & kb_4)		return 4;
@@ -356,7 +356,7 @@ uint8_t get_keypress(void) {
 	arrows = kb_Data[7];
 	if (arrows & kb_Left)			return 16;
 	if (arrows & kb_Right)			return 17;
-	if (arrows & kb_Up)				return 18;
+	if (arrows & kb_Up)			return 18;
 	if (arrows & kb_Down)			return 19;
 	
 	if (kb_Data[6] & kb_Clear)		return 20;
