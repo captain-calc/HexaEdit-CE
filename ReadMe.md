@@ -2,10 +2,10 @@
 
 HexaEdit CE is a on-calc hex editor for the TI-84 Plus CE.It can edit any kind of program or appvar as well as the calculator's RAM. It also provides a wide array of features, such as byte insertion and deletion, hexadecimal-to-decimal translation, and much more.
 
-<screenshot>
+[img]http://u.cubeupload.com/torontobay/upload.png[/img]
 
 To find out more about HexaEdit CE, please visit its Cemetech forum thread:
-
+[url]https://www.cemetech.net/forum/viewtopic.php?t=16759[/url]
 
 #### Installation
 
@@ -21,5 +21,5 @@ As of July 4, 2020, this repository does not include two files, namely, *easter_
 
 * Platform: TI-84 Plus CE
 * Language: C
-* Latest Version: 1.0.0
+* Latest Version: 1.1.0
 * Author: Captain-Calc

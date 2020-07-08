@@ -11,6 +11,7 @@
 #define WHITE	0xFF
 #define GREEN	0x06
 #define BLUE	0x1C
+#define RED	0xE0
 
 /* Editor file types
    These are different from the TI-OS file type codes */

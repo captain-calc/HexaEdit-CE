@@ -11,6 +11,7 @@
 #include <debug.h>
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
@@ -507,6 +508,10 @@ uint8_t run_editor(void) {
 			redraw_bars = false;
 		};
 		
+		/* Selective delay to slow down cursor and selection response times for small files */
+		if (ti_GetSize(editor.file) < 120)
+			delay(100);
+		
 		key = get_keypress();
 		
 		easter_egg_one();
@@ -593,6 +598,7 @@ uint8_t run_editor(void) {
 			
 			move_cursor(key);
 		};
+		
 	};
 	
 	EXIT_EDITOR:

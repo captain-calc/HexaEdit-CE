@@ -65,13 +65,12 @@ static void create_undo_action_appvar(void) {
 static void draw_title_bar(void) {
 	
 	gfx_SetColor(DK_GRAY);
-	gfx_FillRectangle_NoClip(0, 0, LCD_WIDTH, 20);
+	gfx_FillRectangle_NoClip(0, 0, 180, 20);
 	gfx_SetTextBGColor(DK_GRAY);
 	gfx_SetTextFGColor(WHITE);
 	gfx_SetTextTransparentColor(DK_GRAY);
 	gfx_PrintStringXY(PROGRAM_NAME, 5, 6);
 	gfx_PrintStringXY(PROGRAM_VERSION, 7 + gfx_GetStringWidth(PROGRAM_NAME), 6);
-	draw_battery_status();
 	return;
 }
 
@@ -167,6 +166,130 @@ static void open_context_menu(char *file_name, uint8_t editor_file_type, uint24_
 	// Wait for keypress
 	gfx_BlitRectangle(1, xPos, yPos, width, height);
 	delay(200);
+	while (!os_GetCSC());
+	return;
+}
+
+/* Search routine for quickly finding files.
+   Automatically sets the list_offset and sel_file_left_window variables to the desired file, if found */
+static void search_files(uint8_t editor_file_type, uint8_t *list_offset, uint8_t *sel_file_left_window) {
+	
+	uint8_t input_x;
+	uint8_t input_y;
+	uint8_t input_w;
+	uint8_t input_h;
+	
+	uint8_t local_list_offset = 0;
+	uint8_t local_sel_file = 0;
+	
+	uint8_t key, i = 0;
+	uint8_t buffer_width = 0;
+	uint8_t *detect_str = NULL;
+	uint8_t ti_file_type;
+	
+	const char *letters = "\0\0\0\0\0\0\0\0\0\0\0WRMH\0\0\0[VQLG\0\0\0ZUPKFC\0\0YTOJEB\0\0XSNIDA\0\0\0\0\0\0\0\0";
+	const char *numbers = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x33\x36\x39\0\0\0\0\0\x32\x35\x38\0\0\0\0\x30\x31\x34\x37\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+	char *keymap = letters;
+	char buffer[9] = '\0';
+	char *file_name;
+	
+	
+	gfx_SetColor(WHITE);
+	gfx_HorizLine(75, 99, 170);
+	draw_window("Search Files", true, 75, 85, 170, 70);
+	
+	gfx_SetTextBGColor(WHITE);
+	gfx_SetTextFGColor(BLACK);
+	gfx_SetTextTransparentColor(WHITE);
+	gfx_PrintStringXY("File name:", 80, 116);
+	
+	gfx_SetColor(BLACK);
+	gfx_FillRectangle_NoClip(80, 125, 160, 13);
+	input_x = 81;
+	input_y = 126;
+	input_w = 158;
+	input_h = 11;
+	
+	for (;;) {
+		
+		gfx_SetColor(WHITE);
+		gfx_FillRectangle_NoClip(input_x, input_y, input_w, input_h);
+		gfx_SetTextXY(input_x + 1, input_y + 2);
+		gfx_SetTextBGColor(WHITE);
+		gfx_SetTextFGColor(BLACK);
+		gfx_SetTextTransparentColor(WHITE);
+		
+		gfx_SetColor(BLACK);
+		print_file_name(buffer);
+		
+		gfx_SetColor(BLACK);
+		gfx_FillRectangle_NoClip(gfx_GetTextX(), input_y + 1, 9, 9);
+		
+		gfx_SetTextBGColor(BLACK);
+		gfx_SetTextFGColor(WHITE);
+		gfx_SetTextTransparentColor(BLACK);
+		gfx_SetTextXY(gfx_GetTextX() + 1, gfx_GetTextY());
+		
+		if (keymap == letters) {
+			gfx_PrintChar('A');
+		} else {
+			gfx_PrintChar('0');
+		};
+		
+		gfx_SetTextXY(gfx_GetTextX() - 1, gfx_GetTextY());
+			
+		gfx_BlitRectangle(1, 75, 85, 170, 70);
+		while (!(key = os_GetCSC()));
+		
+		if (keymap[key] && i < 8) {
+			buffer[i] = keymap[key];
+			if (*(buffer + i) != '[') {
+				buffer_width += gfx_GetCharWidth(buffer[i]);
+			} else {
+				buffer_width += gfx_GetCharWidth('O');
+			};
+			i++;
+		};
+		
+		if (key == sk_Del && i > 0) {
+			buffer_width -= gfx_GetCharWidth(buffer[--i]);
+			*(buffer + i) = '\0';
+		};
+		
+		if (key == sk_Alpha) {
+			if (keymap == letters) {
+				keymap = numbers;
+			} else {
+				keymap = letters;
+			};
+		};
+		
+		if (key == sk_Clear)
+			return;
+		
+		if (key == sk_2nd)
+			break;
+	};
+	
+	ti_file_type = find_ti_file_type(editor_file_type);
+	
+	while (((file_name = ti_DetectVar(&detect_str, NULL, ti_file_type)) != NULL)) {
+		if (!strcmp(file_name, buffer)) {
+			*list_offset = local_list_offset;
+			*sel_file_left_window = local_sel_file;
+			return;
+		};
+		
+		local_sel_file++;
+		if (local_sel_file == MAX_LINES_ONSCREEN) {
+			local_sel_file--;
+			local_list_offset++;
+		};
+	};
+	
+	gfx_SetTextFGColor(RED);
+	gfx_PrintStringXY("File not found!", 110, 143);
+	gfx_BlitRectangle(1, 75, 85, 170, 70);
 	while (!os_GetCSC());
 	return;
 }
@@ -367,6 +490,8 @@ static bool create_recents_appvar(void) {
 		return false;
 	};
 	
+	num_files_per_type.recent = 0;
+	
 	ti_CloseAll();
 	return true;
 }
@@ -403,12 +528,59 @@ static void add_recent_file(char *file_name, uint8_t editor_file_type) {
 	if (ti_Delete(RECENT_FILES_APPVAR))
 		ti_Rename("HXAEDRF2", RECENT_FILES_APPVAR);
 	
+	num_files_per_type.recent = num_files_copied - 1;
+	
+	return;
+}
+
+static void delete_recent_file(char *file_name, uint8_t *sel_file_right_window) {
+	
+	ti_var_t rf_appvar, new_rf_appvar;
+	char next_file_name[9] = {'\0'};
+	uint8_t num_files_copied;
+	uint8_t editor_file_type;
+
+	rf_appvar = ti_Open(RECENT_FILES_APPVAR, "r");
+	new_rf_appvar = ti_Open("HXAEDRF2", "w+");
+	if (!new_rf_appvar)
+		return;
+
+	num_files_copied = 0;
+
+	while (num_files_copied++ < MAX_LINES_ONSCREEN) {
+		if (ti_Read(next_file_name, 8, 1, rf_appvar) == NULL)
+			break;
+		editor_file_type = ti_GetC(rf_appvar);
+		if (strcmp(file_name, next_file_name)) {
+			ti_Write(next_file_name, 8, 1, new_rf_appvar);
+			ti_PutC((uint8_t)editor_file_type, new_rf_appvar);
+		};
+	};
+
+	ti_CloseAll();
+	
+	if (ti_Delete(RECENT_FILES_APPVAR))
+		ti_Rename("HXAEDRF2", RECENT_FILES_APPVAR);
+	
+	num_files_per_type.recent = num_files_copied - 1;
+	
+	// Debugging
+	dbg_sprintf(dbgout, "[main.c] [delete_recent_file()]\t: selected file = %d\n", *sel_file_right_window);
+	
+	if (*sel_file_right_window > 0)
+		(*sel_file_right_window)--;
+	
+	// Debugging
+	dbg_sprintf(dbgout, "[main.c] [delete_recent_file()]\t: selected file = %d\n", *sel_file_right_window);
+	
 	return;
 }
 
 void main(void) {
 	
-	uint8_t i;
+	// Debugging
+	// uint8_t i;
+	
 	bool redraw_background;
 	
 	uint8_t editor_file_type;
@@ -420,7 +592,7 @@ void main(void) {
 	kb_key_t arrows, function;
 	bool key_Left, key_Right, key_Up, key_Down;
 	bool key_Yequ, key_Window, key_Zoom, key_Trace, key_Graph;
-	bool key_2nd, key_Alpha, key_Clear;
+	bool key_2nd, key_Alpha, key_Mode, key_Del, key_Clear;
 	
 	char *sel_file_name;
 	
@@ -451,6 +623,10 @@ void main(void) {
 	get_num_appvars();
 	num_files_curr_type = 0;
 
+	gfx_SetColor(DK_GRAY);
+	gfx_FillRectangle_NoClip(0, 0, LCD_WIDTH, 20);
+	draw_battery_status();
+
 	for (;;) {
 		
 		switch (editor_file_type) {
@@ -469,7 +645,8 @@ void main(void) {
 		};
 		
 		if (redraw_background) {
-			gfx_FillScreen(LT_GRAY);
+			gfx_SetColor(LT_GRAY);
+			gfx_FillRectangle_NoClip(0, 20, LCD_WIDTH, 220);
 			redraw_background = false;
 		};
 		draw_title_bar();
@@ -499,6 +676,8 @@ void main(void) {
 		key_Trace = function & kb_Trace;
 		key_Graph = function & kb_Graph;
 		key_2nd = function & kb_2nd;
+		key_Mode = function & kb_Mode;
+		key_Del = function & kb_Del;
 		
 		key_Alpha = kb_Data[2] & kb_Alpha;
 		key_Clear = kb_Data[6] & kb_Clear;
@@ -555,10 +734,10 @@ void main(void) {
 		
 		if (key_2nd) {
 			// Debugging
-			dbg_sprintf(dbgout, "[main.c] [Starting add_recent_file()] : sel_file_name = %s | ", sel_file_data.name);
-			for (i = 0; i < 9; i++)
-				dbg_sprintf(dbgout, "%2x ", sel_file_data.name[i]);
-			dbg_sprintf(dbgout, "\n");
+			//dbg_sprintf(dbgout, "[main.c] [Starting add_recent_file()] : sel_file_name = %s | ", sel_file_data.name);
+			//for (i = 0; i < 9; i++)
+			//	dbg_sprintf(dbgout, "%2x ", sel_file_data.name[i]);
+			//dbg_sprintf(dbgout, "\n");
 			
 			add_recent_file(sel_file_data.name, sel_file_data.editor_file_type);
 			
@@ -566,12 +745,24 @@ void main(void) {
 			// dbg_sprintf(dbgout, "[main.c] [Starting edit_file()] : sel_file_name = %s\n", sel_file_name);
 			edit_file(sel_file_data.name, sel_file_data.editor_file_type);
 			redraw_background = true;
+			delay(200);
+		};
+		
+		if (key_Mode) {
+			search_files(editor_file_type, &list_offset, &sel_file_left_window);
+			redraw_background = true;
+			delay(200);
+		};
+		
+		if (key_Del && sel_window == 2) {
+			delete_recent_file(sel_file_data.name, &sel_file_right_window);
 		};
 		
 		if (key_Alpha) {
 			open_context_menu(sel_file_data.name, sel_file_data.editor_file_type, 75, 85);
 			redraw_background = true;
-		}
+			delay(200);
+		};
 	};
 	
 	close_program();

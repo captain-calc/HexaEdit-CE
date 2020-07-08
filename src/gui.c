@@ -1,8 +1,12 @@
 #include "defines.h"
 #include "gui.h"
-#include <stdbool.h>
+
 #include <graphx.h>
 #include <tice.h>
+
+#include <stdbool.h>
+#include <stdio.h>
+
 
 void draw_window(char *title, bool highlighted, uint24_t xPos, uint8_t yPos, uint24_t width, uint8_t height) {
 	
@@ -39,6 +43,7 @@ void draw_message_dialog(const char *message) {
 void draw_battery_status(void) {
 	
 	uint8_t status;
+	char status_str[5] = {'\0'};
 	
 	status = boot_GetBatteryStatus();
 	gfx_SetColor(BLACK);
@@ -48,10 +53,14 @@ void draw_battery_status(void) {
 	gfx_FillRectangle_NoClip(309, 5, 6, 10);
 	gfx_SetColor(GREEN);
 	gfx_FillRectangle_NoClip(310, 14 - (2 * status), 4, 2 * status);
-	gfx_SetTextXY(275, 6);
 	gfx_SetTextFGColor(WHITE);
-	gfx_PrintUInt(25 * status, 2);
-	gfx_PrintString("%");
+	sprintf(status_str, "%d", 25 * status);
+	if (status == 4) {
+		*(status_str + 3) = '%';
+	} else {
+		*(status_str + 2) = '%';
+	};
+	gfx_PrintStringXY(status_str, 306 - gfx_GetStringWidth(status_str), 6);
 	return;
 }
 
@@ -82,14 +91,15 @@ void print_file_name(char *name) {
 	uint8_t name_width = 0;
 	
 
-	do {
+	while (*character != '\0') {
 		if (*character == 0x5B) {
 			gfx_PrintChar('O');
 			gfx_HorizLine(gfx_GetTextX() - 6, gfx_GetTextY() + 3, 3);
 		} else {
 			gfx_PrintChar(*character);
 		};
-	} while (*character++ != '\0');
+		character++;
+	};
 
 	return;
 }

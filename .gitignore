@@ -1,5 +1,3 @@
 bin/
 obj/
 releases/
-src/easter_eggs.h
-src/easter_eggs.c
