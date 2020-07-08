@@ -10,7 +10,7 @@ https://www.cemetech.net/forum/viewtopic.php?t=16759
 
 #### Installation
 
-After extracting the Mental_Math_CE.zip file, send the following file to your calculator using a computer-calculator link program, such as TI-Connect CE or TILP:
+After extracting the HexaEdit_CE.zip file, send the following file to your calculator using a computer-calculator link program, such as TI-Connect CE or TILP:
 
 * HEXAEDIT.8xp
 
