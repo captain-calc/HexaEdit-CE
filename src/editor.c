@@ -125,7 +125,7 @@ uint24_t input(const char *prompt, uint8_t char_limit, bool hex_flag) {
 
 void draw_alt_tool_bar(void) {
 	
-	uint8_t byte = 0, i = 1;
+	uint8_t byte = 0, i;
 	uint24_t byte_value = 0;
 	
 	gfx_SetColor(DK_GRAY);
@@ -140,13 +140,9 @@ void draw_alt_tool_bar(void) {
 	if (editor.num_selected_bytes < 4) {
 		gfx_PrintStringXY("DEC:", 5, 226);
 		gfx_SetTextXY(40, 226);
-		ti_Seek(editor.sel_byte_string_offset - editor.edit_offset, SEEK_SET, editor.file);
-		ti_Read(&byte, 1, 1, editor.file);
-		while (i++ < editor.num_selected_bytes) {
-			ti_Read(&byte_value, 1, 1, editor.file);
-			byte_value <<= 8;
-		};
-		byte_value += byte;
+		
+		for (i = 0; i < editor.num_selected_bytes; i++)
+			byte_value += *(editor.sel_byte_string_offset + i) << (8 * i);
 		// Debugging
 		// dbg_sprintf(dbgout, "byte_value = 0x%6x\n", byte_value);
 		gfx_PrintUInt(byte_value, log10((double)byte_value + 10));
@@ -328,7 +324,13 @@ uint8_t get_keypress(void) {
 	if (function & kb_Trace)		return 24;
 	if (function & kb_Graph)		return 25;
 	if (function & kb_2nd)			return 26;
-	if (function * kb_Del)			return 27;
+	if (function & kb_Del)			return 27;
+	
+	arrows = kb_Data[7];
+	if (arrows & kb_Left)			return 16;
+	if (arrows & kb_Right)			return 17;
+	if (arrows & kb_Up)			return 18;
+	if (arrows & kb_Down)			return 19;
 	
 	key_row_two = kb_Data[2];
 	if (key_row_two & kb_Math)		return 10;
@@ -353,12 +355,6 @@ uint8_t get_keypress(void) {
 	if (key_row_five & kb_9)		return 9;
 	if (key_row_five & kb_6)		return 6;
 	if (key_row_five & kb_3)		return 3;
-
-	arrows = kb_Data[7];
-	if (arrows & kb_Left)			return 16;
-	if (arrows & kb_Right)			return 17;
-	if (arrows & kb_Up)			return 18;
-	if (arrows & kb_Down)			return 19;
 	
 	if (kb_Data[6] & kb_Clear)		return 20;
 	
@@ -367,6 +363,7 @@ uint8_t get_keypress(void) {
 
 void move_cursor(uint8_t key) {
 	
+	uint8_t i;
 	uint8_t *old_cursor_offset;
 	
 	if (key == KEY_LEFT && editor.cursor_offset > editor.min_offset)
@@ -379,28 +376,37 @@ void move_cursor(uint8_t key) {
 		old_cursor_offset = editor.cursor_offset;
 		while (editor.cursor_offset < old_cursor_offset + MAX_BYTES_PER_LINE && editor.cursor_offset + 1 < editor.max_offset)
 			editor.cursor_offset++;
+		
+		if (kb_Data[2] & kb_Alpha)
+			editor.cursor_offset += (MAX_LINES_ONSCREEN - 1) * MAX_BYTES_PER_LINE;
 	};
 	
 	if (key == KEY_UP) {
 		old_cursor_offset = editor.cursor_offset;
 		while (editor.cursor_offset > old_cursor_offset - MAX_BYTES_PER_LINE && editor.cursor_offset > editor.min_offset)
 			editor.cursor_offset--;
+		
+		if (kb_Data[2] & kb_Alpha) {
+			i = (MAX_LINES_ONSCREEN - 1) * MAX_BYTES_PER_LINE;
+			while (editor.cursor_offset > cursor.min && i-- > 0)
+				editor.cursor_offset--;
+		};
 	};
 	
-	if (editor.cursor_offset < editor.edit_offset)
-		editor.edit_offset -= MAX_BYTES_PER_LINE;
-	
-	if (editor.cursor_offset - editor.edit_offset >= MAX_LINES_ONSCREEN * MAX_BYTES_PER_LINE)
-		editor.edit_offset += MAX_BYTES_PER_LINE;
-	
-	
-	/* If one of the cursor bounds is exceeded, set the cursor_offset to the exceeded
-	   bound */
-	   
+	/* If one of the cursor bounds is exceeded, set the cursor_offset to the exceeded bound */
 	if (editor.cursor_offset > cursor.max)
 		editor.cursor_offset = cursor.max;
 	if (editor.cursor_offset < cursor.min)
 		editor.cursor_offset = cursor.min;
+	
+	dbg_sprintf(dbgout, "cursor_offset = 0x%6x\n", editor.cursor_offset);
+	
+	/* Move the window offset if necessary */
+	while (editor.cursor_offset < editor.edit_offset)
+		editor.edit_offset -= MAX_BYTES_PER_LINE;
+	
+	while (editor.cursor_offset - editor.edit_offset >= MAX_LINES_ONSCREEN * MAX_BYTES_PER_LINE)
+		editor.edit_offset += MAX_BYTES_PER_LINE;
 	
 	cursor.x = (editor.cursor_offset - editor.edit_offset) % 8;
 	cursor.y = (editor.cursor_offset - editor.edit_offset) / 8;
@@ -487,8 +493,6 @@ uint8_t run_editor(void) {
 				redraw_bars = true;
 				goto DRAW_BACKGROUND;
 			};
-			/* The line below could be executed for every loop whether or not multi_byte_selection was true
-			   and still produce the same answer */
 			editor.num_selected_bytes = editor.cursor_offset - editor.sel_byte_string_offset + 1;
 			draw_alt_tool_bar();
 		} else {
@@ -569,11 +573,14 @@ uint8_t run_editor(void) {
 		};
 		
 		if (key == KEY_ZOOM && editor.edit_type == FILE_EDIT_TYPE && multi_byte_selection) {
-			create_file_delete_bytes_undo_action();
-			file_delete_bytes(editor.sel_byte_string_offset - editor.min_offset, editor.num_selected_bytes);	// What happens if the selected file is empty and the user attempts to select a byte?
-			file_changed = true;
+			/* Block byte deletion if there are no bytes in the file */
+			if (ti_GetSize(editor.file) > 0) {
+				create_file_delete_bytes_undo_action();
+				file_delete_bytes(editor.sel_byte_string_offset - editor.min_offset, editor.num_selected_bytes);
+				file_changed = true;
+				editor.undo_activated = true;
+			};
 			redraw_bars = true;
-			editor.undo_activated = true;
 			multi_byte_selection = false;
 		};
 		
@@ -586,22 +593,26 @@ uint8_t run_editor(void) {
 		};
 		
 		if (key >= KEY_LEFT && key <= KEY_DOWN) {
-			sel_nibble = 1;	// Reset the sel_nibble
 			
 			cursor.min = editor.min_offset;
-			cursor.max = editor.max_offset;
+			cursor.max = editor.max_offset - 1;
+			
 			if (multi_byte_selection) {
 				cursor.min = editor.sel_byte_string_offset;
 				if (editor.sel_byte_string_offset + MAX_NUM_SEL_BYTES < editor.max_offset)
-					cursor.max = editor.sel_byte_string_offset + MAX_NUM_SEL_BYTES;
+					cursor.max = editor.sel_byte_string_offset + MAX_NUM_SEL_BYTES - 1;
 			};
 			
-			move_cursor(key);
+			if (!(key == KEY_LEFT && sel_nibble == 0))
+				move_cursor(key);
+			
+			sel_nibble = 1;	// Reset the sel_nibble
 		};
 		
 	};
 	
 	EXIT_EDITOR:
+	delay(200);		// Prevent key fall-through
 	return save_code;
 }
 

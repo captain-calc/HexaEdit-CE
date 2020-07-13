@@ -227,7 +227,7 @@ void editor_goto(uint24_t offset) {
 		};
 
 		if (editor.cursor_offset < editor.edit_offset)
-			editor.edit_offset = (uint8_t *)(((uint24_t)editor.cursor_offset / 8) * 8);
+			editor.edit_offset = editor.min_offset + (((editor.cursor_offset - editor.min_offset) / 8) * 8);
 		
 		// Debugging
 		dbg_sprintf(dbgout, "[routines.c] [editor_goto()] : edit_offset = 0x%6x | cursor_offset = 0x%6x\n", editor.edit_offset, editor.cursor_offset);
@@ -337,7 +337,7 @@ void create_file_delete_bytes_undo_action(void) {
 	return;
 }
 
-bool file_delete_bytes(uint8_t offset, uint8_t num_bytes) {
+bool file_delete_bytes(uint24_t offset, uint8_t num_bytes) {
 
 	/* When the TI-OS resizes a file, any pointers to offsets within it
 	   become inaccurate. It also does not add or remove bytes
@@ -356,12 +356,14 @@ bool file_delete_bytes(uint8_t offset, uint8_t num_bytes) {
 	dbg_sprintf(dbgout, "[Start file_delete_bytes()]\t: sel_byte_string_offset = 0x%6x\t| num_bytes = %d\n", editor.sel_byte_string_offset, num_bytes);
 
 	if (num_bytes_shift > 0) {
-		copy_data(editor.sel_byte_string_offset - 1, editor.cursor_offset - 1, num_bytes_shift, 0);
+		copy_data(editor.sel_byte_string_offset - 1, editor.cursor_offset, num_bytes_shift, 0);
 	};
 
 	if (ti_Resize(ti_GetSize(editor.file) - num_bytes, editor.file)) {
 		editor.cursor_offset = editor.min_offset + num_bytes_shift;
 		editor.max_offset = editor.min_offset + ti_GetSize(editor.file);
+		if (editor.cursor_offset > editor.max_offset - 1)
+			editor.cursor_offset = editor.max_offset - 1;
 	} else {
 		draw_message_dialog("Byte deletion failed");
 		while (!os_GetCSC());

@@ -8,6 +8,25 @@
 #include <stdio.h>
 
 
+void print_file_name(char *name) {
+
+	char *character = name;
+	uint8_t name_width = 0;
+	
+
+	while (*character != '\0') {
+		if (*character == 0x5B) {
+			gfx_PrintChar('O');
+			gfx_HorizLine(gfx_GetTextX() - 6, gfx_GetTextY() + 3, 3);
+		} else {
+			gfx_PrintChar(*character);
+		};
+		character++;
+	};
+
+	return;
+}
+
 void draw_window(char *title, bool highlighted, uint24_t xPos, uint8_t yPos, uint24_t width, uint8_t height) {
 	
 	gfx_SetColor(DK_GRAY);
@@ -15,7 +34,9 @@ void draw_window(char *title, bool highlighted, uint24_t xPos, uint8_t yPos, uin
 	gfx_SetTextBGColor(DK_GRAY);
 	gfx_SetTextFGColor(WHITE);
 	gfx_SetTextTransparentColor(DK_GRAY);
-	gfx_PrintStringXY(title, xPos + width / 2 - gfx_GetStringWidth(title) / 2, yPos + 3);
+	gfx_SetTextXY(xPos + width / 2 - gfx_GetStringWidth(title) / 2, yPos + 3);
+	gfx_SetColor(WHITE);
+	print_file_name(title);
 	gfx_SetColor(BLACK);
 	gfx_Rectangle_NoClip(xPos, yPos + 15, width, height - 15);
 	gfx_SetColor(LT_GRAY);
@@ -81,25 +102,6 @@ void draw_time(uint24_t xPos) {
 	gfx_PrintString(":");
 	gfx_PrintUInt((unsigned int)minutes, 2);
 	
-	gfx_PrintStringXY(time_ind[(uint8_t)boot_IsAfterNoon], xPos + 38, 6);
-	return;
-}
-
-void print_file_name(char *name) {
-
-	char *character = name;
-	uint8_t name_width = 0;
-	
-
-	while (*character != '\0') {
-		if (*character == 0x5B) {
-			gfx_PrintChar('O');
-			gfx_HorizLine(gfx_GetTextX() - 6, gfx_GetTextY() + 3, 3);
-		} else {
-			gfx_PrintChar(*character);
-		};
-		character++;
-	};
-
+	gfx_PrintStringXY(time_ind[(uint8_t)boot_IsAfterNoon()], xPos + 38, 6);
 	return;
 }

@@ -1,6 +1,7 @@
+
 /*-----------------------------------------
  * Program Name: HexaEdit CE
- * Version:      1.1.0 CE
+ * Version:      1.2.0 CE
  * Author:       Captain Calc   
  * Description:  A hex editor for the TI-84
  *               Plus CE.
@@ -22,7 +23,7 @@
 #include <debug.h>
 
 #define PROGRAM_NAME		"HexaEdit "
-#define PROGRAM_VERSION		"1.1.0"
+#define PROGRAM_VERSION		"1.2.0"
 #define RECENT_FILES_APPVAR	"HXAEDRCF"
 
 typedef struct {
@@ -187,9 +188,10 @@ static void search_files(uint8_t editor_file_type, uint8_t *list_offset, uint8_t
 	uint8_t *detect_str = NULL;
 	uint8_t ti_file_type;
 	
-	const char *letters = "\0\0\0\0\0\0\0\0\0\0\0WRMH\0\0\0[VQLG\0\0\0ZUPKFC\0\0YTOJEB\0\0XSNIDA\0\0\0\0\0\0\0\0";
+	const char *uppercase_letters = "\0\0\0\0\0\0\0\0\0\0\0WRMH\0\0\0[VQLG\0\0\0ZUPKFC\0\0YTOJEB\0\0XSNIDA\0\0\0\0\0\0\0\0";
+	const char *lowercase_letters = "\0\0\0\0\0\0\0\0\0\0\0wrmh\0\0\0[vqlg\0\0\0zupkfc\0\0ytojeb\0\0xsnida\0\0\0\0\0\0\0\0";
 	const char *numbers = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x33\x36\x39\0\0\0\0\0\x32\x35\x38\0\0\0\0\x30\x31\x34\x37\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
-	char *keymap = letters;
+	char *keymap = uppercase_letters;
 	char buffer[9] = '\0';
 	char *file_name;
 	
@@ -230,8 +232,10 @@ static void search_files(uint8_t editor_file_type, uint8_t *list_offset, uint8_t
 		gfx_SetTextTransparentColor(BLACK);
 		gfx_SetTextXY(gfx_GetTextX() + 1, gfx_GetTextY());
 		
-		if (keymap == letters) {
+		if (keymap == uppercase_letters) {
 			gfx_PrintChar('A');
+		} else if (keymap == lowercase_letters) {
+			gfx_PrintChar('a');
 		} else {
 			gfx_PrintChar('0');
 		};
@@ -257,10 +261,12 @@ static void search_files(uint8_t editor_file_type, uint8_t *list_offset, uint8_t
 		};
 		
 		if (key == sk_Alpha) {
-			if (keymap == letters) {
+			if (keymap == uppercase_letters) {
+				keymap = lowercase_letters;
+			} else if (keymap == lowercase_letters) {
 				keymap = numbers;
 			} else {
-				keymap = letters;
+				keymap = uppercase_letters;
 			};
 		};
 		
@@ -578,8 +584,8 @@ static void delete_recent_file(char *file_name, uint8_t *sel_file_right_window) 
 
 void main(void) {
 	
-	// Debugging
-	// uint8_t i;
+	// General-purpose loop variable
+	uint8_t i;
 	
 	bool redraw_background;
 	
@@ -592,7 +598,7 @@ void main(void) {
 	kb_key_t arrows, function;
 	bool key_Left, key_Right, key_Up, key_Down;
 	bool key_Yequ, key_Window, key_Zoom, key_Trace, key_Graph;
-	bool key_2nd, key_Alpha, key_Mode, key_Del, key_Clear;
+	bool key_2nd, key_Alpha, key_Mode, key_GraphVar, key_Del, key_Clear;
 	
 	char *sel_file_name;
 	
@@ -680,6 +686,7 @@ void main(void) {
 		key_Del = function & kb_Del;
 		
 		key_Alpha = kb_Data[2] & kb_Alpha;
+		key_GraphVar = kb_Data[3] & kb_GraphVar;
 		key_Clear = kb_Data[6] & kb_Clear;
 		
 		redraw_background = easter_egg_two();
@@ -702,10 +709,22 @@ void main(void) {
 		
 		if (key_Up) {
 			if (sel_window == 1) {
-				if (sel_file_left_window > 0)
-					sel_file_left_window--;
-				else if (list_offset > 0)
-					list_offset--;
+				
+				// Alpha accelerated scrolling
+				if (key_Alpha) {
+					if (list_offset == 0)
+						sel_file_left_window = 0;
+					
+					i = MAX_LINES_ONSCREEN;
+					while (i-- > 0 && list_offset > 0)
+						list_offset--;
+				} else {
+					if (sel_file_left_window > 0)
+						sel_file_left_window--;
+					else if (list_offset > 0)
+						list_offset--;
+				};
+				
 			} else {
 				if (sel_file_right_window > 0)
 					sel_file_right_window--;
@@ -714,10 +733,22 @@ void main(void) {
 		
 		if (key_Down) {
 			if (sel_window == 1) {
-				if (sel_file_left_window + 1 < num_files_curr_type && sel_file_left_window < MAX_LINES_ONSCREEN - 1)
-					sel_file_left_window++;
-				if (sel_file_left_window == (MAX_LINES_ONSCREEN - 1) && (list_offset + sel_file_left_window + 1) < num_files_curr_type)
-					list_offset++;
+				
+				// Alpha accelerated scrolling
+				if (key_Alpha) {
+					if (list_offset + MAX_LINES_ONSCREEN >= num_files_curr_type)
+						sel_file_left_window = num_files_curr_type - list_offset - 1;
+					
+					i = 0;
+					while (i++ < MAX_LINES_ONSCREEN && (list_offset + MAX_LINES_ONSCREEN < num_files_curr_type))
+						list_offset++;
+				} else {
+					if (sel_file_left_window == (MAX_LINES_ONSCREEN - 1) && (list_offset + sel_file_left_window + 1) < num_files_curr_type)
+						list_offset++;
+					if (sel_file_left_window + 1 < num_files_curr_type && sel_file_left_window < MAX_LINES_ONSCREEN - 1)
+						sel_file_left_window++;
+				};
+				
 			} else {
 				if (sel_file_right_window < num_files_per_type.recent)
 					sel_file_right_window++;
@@ -758,7 +789,7 @@ void main(void) {
 			delete_recent_file(sel_file_data.name, &sel_file_right_window);
 		};
 		
-		if (key_Alpha) {
+		if (key_GraphVar) {
 			open_context_menu(sel_file_data.name, sel_file_data.editor_file_type, 75, 85);
 			redraw_background = true;
 			delay(200);
