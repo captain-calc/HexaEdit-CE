@@ -15,6 +15,12 @@ After extracting the HexaEdit_CE.zip file, send the following file to your calcu
 
 * HEXAEDIT.8xp
 
+#### Easter Egg Controls
+
+To activate the icon viewer, press [stat].
+
+To view your calculator's ROM, press the [+] key while in HexaEdit's main menu.
+
 #### Technical Info
 
 * Platform: TI-84 Plus CE
