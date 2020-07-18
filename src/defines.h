@@ -17,7 +17,7 @@
    These are different from the TI-OS file type codes */
 #define ASM_PRGM_FILE	1
 #define TI_PRGM_FILE	2
-#define APPVAR_FILE		3
+#define APPVAR_FILE	3
 
 // Editor edit types
 #define FILE_EDIT_TYPE	0
@@ -28,7 +28,7 @@
 
 #define KEY_LEFT	16
 #define KEY_RIGHT	17
-#define KEY_UP	18
+#define KEY_UP		18
 #define KEY_DOWN	19
 #define KEY_CLEAR	20
 #define KEY_YEQU	21
@@ -36,8 +36,8 @@
 #define KEY_ZOOM	23
 #define KEY_TRACE	24
 #define KEY_GRAPH	25
-#define KEY_2ND	26
-#define KEY_DEL	27
+#define KEY_2ND		26
+#define KEY_DEL		27
 
 #define MAX_NUM_SEL_BYTES 99
 
