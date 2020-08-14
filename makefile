@@ -1,23 +1,25 @@
 # ----------------------------
-# Set NAME to the program name
-# Set ICON to the png icon file name
-# Set DESCRIPTION to display within a compatible shell
-# Set COMPRESSED to "YES" to create a compressed program
+# Program Options
 # ----------------------------
 
-NAME        ?= HEXAEDIT
-COMPRESSED  ?= NO
-ICON        ?= icon.png
-DESCRIPTION ?= "HexaEdit CE"
+NAME         ?= HEXAEDIT
+ICON         ?= icon.png
+DESCRIPTION  ?= "HexaEdit CE"
+MAIN_ARGS    ?= NO
+COMPRESSED   ?= NO
+ARCHIVED     ?= NO
 
 # ----------------------------
-# Other Options (Advanced)
+# Compile Options
 # ----------------------------
 
+OPT_MODE     ?= -Oz
+EXTRA_CFLAGS ?= -Wall -Wextra
 
-ARCHIVED            ?= YES
-SRCDIR              ?= src
-OBJDIR              ?= obj
-BINDIR              ?= bin
+# ----------------------------
+# Debug Options
+# ----------------------------
+
+OUTPUT_MAP   ?= NO
 
 include $(CEDEV)/include/.makefile

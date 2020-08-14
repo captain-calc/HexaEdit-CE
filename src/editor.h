@@ -30,17 +30,17 @@ extern cursor_t cursor;
 
 // GUI routines
 void draw_file_size(void);
-void draw_top_bar(bool file_changed);
+void draw_top_bar(bool file_changed, bool redraw);
 uint24_t input(const char *prompt, uint8_t char_limit, bool hex_flag);
 void draw_alt_tool_bar(void);
-void draw_tool_bar(void);
+void draw_tool_bar(bool redraw);
 void draw_address_window(void);
 static void draw_offset_window(void);
 char *hex(uint8_t byte);
 void draw_byte_selector(uint8_t sel_nibble, uint8_t pixel_x, uint8_t pixel_y);
 void draw_printable_bytes(uint8_t byte, bool highlight, uint24_t print_x, uint8_t print_y);
 void draw_right_two_windows(uint8_t sel_nibble);
-void update_windows(uint8_t sel_nibble);
+void update_windows(uint8_t sel_nibble, bool redraw);
 void print_alt_byte_values(void);
 
 // Actual editor

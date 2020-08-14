@@ -1,7 +1,8 @@
 
 /*-----------------------------------------
  * Program Name: HexaEdit CE
- * Version:      1.2.0 CE
+ * Version:      1.2.1 CE
+ * License:      BSD-3-Clause
  * Author:       Captain Calc   
  * Description:  A hex editor for the TI-84
  *               Plus CE.
@@ -23,7 +24,7 @@
 #include <debug.h>
 
 #define PROGRAM_NAME		"HexaEdit "
-#define PROGRAM_VERSION		"1.2.0"
+#define PROGRAM_VERSION		"1.2.1"
 #define RECENT_FILES_APPVAR	"HXAEDRCF"
 
 typedef struct {
@@ -48,7 +49,7 @@ static void create_undo_action_appvar(void) {
 	ti_var_t appvar;
 
 	ti_CloseAll();
-	if ((appvar = ti_Open(UNDO_APPVAR_NAME, "w+")) == NULL)
+	if ((appvar = ti_Open(UNDO_APPVAR_NAME, "w+")) == 0)
 		goto ERROR;
 	
 	if (ti_Resize(104, appvar) <= 0)
@@ -123,7 +124,7 @@ static void open_context_menu(char *file_name, uint8_t editor_file_type, uint24_
 
 	// Open file
 	ti_CloseAll();
-	if ((file = ti_OpenVar(file_name, "r", ti_file_type)) == NULL)
+	if ((file = ti_OpenVar(file_name, "r", ti_file_type)) == 0)
 		return;
 
 	// Draw window
@@ -146,7 +147,7 @@ static void open_context_menu(char *file_name, uint8_t editor_file_type, uint24_
 	// Retrieve its VAT pointer
 	gfx_PrintStringXY("VAT Ptr:", xPos + 3, yPos + 36);
 	
-	sprintf(hex, "0x%6x", (uint8_t *)ti_GetVATPtr(file));
+	sprintf(hex, "0x%6x", (unsigned int)ti_GetVATPtr(file));
 	i = 2;
 	while (*(hex + i) == ' ')
 		*(hex + i++) = '0';
@@ -155,7 +156,7 @@ static void open_context_menu(char *file_name, uint8_t editor_file_type, uint24_
 	// Get its data pointer and convert it to its memory pointer
 	gfx_PrintStringXY("Address:", xPos + 3, yPos + 45);
 	
-	sprintf(hex, "0x%6x", (uint8_t *)ti_GetDataPtr(file) - 2);
+	sprintf(hex, "0x%6x", (unsigned int)ti_GetDataPtr(file) - 2);
 	i = 2;
 	while (*(hex + i) == ' ')
 		*(hex + i++) = '0';
@@ -185,14 +186,14 @@ static void search_files(uint8_t editor_file_type, uint8_t *list_offset, uint8_t
 	
 	uint8_t key, i = 0;
 	uint8_t buffer_width = 0;
-	uint8_t *detect_str = NULL;
+	void *detect_str = NULL;
 	uint8_t ti_file_type;
 	
-	const char *uppercase_letters = "\0\0\0\0\0\0\0\0\0\0\0WRMH\0\0\0[VQLG\0\0\0ZUPKFC\0\0YTOJEB\0\0XSNIDA\0\0\0\0\0\0\0\0";
-	const char *lowercase_letters = "\0\0\0\0\0\0\0\0\0\0\0wrmh\0\0\0[vqlg\0\0\0zupkfc\0\0ytojeb\0\0xsnida\0\0\0\0\0\0\0\0";
-	const char *numbers = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x33\x36\x39\0\0\0\0\0\x32\x35\x38\0\0\0\0\x30\x31\x34\x37\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+	char *uppercase_letters = "\0\0\0\0\0\0\0\0\0\0\0WRMH\0\0\0[VQLG\0\0\0ZUPKFC\0\0YTOJEB\0\0XSNIDA\0\0\0\0\0\0\0\0";
+	char *lowercase_letters = "\0\0\0\0\0\0\0\0\0\0\0wrmh\0\0\0[vqlg\0\0\0zupkfc\0\0ytojeb\0\0xsnida\0\0\0\0\0\0\0\0";
+	char *numbers = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x33\x36\x39\0\0\0\0\0\x32\x35\x38\0\0\0\0\x30\x31\x34\x37\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 	char *keymap = uppercase_letters;
-	char buffer[9] = '\0';
+	char buffer[9] = {'\0'};
 	char *file_name;
 	
 	
@@ -273,13 +274,13 @@ static void search_files(uint8_t editor_file_type, uint8_t *list_offset, uint8_t
 		if (key == sk_Clear)
 			return;
 		
-		if (key == sk_2nd)
+		if (key == sk_2nd || key == sk_Enter)
 			break;
 	};
 	
 	ti_file_type = find_ti_file_type(editor_file_type);
 	
-	while (((file_name = ti_DetectVar(&detect_str, NULL, ti_file_type)) != NULL)) {
+	while (((file_name = ti_DetectVar(&detect_str, NULL, ti_file_type)) != 0)) {
 		if (!strcmp(file_name, buffer)) {
 			*list_offset = local_list_offset;
 			*sel_file_left_window = local_sel_file;
@@ -302,10 +303,10 @@ static void search_files(uint8_t editor_file_type, uint8_t *list_offset, uint8_t
 
 static void get_num_asm_prgms(void) {
 	
-	uint8_t *offset_ptr = NULL;
+	void *offset_ptr = NULL;
 	uint8_t num_asm_prgms = 0;
 	
-	while (ti_DetectVar(&offset_ptr, NULL, TI_PPRGM_TYPE) != NULL)
+	while (ti_DetectVar(&offset_ptr, NULL, TI_PPRGM_TYPE) != 0)
 		num_asm_prgms++;
 	
 	num_files_per_type.asm_prgms = num_asm_prgms;
@@ -314,11 +315,11 @@ static void get_num_asm_prgms(void) {
 
 static void get_num_ti_prgms(void) {
 	
-	uint8_t *offset_ptr = NULL;
+	void *offset_ptr = NULL;
 	uint8_t num_ti_prgms = 0;
 	char *file_name;
 	
-	while ((file_name = ti_DetectVar(&offset_ptr, NULL, TI_PRGM_TYPE)) != NULL)
+	while ((file_name = ti_DetectVar(&offset_ptr, NULL, TI_PRGM_TYPE)) != 0)
 		if (*file_name != '!' && *file_name != '#')
 			num_ti_prgms++;
 	
@@ -328,10 +329,10 @@ static void get_num_ti_prgms(void) {
 
 static void get_num_appvars(void) {
 	
-	uint8_t *offset_ptr = NULL;
+	void *offset_ptr = NULL;
 	uint8_t num_appvars = 0;
 	
-	while (ti_Detect(&offset_ptr, NULL) != NULL)
+	while (ti_Detect(&offset_ptr, NULL) != 0)
 		num_appvars++;
 	
 	num_files_per_type.appvars = num_appvars;
@@ -363,10 +364,10 @@ static void print_file_entry(char *file_name, uint8_t ti_file_type, uint8_t num_
 	return;
 }
 
-static void print_files(uint8_t sel_window, uint8_t list_offset, uint8_t sel_file, uint8_t ti_file_type) {
+static void print_files(uint8_t list_offset, uint8_t sel_file, uint8_t ti_file_type) {
 	
 	const char *empty_file_list = "-- No files found --";
-	uint8_t *detect_str = NULL;
+	void *detect_str = 0;
 	uint8_t num_files_retrieved = 0, num_files_printed = 0;
 	
 	char *file_name;
@@ -375,7 +376,7 @@ static void print_files(uint8_t sel_window, uint8_t list_offset, uint8_t sel_fil
 	gfx_SetTextBGColor(LT_GRAY);
 	gfx_SetTextTransparentColor(LT_GRAY);
 	
-	while (((file_name = ti_DetectVar(&detect_str, NULL, ti_file_type)) != NULL) && num_files_printed < MAX_LINES_ONSCREEN) {
+	while (((file_name = ti_DetectVar(&detect_str, NULL, ti_file_type)) != 0) && num_files_printed < MAX_LINES_ONSCREEN) {
 		
 		if (++num_files_retrieved > list_offset) {
 			
@@ -409,7 +410,7 @@ static void print_files(uint8_t sel_window, uint8_t list_offset, uint8_t sel_fil
 static void draw_left_window(uint8_t sel_window, uint8_t editor_file_type, uint8_t list_offset, uint8_t sel_file) {
 	
 	uint8_t ti_file_type;
-	const char *editor_file_type_headers[3] = {"Assembly Programs", "BASIC Programs", "AppVars"};
+	char *editor_file_type_headers[3] = {"Assembly Programs", "BASIC Programs", "AppVars"};
 	
 	if (editor_file_type == ASM_PRGM_FILE) {
 		ti_file_type = TI_PPRGM_TYPE;
@@ -423,7 +424,7 @@ static void draw_left_window(uint8_t sel_window, uint8_t editor_file_type, uint8
 		sel_window = 0;
 	
 	draw_window(editor_file_type_headers[editor_file_type - 1], (bool)sel_window, 5, 25, 180, 190);
-	print_files(sel_window, list_offset, sel_file, ti_file_type);
+	print_files(list_offset, sel_file, ti_file_type);
 	
 	// This function updates the selected file info by default
 	sel_file_data.editor_file_type = editor_file_type;
@@ -435,7 +436,6 @@ static void draw_recent_files (uint8_t sel_window, uint8_t sel_file_right_window
 	uint8_t print_y = 0;
 	uint8_t editor_file_type;
 	ti_var_t file;
-	const char *title = "Recent Files";
 	char file_name[9] = {'\0'};
 	static char sel_file_name_rw[9] = {'\0'};
 	
@@ -443,13 +443,13 @@ static void draw_recent_files (uint8_t sel_window, uint8_t sel_file_right_window
 	draw_window("Recent Files", (bool)sel_window, 190, 25, 125, 190);
 	
 	ti_CloseAll();
-	if ((file = ti_Open(RECENT_FILES_APPVAR, "r")) == NULL) {
+	if ((file = ti_Open(RECENT_FILES_APPVAR, "r")) == 0) {
 		draw_message_dialog("Error opening recents appvar. Close HexaEdit");
 		while (!os_GetCSC());
 		return;
 	};
 	
-	while (ti_Read(file_name, 8, 1, file) != NULL && print_y < MAX_LINES_ONSCREEN) {
+	while (ti_Read(file_name, 8, 1, file) != 0 && print_y < MAX_LINES_ONSCREEN) {
 		
 		gfx_SetTextFGColor(BLACK);
 		gfx_SetColor(BLACK);
@@ -486,7 +486,6 @@ static void draw_recent_files (uint8_t sel_window, uint8_t sel_file_right_window
 static bool create_recents_appvar(void) {
 	
 	ti_var_t appvar;
-	uint8_t i;
 	
 	ti_CloseAll();
 	appvar = ti_Open(RECENT_FILES_APPVAR, "w");
@@ -518,7 +517,7 @@ static void add_recent_file(char *file_name, uint8_t editor_file_type) {
 	num_files_copied = 1;
 
 	while (num_files_copied++ < MAX_LINES_ONSCREEN) {
-		if (ti_Read(next_file_name, 8, 1, rf_appvar) == NULL)
+		if (ti_Read(next_file_name, 8, 1, rf_appvar) == 0)
 			break;
 		editor_file_type = ti_GetC(rf_appvar);
 		// Debugging
@@ -539,46 +538,60 @@ static void add_recent_file(char *file_name, uint8_t editor_file_type) {
 	return;
 }
 
-static void delete_recent_file(char *file_name, uint8_t *sel_file_right_window) {
+static void delete_recent_file(char *file_name) {
 	
-	ti_var_t rf_appvar, new_rf_appvar;
-	char next_file_name[9] = {'\0'};
-	uint8_t num_files_copied;
+	ti_var_t rf_appvar;
+	char rf_file_name[9] = {'\0'};
+
+	rf_appvar = ti_Open(RECENT_FILES_APPVAR, "r+");
+	if (!rf_appvar)
+		return;
+
+	while (ti_Read(rf_file_name, 8, 1, rf_appvar) != 0) {
+		
+		ti_GetC(rf_appvar);
+		if (!strcmp(file_name, rf_file_name)) {
+			if (ti_Tell(rf_appvar) >= 10)
+				copy_data(ti_GetDataPtr(rf_appvar) - 10, ti_GetDataPtr(rf_appvar) - 1, ti_Tell(rf_appvar) - 9, 0);
+			ti_Resize(ti_GetSize(rf_appvar) - 9, rf_appvar);
+			
+			ti_Close(rf_appvar);
+			num_files_per_type.recent--;
+			return;
+		};
+	}
+
+	ti_Close(rf_appvar);
+	num_files_per_type.recent--;
+	return;
+}
+
+static void update_recent_files_list(void) {
+
+	ti_var_t rf_appvar, file;
+	char file_name[9] = {'\0'};
 	uint8_t editor_file_type;
 
 	rf_appvar = ti_Open(RECENT_FILES_APPVAR, "r");
-	new_rf_appvar = ti_Open("HXAEDRF2", "w+");
-	if (!new_rf_appvar)
+	if (!rf_appvar) {
+		draw_message_dialog("Could not update Recent Files list");
+		while (!os_GetCSC());
 		return;
+	};
 
-	num_files_copied = 0;
-
-	while (num_files_copied++ < MAX_LINES_ONSCREEN) {
-		if (ti_Read(next_file_name, 8, 1, rf_appvar) == NULL)
-			break;
-		editor_file_type = ti_GetC(rf_appvar);
-		if (strcmp(file_name, next_file_name)) {
-			ti_Write(next_file_name, 8, 1, new_rf_appvar);
-			ti_PutC((uint8_t)editor_file_type, new_rf_appvar);
+	while (ti_Read(file_name, 8, 1, rf_appvar) != 0) {
+		
+		editor_file_type = (uint8_t)ti_GetC(rf_appvar);
+		if ((file = ti_OpenVar(file_name, "r", find_ti_file_type(editor_file_type))) == 0) {
+			delete_recent_file(file_name);
+			// Seek back one entry since the appvar now contains one less entry
+			ti_Seek(-9, SEEK_CUR, rf_appvar);
+		} else {
+			ti_Close(file);
 		};
 	};
 
-	ti_CloseAll();
-	
-	if (ti_Delete(RECENT_FILES_APPVAR))
-		ti_Rename("HXAEDRF2", RECENT_FILES_APPVAR);
-	
-	num_files_per_type.recent = num_files_copied - 1;
-	
-	// Debugging
-	dbg_sprintf(dbgout, "[main.c] [delete_recent_file()]\t: selected file = %d\n", *sel_file_right_window);
-	
-	if (*sel_file_right_window > 0)
-		(*sel_file_right_window)--;
-	
-	// Debugging
-	dbg_sprintf(dbgout, "[main.c] [delete_recent_file()]\t: selected file = %d\n", *sel_file_right_window);
-	
+	ti_Close(rf_appvar);
 	return;
 }
 
@@ -599,8 +612,7 @@ void main(void) {
 	bool key_Left, key_Right, key_Up, key_Down;
 	bool key_Yequ, key_Window, key_Zoom, key_Trace, key_Graph;
 	bool key_2nd, key_Alpha, key_Mode, key_GraphVar, key_Del, key_Clear;
-	
-	char *sel_file_name;
+	bool key_Enter;
 	
 	redraw_background = true;
 	editor_file_type = ASM_PRGM_FILE;
@@ -616,13 +628,15 @@ void main(void) {
 	
 	create_undo_action_appvar();
 	
-	if (ti_Open(RECENT_FILES_APPVAR, "r") == NULL) {
+	if (ti_Open(RECENT_FILES_APPVAR, "r") == 0) {
 		if (!create_recents_appvar()) {
 			draw_message_dialog("Failed to create appvar. Program will exit");
 			while (!os_GetCSC());
 			close_program();
 		};
 	};
+	
+	update_recent_files_list();
 	
 	get_num_asm_prgms();
 	get_num_ti_prgms();
@@ -688,6 +702,7 @@ void main(void) {
 		key_Alpha = kb_Data[2] & kb_Alpha;
 		key_GraphVar = kb_Data[3] & kb_GraphVar;
 		key_Clear = kb_Data[6] & kb_Clear;
+		key_Enter = kb_Data[6] & kb_Enter;
 		
 		redraw_background = easter_egg_two();
 		
@@ -763,7 +778,7 @@ void main(void) {
 			sel_window++;
 		};
 		
-		if (key_2nd) {
+		if (key_2nd || key_Enter) {
 			// Debugging
 			//dbg_sprintf(dbgout, "[main.c] [Starting add_recent_file()] : sel_file_name = %s | ", sel_file_data.name);
 			//for (i = 0; i < 9; i++)
@@ -786,7 +801,10 @@ void main(void) {
 		};
 		
 		if (key_Del && sel_window == 2) {
-			delete_recent_file(sel_file_data.name, &sel_file_right_window);
+			delete_recent_file(sel_file_data.name);
+			if (sel_file_right_window > 0)
+				sel_file_right_window--;
+			delay(200);
 		};
 		
 		if (key_GraphVar) {
