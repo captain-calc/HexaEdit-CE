@@ -82,6 +82,10 @@ bool easter_egg_two(void) {
 	key = 255;	// 255 is a non-action keycode
 	
 	editor.edit_type = ROM_EDIT_TYPE;
+	
+	// Technically not a file, but treated as one for the namespace
+	editor.file_name = "ROM Viewer";
+	
 	editor.edit_offset = (uint8_t *)0x000000;
 	editor.Draw_Left_Window = &draw_address_window;
 	
@@ -129,8 +133,6 @@ bool easter_egg_two(void) {
 		
 		key = get_keypress();
 		
-		easter_egg_one(file_changed, sel_nibble);
-		
 		if (key == KEY_2ND) {
 			if (multi_byte_selection) {
 				multi_byte_selection = false;
@@ -142,6 +144,9 @@ bool easter_egg_two(void) {
 		};
 		
 		if (!multi_byte_selection) {
+			
+			easter_egg_one(file_changed, sel_nibble);
+			
 			if (key == KEY_YEQU) {
 				create_goto_undo_action();
 				offset = input("Goto:", 6, editor.edit_type);

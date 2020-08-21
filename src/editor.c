@@ -29,24 +29,26 @@ void draw_file_size(void) {
 
 void draw_top_bar(bool file_changed, bool redraw) {
 	
-	char name[10] = {'\0'};
+	char name[20] = {'\0'};
+	
+	gfx_SetColor(DK_GRAY);
+	gfx_FillRectangle_NoClip(0, 0, 320, 20);
+	gfx_SetTextBGColor(DK_GRAY);
+	gfx_SetTextFGColor(WHITE);
+	gfx_SetTextTransparentColor(DK_GRAY);
+	gfx_SetColor(WHITE);
+	
 	if (editor.edit_type == FILE_EDIT_TYPE) {
 		if (file_changed)
 			*name = '*';
-		strcpy((name + file_changed), editor.file_name);
-		
-		gfx_SetColor(DK_GRAY);
-		gfx_FillRectangle_NoClip(0, 0, 320, 20);
-		gfx_SetTextBGColor(DK_GRAY);
-		gfx_SetTextFGColor(WHITE);
-		gfx_SetTextTransparentColor(DK_GRAY);
-		gfx_SetColor(WHITE);
-		gfx_SetTextXY(5, 6);
-		print_file_name(name);
 		draw_file_size();
 	};
 	
+	gfx_SetTextXY(5, 6);
+	strcpy((name + file_changed), editor.file_name);
+	print_file_name(name);
 	draw_battery_status();
+	
 	if (redraw)
 		gfx_BlitRectangle(1, 0, 0, 320, 20);
 	return;
@@ -671,6 +673,9 @@ void edit_ram(void) {
 	
 	editor.edit_type = RAM_EDIT_TYPE;
 	editor.edit_offset = get_min_ram_address();
+	
+	// Technically not a file but treated as one for the name
+	editor.file_name = "RAM Viewer";
 	
 	// Debugging
 	dbg_sprintf(dbgout, "[editor.c] [edit_ram()] : edit_offset = 0x%6x\n", editor.edit_offset);

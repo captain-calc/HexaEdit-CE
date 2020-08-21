@@ -1,7 +1,7 @@
 
 /*-----------------------------------------
  * Program Name: HexaEdit CE
- * Version:      1.2.1 CE
+ * Version:      1.2.2 CE
  * License:      BSD-3-Clause
  * Author:       Captain Calc   
  * Description:  A hex editor for the TI-84
@@ -24,7 +24,7 @@
 #include <debug.h>
 
 #define PROGRAM_NAME		"HexaEdit "
-#define PROGRAM_VERSION		"1.2.1"
+#define PROGRAM_VERSION		"1.2.2"
 #define RECENT_FILES_APPVAR	"HXAEDRCF"
 
 typedef struct {

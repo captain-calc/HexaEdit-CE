@@ -25,9 +25,11 @@ To view your calculator's ROM, press the [+] key while in HexaEdit's main menu.
 
 * Platform: TI-84 Plus CE
 * Language: C
-* Latest Version: 1.2.1
+* Latest Version: 1.2.2
 
 #### Change Log
+
+v1.2.2 - Fixed graphical bug in RAM editor and ROM viewer
 
 v1.2.1 - Added [Enter] key support for selection and submitting actions; Upgraded the sprite
          viewer to handle any sprite size; Program now removes deleted files from "Recent Files"
