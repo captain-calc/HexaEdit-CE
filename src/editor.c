@@ -52,7 +52,7 @@ static uint24_t decimal(const char *hex)
 	{
 		i--;
 		
-		for (j = 0; j < 15; j++)
+		for (j = 0; j < 16; j++)
 		{
 			if (*(hex + i) == hex_chars[j])
 			{
@@ -1579,7 +1579,7 @@ static bool get_config_data(char *config_appvar_name)
 	ti_Read(&cursor_secondary_offset, 3, 1, config_appvar);
 	ti_Close(config_appvar);
 	
-	dbg_sprintf(dbgout, "name = %s | type = %d\n", editor->name, editor->file_type);
+	//dbg_sprintf(dbgout, "name = %s | type = %d\n", editor->name, editor->file_type);
 	
 	if ((file = ti_OpenVar(editor->name, "r", editor->file_type)) == 0)
 	{
