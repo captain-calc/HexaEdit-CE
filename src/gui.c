@@ -15,8 +15,8 @@
 #include <string.h>
 
 
-void gui_PrintFileName(char *name) {
-
+void gui_PrintFileName(char *name)
+{
 	char *character = name;
 	
 
@@ -33,8 +33,8 @@ void gui_PrintFileName(char *name) {
 	return;
 }
 
-void gui_DrawMessageDialog(const char *message) {
-	
+void gui_DrawMessageDialog(const char *message)
+{
 	uint24_t message_width = gfx_GetStringWidth(message);
 	
 	gfx_SetColor(DK_GRAY);
@@ -55,8 +55,8 @@ void gui_DrawMessageDialog_Blocking(const char *message)
 	return;
 }
 
-void gui_DrawBatteryStatus(void) {
-	
+void gui_DrawBatteryStatus(void)
+{
 	uint8_t status;
 	uint8_t colors[4] = {RED, RED, YELLOW, GREEN};
 	char status_str[5] = {'\0'};
@@ -80,8 +80,8 @@ void gui_DrawBatteryStatus(void) {
 	return;
 }
 
-void gui_DrawTime(uint24_t xPos) {
-	
+void gui_DrawTime(uint24_t xPos)
+{
 	uint8_t seconds = 0, minutes = 0, hour = 0;
 	const char *time_ind[2] = {"AM", "PM"};
 	

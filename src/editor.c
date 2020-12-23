@@ -1013,8 +1013,8 @@ static uint8_t save_prompt(void)
 	};
 }
 
-static bool save_file(char *name, uint8_t type) {
-
+static bool save_file(char *name, uint8_t type)
+{
 	ti_var_t original_file, new_file, edit_file;
 	uint24_t edit_file_size;
 	bool is_archived;
@@ -1335,8 +1335,8 @@ static bool create_undo_appvar(void)
 	return true;
 }
 
-static bool create_edit_file(char *name, uint8_t type) {
-
+static bool create_edit_file(char *name, uint8_t type)
+{
 	ti_var_t file, edit_file;
 	uint24_t file_size;
 	

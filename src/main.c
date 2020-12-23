@@ -60,8 +60,8 @@ uint8_t col_widths[] = {69, 30, 75, 70, 64};
 #define TABLE_NUM_COLS		5
 
 
-static bool create_recents_appvar(void) {
-	
+static bool create_recents_appvar(void)
+{
 	ti_var_t appvar;
 	
 	ti_CloseAll();
@@ -76,8 +76,8 @@ static bool create_recents_appvar(void) {
 	return true;
 }
 
-static void add_recent_file(char *name, uint8_t type) {
-	
+static void add_recent_file(char *name, uint8_t type)
+{
 	ti_var_t rf_appvar, new_rf_appvar;
 	char next_file_name[9] = {'\0'};
 	uint8_t num_files_copied;
@@ -113,8 +113,8 @@ static void add_recent_file(char *name, uint8_t type) {
 	return;
 }
 
-static void delete_recent_file(char *file_name) {
-	
+static void delete_recent_file(char *file_name)
+{
 	ti_var_t rf_appvar;
 	char rf_file_name[9] = {'\0'};
 
@@ -140,8 +140,8 @@ static void delete_recent_file(char *file_name) {
 	return;
 }
 
-static void update_recent_files_list(void) {
-
+static void update_recent_files_list(void)
+{
 	ti_var_t rf_appvar, file;
 	char file_name[9] = {'\0'};
 	uint8_t file_type;
@@ -225,8 +225,8 @@ static char *get_recent_file(uint24_t num)
 	return file_name;
 }
 
-static void draw_title_bar(void) {
-	
+static void draw_title_bar(void)
+{
 	gfx_SetColor(DK_GRAY);
 	gfx_FillRectangle_NoClip(0, 0, LCD_WIDTH, 20);
 	gfx_SetTextBGColor(DK_GRAY);
@@ -255,8 +255,8 @@ static void draw_menu_bar(void)
 	return;
 }
 
-static void get_num_recent_files(void) {
-	
+static void get_num_recent_files(void)
+{
 	ti_var_t rf_appvar;
 	
 	if ((rf_appvar = ti_Open(RECENT_FILES_APPVAR, "r")) == 0)
@@ -269,8 +269,8 @@ static void get_num_recent_files(void) {
 	return;
 }
 
-static void get_num_protected_prgms(void) {
-	
+static void get_num_protected_prgms(void)
+{
 	void *offset_ptr = NULL;
 	uint8_t num_prot_prgms = 0;
 	
@@ -281,8 +281,8 @@ static void get_num_protected_prgms(void) {
 	return;
 }
 
-static void get_num_prgms(void) {
-	
+static void get_num_prgms(void)
+{
 	void *offset_ptr = NULL;
 	uint8_t num_prgms = 0;
 	char *file_name;
@@ -295,8 +295,8 @@ static void get_num_prgms(void) {
 	return;
 }
 
-static void get_num_appvars(void) {
-	
+static void get_num_appvars(void)
+{
 	void *offset_ptr = NULL;
 	uint8_t num_appvars = 0;
 	
@@ -330,16 +330,6 @@ static void draw_file_list_header(uint8_t y, uint8_t table_num)
 		gfx_PrintStringXY(table_names[i], x, y + 2);
 		x += gfx_GetStringWidth(table_names[i]) + 15;
 	};
-	/*
-	gfx_PrintStringXY(table_names[table_num], x, y + 2);
-	if (table_num > 0)
-	{
-		gfx_PrintStringXY("<<", x - 30, y + 2);
-	};
-	if (table_num < NUM_TABLES - 1)
-	{
-		gfx_PrintStringXY(">>", x + gfx_GetStringWidth(table_names[table_num]) + 20, y + 2);
-	};*/
 	return;
 }
 
@@ -363,79 +353,7 @@ static void draw_table_header(uint8_t y)
 	};
 	return;
 }
-/*
-static void print_file_archive_status(char *name, uint8_t type, uint8_t y)
-{
-	ti_var_t file;
-	
-	ti_CloseAll();
-	file = ti_OpenVar(name, "r", type);
-	if (ti_IsArchived(file))
-	{
-		gfx_PrintStringXY("*", COL_2_X, y);
-	};
-	ti_Close(file);
-	return;
-}
 
-static void print_file_vat_ptr(char *name, uint8_t type, uint8_t y)
-{
-	ti_var_t file;
-	static char vat_ptr[9] = {'\0'};
-	
-	ti_CloseAll();
-	gfx_SetTextXY(COL_3_X, y);
-	if ((file = ti_OpenVar(name, "r", type)) == 0)
-	{
-		gfx_PrintString("Error");
-		return;
-	};
-	
-	return;
-}
-
-static void print_file_data_ptr(char *name, uint8_t type, uint8_t y)
-{
-	ti_var_t file;
-	char data_ptr[9] = {'\0'};
-	char *c = data_ptr;
-	
-	ti_CloseAll();
-	gfx_SetTextXY(COL_4_X, y);
-	if ((file = ti_OpenVar(name, "r", type)) == 0)
-	{
-		gfx_PrintString("Error");
-		return;
-	};
-	sprintf(data_ptr, "0x%6x", (unsigned int)ti_GetDataPtr(file));
-	while (*c != '\0')
-	{
-		if (*c == ' ')
-			*c = '0';
-		c++;
-	};
-	ti_Close(file);
-	gfx_PrintStringXY(data_ptr, COL_4_X, y);
-	return;
-}
-
-static void print_file_size(char *name, uint8_t type, uint8_t y) {
-	
-	ti_var_t file;
-	
-	char size_str[7] = "Error\0\0";
-	
-	ti_CloseAll();
-	if ((file = ti_OpenVar(name, "r", type)) == 0)
-	{
-		gfx_PrintStringXY(size_str, COL_5_X + (col_widths[4] - gfx_GetStringWidth(size_str)), y);
-		return;
-	};
-	size = ti_GetSize(file);
-	
-	return;
-}
-*/
 static void sprintf_ptr(char *buffer, unsigned int pointer)
 {
 	char *c;
