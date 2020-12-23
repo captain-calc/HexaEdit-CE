@@ -47,7 +47,7 @@ void print_alt_byte_values(void);
 uint8_t get_keypress(void);
 void move_cursor(uint8_t key);
 static uint8_t save_changes_prompt(void);
-static uint8_t run_editor(void);
+uint8_t run_editor(void);
 
 void edit_file(char *file_name, uint8_t editor_file_type);
 void edit_ram(void);

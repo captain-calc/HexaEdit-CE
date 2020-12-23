@@ -1,23 +1,20 @@
 # ----------------------------
-# Set NAME to the program name
-# Set ICON to the png icon file name
-# Set DESCRIPTION to display within a compatible shell
-# Set COMPRESSED to "YES" to create a compressed program
+# Makefile Options
 # ----------------------------
 
-NAME        ?= HEXAEDIT
-COMPRESSED  ?= NO
-ICON        ?= icon.png
+NAME ?= HEXAEDIT
+ICON ?= icon.png
 DESCRIPTION ?= "HexaEdit CE"
+COMPRESSED ?= NO
+ARCHIVED ?= NO
+
+CFLAGS ?= -Wall -Wextra -Oz
+CXXFLAGS ?= -Wall -Wextra -Oz
 
 # ----------------------------
-# Other Options (Advanced)
-# ----------------------------
 
+ifndef CEDEV
+$(error CEDEV environment path variable is not set)
+endif
 
-ARCHIVED            ?= YES
-SRCDIR              ?= src
-OBJDIR              ?= obj
-BINDIR              ?= bin
-
-include $(CEDEV)/include/.makefile
+include $(CEDEV)/meta/makefile.mk

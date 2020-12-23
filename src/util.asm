@@ -1,4 +1,4 @@
-	.def	_copy_data
+	public	_copy_data
 _copy_data:
 ; Arguments:
 ;   arg0 = pointer to copy data from
@@ -24,7 +24,7 @@ _copy_data:
 	lddr
 	ret
 
-	.def	_get_min_ram_address
+	public	_get_min_ram_address
 _get_min_ram_address:
 ; Arguments:
 ;   None
@@ -34,7 +34,7 @@ _get_min_ram_address:
 	ld	hl, $D00000
 	ret
 
-	.def	_get_max_ram_address
+	public	_get_max_ram_address
 _get_max_ram_address:
 ; Arguments:
 ;   None

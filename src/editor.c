@@ -77,12 +77,12 @@ uint24_t input(const char *prompt, uint8_t char_limit, bool hex_flag) {
 	gfx_SetColor(WHITE);
 	gfx_FillRectangle_NoClip(9 + prompt_width, 224, 58, 11);
 	
-	gfx_SetTextXY(11 + prompt_width, 226);
 	gfx_SetTextBGColor(WHITE);
 	gfx_SetTextFGColor(BLACK);
 	gfx_SetTextTransparentColor(WHITE);
 	
 	do {
+		gfx_SetTextXY(11 + prompt_width + offset_width, 226);
 		gfx_SetColor(WHITE);
 		gfx_VertLine(11 + prompt_width + offset_width, 225, 9);
 		
@@ -106,6 +106,7 @@ uint24_t input(const char *prompt, uint8_t char_limit, bool hex_flag) {
 				offset /= 10;
 			};
 			offset_width -= gfx_GetCharWidth(chars[--i]);
+			gfx_FillRectangle_NoClip(11 + prompt_width + offset_width, 225, gfx_GetCharWidth(chars[i]), 9);
 		};
 		
 		if (key == KEY_CLEAR)
@@ -118,7 +119,9 @@ uint24_t input(const char *prompt, uint8_t char_limit, bool hex_flag) {
 		gfx_VertLine(11 + prompt_width + offset_width, 225, 9);
 		gfx_BlitRectangle(1, 5, 223, 320, 13);
 		delay(200);
-	} while ((key = get_keypress()) != KEY_2ND);
+		key = get_keypress();
+		
+	} while (key != KEY_2ND && key != KEY_ENTER);
 	
 	return offset;
 }
@@ -305,7 +308,7 @@ void update_windows(uint8_t sel_nibble) {
 	
 	editor.Draw_Left_Window();
 	draw_right_two_windows(sel_nibble);
-	gfx_BlitRectangle(1, 5, 25, 310, 190);
+	gfx_BlitRectangle(1, 0, 20, 320, 200);
 	return;
 }
 
@@ -318,19 +321,19 @@ uint8_t get_keypress(void) {
 	} while (!kb_AnyKey());
 	
 	function = kb_Data[1];
-	if (function & kb_Yequ)			return 21;
-	if (function & kb_Window)		return 22;
-	if (function & kb_Zoom)			return 23;
-	if (function & kb_Trace)		return 24;
-	if (function & kb_Graph)		return 25;
-	if (function & kb_2nd)			return 26;
-	if (function & kb_Del)			return 27;
+	if (function & kb_Yequ)			return KEY_YEQU;
+	if (function & kb_Window)		return KEY_WINDOW;
+	if (function & kb_Zoom)			return KEY_ZOOM;
+	if (function & kb_Trace)		return KEY_TRACE;
+	if (function & kb_Graph)		return KEY_GRAPH;
+	if (function & kb_2nd)			return KEY_2ND;
+	if (function & kb_Del)			return KEY_DEL;
 	
 	arrows = kb_Data[7];
-	if (arrows & kb_Left)			return 16;
-	if (arrows & kb_Right)			return 17;
-	if (arrows & kb_Up)			return 18;
-	if (arrows & kb_Down)			return 19;
+	if (arrows & kb_Left)			return KEY_LEFT;
+	if (arrows & kb_Right)			return KEY_RIGHT;
+	if (arrows & kb_Up)			return KEY_UP;
+	if (arrows & kb_Down)			return KEY_DOWN;
 	
 	key_row_two = kb_Data[2];
 	if (key_row_two & kb_Math)		return 10;
@@ -357,6 +360,7 @@ uint8_t get_keypress(void) {
 	if (key_row_five & kb_3)		return 3;
 	
 	if (kb_Data[6] & kb_Clear)		return 20;
+	if (kb_Data[6] & kb_Enter)		return KEY_ENTER;
 	
 	return 255;
 }
@@ -518,9 +522,9 @@ uint8_t run_editor(void) {
 		
 		key = get_keypress();
 		
-		easter_egg_one();
+		easter_egg_one(file_changed, sel_nibble);
 		
-		if (key == KEY_2ND) {
+		if (key == KEY_2ND || key == KEY_ENTER) {
 			if (multi_byte_selection) {
 				multi_byte_selection = false;
 				editor.cursor_offset = editor.sel_byte_string_offset;

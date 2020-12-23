@@ -38,6 +38,7 @@
 #define KEY_GRAPH	25
 #define KEY_2ND		26
 #define KEY_DEL		27
+#define KEY_ENTER	28
 
 #define MAX_NUM_SEL_BYTES 99
 

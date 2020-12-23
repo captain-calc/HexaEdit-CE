@@ -19,15 +19,20 @@ After extracting the HexaEdit_CE.zip file, send the following file to your calcu
 
 To activate the icon viewer, press [stat].
 
-To view your calculator's ROM, press the [+] key while in HexaEdit's main menu.
 
 #### Technical Info
 
 * Platform: TI-84 Plus CE
 * Language: C
-* Latest Version: 1.2.0
+* Latest Version: 2.0.0
 
 #### Change Log
+
+v2.0.0 - Complete rewrite; Added Headless Start and expanded file search range to cover
+         different file types. "Undo" action now works for more than one change. Reworked GUI.
+
+v1.2.1 - Added [Enter] key support for selection and submitting actions; Upgraded the sprite
+         viewer to handle any sprite size
 
 v1.2.0 - Fixed "Goto" and decimal translation bugs; Added alpha-scrolling to main menu and
          editor; When the selected nibble is the second part of the byte, pressing the left

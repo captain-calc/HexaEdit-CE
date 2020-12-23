@@ -1,18 +1,16 @@
 
 /*-----------------------------------------
  * Program Name: HexaEdit CE
- * Version:      1.2.0 CE
+ * Version:      1.2.1 CE
  * Author:       Captain Calc   
  * Description:  A hex editor for the TI-84
  *               Plus CE.
  *-----------------------------------------
 */
 
-#include "defines.h"
-#include "easter_eggs.h"
+#include "colors.h"
 #include "editor.h"
 #include "gui.h"
-#include "routines.h"
 
 #include <string.h>
 
@@ -20,10 +18,15 @@
 #include <graphx.h>
 #include <fileioc.h>
 #include <keypadc.h>
-#include <debug.h>
+
+// Debugging
+#include <stdio.h>
+#define dbgout ((char*)0xFB0000)
+#define dbgerr ((char*)0xFC0000)
+#define dbg_sprintf sprintf
 
 #define PROGRAM_NAME		"HexaEdit "
-#define PROGRAM_VERSION		"1.2.0"
+#define PROGRAM_VERSION		"1.2.1"
 #define RECENT_FILES_APPVAR	"HXAEDRCF"
 
 typedef struct {
@@ -146,7 +149,7 @@ static void open_context_menu(char *file_name, uint8_t editor_file_type, uint24_
 	// Retrieve its VAT pointer
 	gfx_PrintStringXY("VAT Ptr:", xPos + 3, yPos + 36);
 	
-	sprintf(hex, "0x%6x", (uint8_t *)ti_GetVATPtr(file));
+	sprintf(hex, "0x%6x", (unsigned int *)ti_GetVATPtr(file));
 	i = 2;
 	while (*(hex + i) == ' ')
 		*(hex + i++) = '0';
@@ -155,7 +158,7 @@ static void open_context_menu(char *file_name, uint8_t editor_file_type, uint24_
 	// Get its data pointer and convert it to its memory pointer
 	gfx_PrintStringXY("Address:", xPos + 3, yPos + 45);
 	
-	sprintf(hex, "0x%6x", (uint8_t *)ti_GetDataPtr(file) - 2);
+	sprintf(hex, "0x%6x", (unsigned int *)ti_GetDataPtr(file) - 2);
 	i = 2;
 	while (*(hex + i) == ' ')
 		*(hex + i++) = '0';
@@ -188,11 +191,11 @@ static void search_files(uint8_t editor_file_type, uint8_t *list_offset, uint8_t
 	uint8_t *detect_str = NULL;
 	uint8_t ti_file_type;
 	
-	const char *uppercase_letters = "\0\0\0\0\0\0\0\0\0\0\0WRMH\0\0\0[VQLG\0\0\0ZUPKFC\0\0YTOJEB\0\0XSNIDA\0\0\0\0\0\0\0\0";
-	const char *lowercase_letters = "\0\0\0\0\0\0\0\0\0\0\0wrmh\0\0\0[vqlg\0\0\0zupkfc\0\0ytojeb\0\0xsnida\0\0\0\0\0\0\0\0";
-	const char *numbers = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x33\x36\x39\0\0\0\0\0\x32\x35\x38\0\0\0\0\x30\x31\x34\x37\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+	char *uppercase_letters = "\0\0\0\0\0\0\0\0\0\0\0WRMH\0\0\0[VQLG\0\0\0ZUPKFC\0\0YTOJEB\0\0XSNIDA\0\0\0\0\0\0\0\0";
+	char *lowercase_letters = "\0\0\0\0\0\0\0\0\0\0\0wrmh\0\0\0[vqlg\0\0\0zupkfc\0\0ytojeb\0\0xsnida\0\0\0\0\0\0\0\0";
+	char *numbers = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x33\x36\x39\0\0\0\0\0\x32\x35\x38\0\0\0\0\x30\x31\x34\x37\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 	char *keymap = uppercase_letters;
-	char buffer[9] = '\0';
+	char buffer[9] = {'\0'};
 	char *file_name;
 	
 	
@@ -273,7 +276,7 @@ static void search_files(uint8_t editor_file_type, uint8_t *list_offset, uint8_t
 		if (key == sk_Clear)
 			return;
 		
-		if (key == sk_2nd)
+		if (key == sk_2nd || key == sk_Enter)
 			break;
 	};
 	
@@ -366,7 +369,7 @@ static void print_file_entry(char *file_name, uint8_t ti_file_type, uint8_t num_
 static void print_files(uint8_t sel_window, uint8_t list_offset, uint8_t sel_file, uint8_t ti_file_type) {
 	
 	const char *empty_file_list = "-- No files found --";
-	uint8_t *detect_str = NULL;
+	void *detect_str = 0;
 	uint8_t num_files_retrieved = 0, num_files_printed = 0;
 	
 	char *file_name;
@@ -443,13 +446,13 @@ static void draw_recent_files (uint8_t sel_window, uint8_t sel_file_right_window
 	draw_window("Recent Files", (bool)sel_window, 190, 25, 125, 190);
 	
 	ti_CloseAll();
-	if ((file = ti_Open(RECENT_FILES_APPVAR, "r")) == NULL) {
+	if ((file = ti_Open(RECENT_FILES_APPVAR, "r")) == 0) {
 		draw_message_dialog("Error opening recents appvar. Close HexaEdit");
 		while (!os_GetCSC());
 		return;
 	};
 	
-	while (ti_Read(file_name, 8, 1, file) != NULL && print_y < MAX_LINES_ONSCREEN) {
+	while (ti_Read(file_name, 8, 1, file) != 0 && print_y < MAX_LINES_ONSCREEN) {
 		
 		gfx_SetTextFGColor(BLACK);
 		gfx_SetColor(BLACK);
@@ -582,6 +585,54 @@ static void delete_recent_file(char *file_name, uint8_t *sel_file_right_window) 
 	return;
 }
 
+static void update_recent_files_list(void) {
+
+	ti_var_t rf_appvar;
+	char file_name[9] = {'\0'};
+	uint8_t file_type;
+	uint8_t file_num = 0;
+
+	rf_appvar = ti_Open(RECENT_FILES_APPVAR, "r");
+	
+	if (!rf_appvar) {
+		draw_message_dialog("Could not update Recent Files list");
+		while (!os_GetCSC());
+		return;
+	};
+
+	while (ti_Read(file_name, 8, 1, rf_appvar) != 0) {
+		
+		file_type = ti_GetC(rf_appvar);
+
+		gfx_SetTextXY(0, 0);
+		gfx_FillScreen(0xff);
+		gfx_SetTextBGColor(0xff);
+		gfx_SetTextFGColor(0x00);
+		gfx_SetTextTransparentColor(0xff);
+		gfx_PrintString(file_name);
+		gfx_PrintInt(file_type, 2);
+		gfx_BlitBuffer();
+		while(!os_GetCSC());
+
+		if (ti_OpenVar(file_name, "r", find_ti_file_type(file_type)) == 0) {
+			
+			gfx_PrintStringXY("Deleting", 0, 10);
+			
+			delete_recent_file(file_name, file_num);
+		} else {
+			
+			gfx_PrintStringXY("Closing", 0, 10);
+			
+			ti_Close(file_name);
+		};
+		file_num++;
+		
+		while(!os_GetCSC());
+	};
+
+	return;
+}
+
 void main(void) {
 	
 	// General-purpose loop variable
@@ -599,6 +650,7 @@ void main(void) {
 	bool key_Left, key_Right, key_Up, key_Down;
 	bool key_Yequ, key_Window, key_Zoom, key_Trace, key_Graph;
 	bool key_2nd, key_Alpha, key_Mode, key_GraphVar, key_Del, key_Clear;
+	bool key_Enter;
 	
 	char *sel_file_name;
 	
@@ -623,6 +675,8 @@ void main(void) {
 			close_program();
 		};
 	};
+	
+	update_recent_files_list();
 	
 	get_num_asm_prgms();
 	get_num_ti_prgms();
@@ -688,6 +742,7 @@ void main(void) {
 		key_Alpha = kb_Data[2] & kb_Alpha;
 		key_GraphVar = kb_Data[3] & kb_GraphVar;
 		key_Clear = kb_Data[6] & kb_Clear;
+		key_Enter = kb_Data[6] & kb_Enter;
 		
 		redraw_background = easter_egg_two();
 		
@@ -763,7 +818,7 @@ void main(void) {
 			sel_window++;
 		};
 		
-		if (key_2nd) {
+		if (key_2nd || key_Enter) {
 			// Debugging
 			//dbg_sprintf(dbgout, "[main.c] [Starting add_recent_file()] : sel_file_name = %s | ", sel_file_data.name);
 			//for (i = 0; i < 9; i++)
