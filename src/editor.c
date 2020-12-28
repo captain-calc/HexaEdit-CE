@@ -159,16 +159,16 @@ static void goto_prompt(char buffer[], uint8_t buffer_size)
 	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
 	goto_input_str = gui_Input(buffer, buffer_size, keymap, 0, 1, 52, 225, 99, FONT_HEIGHT + 4);
 	
-	if (!(kb_Data[6] & kb_Clear))
+	if (kb_Data[6] & kb_Clear)
+		return;
+	
+	if (editor->type == FILE_EDITOR)
 	{
-		if (editor->type == FILE_EDITOR)
-		{
-			goto_input_decimal = atoi(goto_input_str);
-		} else {
-			goto_input_decimal = decimal(goto_input_str);
-		};
-		editact_Goto(editor, cursor, goto_input_decimal);
+		goto_input_decimal = atoi(goto_input_str);
+	} else {
+		goto_input_decimal = decimal(goto_input_str);
 	};
+	editact_Goto(editor, cursor, goto_input_decimal);
 	return;
 }
 
@@ -189,6 +189,9 @@ static bool insert_bytes_prompt(char buffer[], uint8_t buffer_size)
 	dbg_sprintf(dbgout, "Preparing to recieve input\n");
 	
 	num_bytes_insert = (uint24_t)atoi(gui_Input(buffer, buffer_size, keymap, 0, 1, 62, 225, 99, FONT_HEIGHT + 4));
+	
+	if (kb_Data[6] & kb_Clear)
+		return false;
 	
 	dbg_sprintf(dbgout, "num_bytes_insert = %d\n", num_bytes_insert);
 	
@@ -222,7 +225,8 @@ static uint8_t save_prompt(void)
 	gfx_PrintStringXY("Cancel", 270, 226);
 	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
 	
-	delay(200);
+	/* Prevent long keypress from triggering fall-through. */
+	delay(500);
 	
 	do {
 		kb_Scan();
@@ -455,7 +459,7 @@ static void run_editor(void)
 			redraw_tool_bar = true;
 		};
 		
-		//dbg_sprintf(dbgout, "min_address = 0x%6x\n", editor->min_address);
+		dbg_sprintf(dbgout, "multibyte_selection = %d\n", cursor->multibyte_selection);
 		
 		if (key == sk_Window && editor->type == FILE_EDITOR && !cursor->multibyte_selection)
 		{
@@ -541,8 +545,8 @@ static void run_editor(void)
 			redraw_tool_bar = true;
 		};
 		
-		if (editor->max_address - editor->min_address < COLS_ONSCREEN * ROWS_ONSCREEN)
-			delay(200);
+		if (editor->max_address - editor->window_address < COLS_ONSCREEN * ROWS_ONSCREEN)
+			delay(100);
 	};
 }
 

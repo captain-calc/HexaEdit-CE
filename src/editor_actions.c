@@ -234,9 +234,13 @@ bool editact_InsertBytes(editor_t *editor, uint8_t *insertion_point, uint24_t nu
 		*(insertion_point + i) = '\0';
 	};
 	
-	
-	editor->max_address += num_bytes - 1;
-	editor->is_file_empty = false;
+	if (editor->type == FILE_EDITOR && editor->is_file_empty)
+	{
+		editor->is_file_empty = false;
+		editor->max_address += num_bytes - 1;
+	} else {
+		editor->max_address += num_bytes;
+	}
 	
 	ti_Close(edit_file);
 	return true;
