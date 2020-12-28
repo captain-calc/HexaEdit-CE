@@ -234,8 +234,7 @@ bool editact_InsertBytes(editor_t *editor, uint8_t *insertion_point, uint24_t nu
 		*(insertion_point + i) = '\0';
 	};
 	
-	/* The first inserted byte replaces the one that the max_address points to, so
-	the distance the max_address has to move is num_bytes - 1. */
+	
 	editor->max_address += num_bytes - 1;
 	editor->is_file_empty = false;
 	
@@ -354,11 +353,11 @@ void undo_delete_bytes(editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar)
 	ti_Read(&cursor->secondary, 3, 1, undo_appvar);
 	ti_Read(&num_bytes, 3, 1, undo_appvar);
 	
-	//dbg_sprintf(dbgout, "num_bytes = %d\n", num_bytes);
+	dbg_sprintf(dbgout, "num_bytes = %d\n", num_bytes);
 	
 	editact_InsertBytes(editor, cursor->secondary, num_bytes);
 	
-	//dbg_sprintf(dbgout, "Inserted bytes for undo-ing.\n");
+	dbg_sprintf(dbgout, "Inserted bytes for undo-ing.\n");
 	
 	for (i = 0; i < num_bytes; i++)
 	{

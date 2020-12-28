@@ -635,17 +635,18 @@ static bool file_normal_start(const char *name, uint8_t type)
 	editor->min_address = ti_GetDataPtr(slot);
 	
 	//dbg_sprintf(dbgout, "min_address = 0x%6x\n", editor->min_address);
-	
-	editor->max_address = editor->min_address + ti_GetSize(slot);
-	editor->window_address = editor->min_address;
-	editor->num_changes = 0;
-	editor->file_type = type;
-	editor->is_file_empty = false;
 	if (ti_GetSize(slot) == 0)
 	{
 		editor->is_file_empty = true;
+		editor->max_address = editor->min_address;
+	} else {
+		editor->is_file_empty = false;
+		editor->max_address = editor->min_address + ti_GetSize(slot) - 1;
 	};
 	editor->type = FILE_EDITOR;
+	editor->window_address = editor->min_address;
+	editor->num_changes = 0;
+	editor->file_type = type;
 	ti_Close(slot);
 	
 	cursor->primary = editor->min_address;
