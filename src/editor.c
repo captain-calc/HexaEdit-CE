@@ -2,6 +2,7 @@
 
 #include "colors.h"
 #include "editor.h"
+#include "editor_actions.h"
 #include "editor_gui.h"
 #include "gui.h"
 #include "asmutil.h"
@@ -17,16 +18,8 @@
 #include <string.h>
 
 
-/* Define common error messages as globals. Saves 7 bytes. */
-const char *EDIT_FILE_OPEN_FAIL = "Could not open edit file";
-const char *EDIT_FILE_RESIZE_FAIL = "Could not resize edit file";
-const char *UNDO_APPVAR_OPEN_FAIL = "Could not open undo appvar";
-const char *UNDO_APPVAR_RESIZE_FAIL = "Could not resize undo appvar";
-
-
 editor_t *editor;
 cursor_t *cursor;
-
 
 /*-----------------------------
 IMPORTANT:
@@ -67,694 +60,6 @@ static uint24_t decimal(const char *hex)
 	//dbg_sprintf(dbgout, "%s -> %d\n", hex, decimal);
 	
 	return decimal;
-}
-
-static void sprite_viewer(void)
-{
-	gfx_sprite_t *sprite_data;
-	uint8_t sprite_width, sprite_height;
-	uint24_t sprite_size;
-	uint24_t xPos = 0;
-	uint8_t yPos = 0;
-	uint8_t scale = 2;
-		
-	// Get the sprite's size
-	sprite_width = *cursor->primary;
-	sprite_height = *(cursor->secondary + 1);
-	sprite_size = sprite_width * sprite_height;
-	
-	if (sprite_size == 0 || sprite_height > 245)
-		return;
-	
-	if ((uint24_t)(editor->max_address - cursor->primary) < sprite_size)
-		return;
-	
-	sprite_data = gfx_MallocSprite(sprite_width, sprite_height);
-	if (sprite_data == NULL)
-		return;
-	
-	// Set the scale to one if the sprite is very large
-	if (sprite_width > 155 || sprite_height > 115)
-		scale = 1;
-	
-	asm_CopyData(cursor->primary + 2, sprite_data->data, sprite_size, 1);
-	
-	// Draw rectangle border
-	gfx_SetColor(WHITE);
-	gfx_FillRectangle_NoClip(xPos, yPos, sprite_width * scale + 10, sprite_height * scale + 10);
-	gfx_SetColor(BLACK);
-	gfx_FillRectangle_NoClip(xPos + 2, yPos + 2, sprite_width * scale + 6, sprite_height * scale + 6);
-	gfx_SetColor(WHITE);
-	gfx_FillRectangle_NoClip(xPos + 3, yPos + 3, sprite_width * scale + 4, sprite_height * scale + 4);
-
-	gfx_ScaledSprite_NoClip(sprite_data, xPos + 5, yPos + 5, scale, scale);
-	gfx_BlitRectangle(1, xPos, yPos, sprite_width * scale + 10, sprite_height * scale + 10);
-	free(sprite_data);
-	
-	delay(200);
-	while (!os_GetCSC());
-	return;
-}
-
-static void gotof(uint24_t offset)
-{
-	//dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x\n", editor->min_address, editor->window_address);
-	
-	if (editor->type == FILE_EDITOR)
-	{
-		offset += (uint24_t)editor->min_address;
-	};
-	
-	if (offset >= (uint24_t)editor->max_address)
-	{
-		cursor->primary = editor->max_address;
-	}
-	else if (offset <= (uint24_t)editor->min_address)
-	{
-		cursor->primary = editor->min_address;
-	}
-	else
-	{
-		cursor->primary = (uint8_t *)offset;
-	};
-	cursor->secondary = cursor->primary;
-	
-	while (cursor->primary > editor->window_address + (((ROWS_ONSCREEN - 1) * COLS_ONSCREEN) / 2))
-	{
-		editor->window_address += COLS_ONSCREEN;
-	};
-		
-	//dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x\n", editor->min_address, editor->window_address);
-
-	if (cursor->primary < editor->window_address)
-	{
-		editor->window_address = editor->min_address + (((cursor->primary - editor->min_address) / COLS_ONSCREEN) * COLS_ONSCREEN);
-	};
-	return;
-}
-
-static bool delete_bytes(uint8_t *deletion_point, uint24_t num_bytes)
-{
-	/* When the TI-OS resizes a file, any pointers to data within it
-	   become inaccurate. It also does not add or remove bytes
-	   from the end of the file, but from the start of the file */
-	
-	/* The above means that the editor->min_address and editor->max_address will be inaccurate */
-	
-	/* If cursor->primary is at the end of the file and the number of bytes requested to be deleted
-	   includes the byte the cursor is on, move the cursor->primary to the last byte of the file */
-	
-	uint24_t num_bytes_shift = deletion_point - editor->min_address;
-	
-	//dbg_sprintf(dbgout, "num_bytes_shift = %d | num_bytes = %d\n", num_bytes_shift, num_bytes);
-	
-	ti_var_t edit_file;
-	
-	if (num_bytes == 0)
-	{
-		return false;
-	};
-	
-	if ((edit_file = ti_Open(EDIT_FILE, "r")) == 0)
-	{
-		gui_DrawMessageDialog_Blocking(EDIT_FILE_OPEN_FAIL);
-		return false;
-	};
-	
-	if (num_bytes_shift > 0)
-	{
-		asm_CopyData(deletion_point - 1, cursor->primary, num_bytes_shift, 0);
-	};
-	
-	//dbg_sprintf(dbgout, "Before re-assignment\neditor->min_address = 0x%6x\n", editor->min_address);
-	//dbg_sprintf(dbgout, "primary = 0x%6x | secondary = 0x%6x\n", cursor->primary, cursor->secondary);
-	
-	if (ti_Resize(ti_GetSize(edit_file) - num_bytes, edit_file) != -1)
-	{
-		editor->min_address = ti_GetDataPtr(edit_file);
-		
-		/* The minus one is very important. If the file size is 0, max_address == min_address - 1.*/
-		if (ti_GetSize(edit_file) == 0)
-		{
-			editor->max_address = editor->min_address + ti_GetSize(edit_file);
-		}
-		else
-		{
-			editor->max_address = editor->min_address + ti_GetSize(edit_file) - 1;
-		};
-		
-		cursor->secondary = editor->min_address + num_bytes_shift;
-		cursor->primary = cursor->secondary;
-		
-		if (cursor->primary < editor->min_address)
-		{
-			cursor->primary = editor->min_address;
-			cursor->secondary = editor->min_address;
-		};
-		
-		if (cursor->primary > editor->max_address)
-		{
-			cursor->primary = editor->max_address;
-			cursor->secondary = editor->max_address;
-		};
-		
-		if (cursor->primary < editor->window_address)
-		{
-			//dbg_sprintf(dbgout, "Re-assigned window_address\n");
-			editor->window_address = editor->min_address + ((cursor->primary - editor->min_address) / COLS_ONSCREEN) * COLS_ONSCREEN;
-		};
-	}
-	else
-	{
-		ti_Close(edit_file);
-		gui_DrawMessageDialog_Blocking(EDIT_FILE_RESIZE_FAIL);
-		return false;
-	};
-	
-	if (ti_GetSize(edit_file) == 0)
-	{
-		editor->is_file_empty = true;
-	};
-	
-	//dbg_sprintf(dbgout, "After re-assignment\neditor->min_address = 0x%6x\n", editor->min_address);
-	
-	ti_Close(edit_file);
-	return true;
-}
-
-static bool insert_bytes(uint8_t *insertion_point, uint24_t num_bytes)
-{
-	ti_var_t edit_file;
-	uint24_t i;
-	uint24_t num_bytes_shift = insertion_point - editor->min_address;
-	
-	if (num_bytes == 0)
-	{
-		return false;
-	};
-	
-	if ((edit_file = ti_Open(EDIT_FILE, "r")) == 0)
-	{
-		gui_DrawMessageDialog_Blocking(EDIT_FILE_OPEN_FAIL);
-		goto ERROR;
-	};
-	
-	if (!ti_Resize(ti_GetSize(edit_file) + num_bytes, edit_file))
-	{
-		gui_DrawMessageDialog_Blocking(EDIT_FILE_RESIZE_FAIL);
-		goto ERROR;
-	};
-	
-	if (ti_Rewind(edit_file) == EOF)
-	{
-		gui_DrawMessageDialog_Blocking("Could not rewind edit file");
-		goto ERROR;
-	};
-	
-	//dbg_sprintf(dbgout, "num_bytes_shift = %d\n", num_bytes_shift);
-	//dbg_sprintf(dbgout, "editor->min_address = 0x%6x | editor->max_address = 0x%6x\n", editor->min_address, editor->max_address);
-	//dbg_sprintf(dbgout, "primary = 0x%6x | secondary = 0x%6x\n", cursor->primary, cursor->secondary);
-	
-	if (num_bytes_shift > 0)
-	{
-		asm_CopyData(editor->min_address + num_bytes, editor->min_address, num_bytes_shift, 1);
-	};
-	
-	for (i = 0; i < num_bytes; i++)
-	{
-		*(insertion_point + i) = '\0';
-	};
-	
-	editor->max_address += num_bytes;
-	editor->is_file_empty = false;
-	
-	ti_Close(edit_file);
-	return true;
-	
-	ERROR:
-	ti_Close(edit_file);
-	return false;
-}
-
-static bool create_undo_insert_bytes_action(uint24_t num_bytes)
-{
-	ti_var_t undo_appvar;
-	uint8_t undo_code = UNDO_INSERT_BYTES;
-	
-	if (num_bytes == 0)
-	{
-		return false;
-	};
-	
-	if ((undo_appvar = ti_Open(UNDO_APPVAR, "a")) == 0)
-	{
-		gui_DrawMessageDialog_Blocking(UNDO_APPVAR_OPEN_FAIL);
-		goto ERROR;
-	};
-	
-	if (ti_Resize(ti_GetSize(undo_appvar) + 10, undo_appvar) == -1)
-	{
-		gui_DrawMessageDialog_Blocking(UNDO_APPVAR_RESIZE_FAIL);
-		goto ERROR;
-	};
-	
-	ti_Write(&undo_code, 1, 1, undo_appvar);
-	ti_Write(&editor->window_address, 3, 1, undo_appvar);
-	ti_Write(&cursor->primary, 3, 1, undo_appvar);
-	ti_Write(&num_bytes, 3, 1, undo_appvar);
-	
-	ti_CloseAll();
-	return true;
-	
-	ERROR:
-	ti_CloseAll();
-	return false;
-}
-
-static void undo_insert_bytes(ti_var_t undo_appvar)
-{
-	uint24_t num_bytes;
-	
-	ti_Read(&editor->window_address, 3, 1, undo_appvar);
-	ti_Read(&cursor->primary, 3, 1, undo_appvar);
-	ti_Read(&num_bytes, 3, 1, undo_appvar);
-	
-	//dbg_sprintf(dbgout, "num_bytes = %d\n", num_bytes);
-	
-	delete_bytes(cursor->primary, num_bytes);
-	
-	if (ti_Resize(ti_GetSize(undo_appvar) - ti_Tell(undo_appvar), undo_appvar) == -1)
-	{
-		gui_DrawMessageDialog_Blocking("Could not delete undo action");
-		return;
-	};
-	
-	cursor->secondary = cursor->primary;
-	return;
-}
-
-static bool create_delete_bytes_undo_action(uint24_t num_bytes)
-{
-	ti_var_t undo_appvar;
-	uint8_t undo_code = UNDO_DELETE_BYTES;
-	uint24_t i;
-	
-	if (num_bytes == 0)
-	{
-		return false;
-	};
-	
-	if ((undo_appvar = ti_Open(UNDO_APPVAR, "a")) == 0)
-	{
-		gui_DrawMessageDialog_Blocking(UNDO_APPVAR_OPEN_FAIL);
-		goto ERROR;
-	};
-	
-	if (ti_Resize(ti_GetSize(undo_appvar) + 10 + num_bytes, undo_appvar) == -1)
-	{
-		gui_DrawMessageDialog_Blocking(UNDO_APPVAR_RESIZE_FAIL);
-		goto ERROR;
-	};
-	
-	ti_Write(&undo_code, 1, 1, undo_appvar);
-	ti_Write(&editor->window_address, 3, 1, undo_appvar);
-	ti_Write(&cursor->secondary, 3, 1, undo_appvar);
-	ti_Write(&num_bytes, 3, 1, undo_appvar);
-	
-	for (i = 0; i < num_bytes; i++)
-	{
-		dbg_sprintf(dbgout, "0x%2x ", *(cursor->secondary + i));
-		ti_Write(cursor->secondary + i, 1, 1, undo_appvar);
-	};
-	
-	ti_CloseAll();
-	return true;
-	
-	ERROR:
-	ti_CloseAll();
-	return false;
-}
-
-static void undo_delete_bytes(ti_var_t undo_appvar)
-{
-	uint24_t num_bytes, i;
-	
-	ti_Read(&editor->window_address, 3, 1, undo_appvar);
-	ti_Read(&cursor->secondary, 3, 1, undo_appvar);
-	ti_Read(&num_bytes, 3, 1, undo_appvar);
-	
-	//dbg_sprintf(dbgout, "num_bytes = %d\n", num_bytes);
-	
-	insert_bytes(cursor->secondary, num_bytes);
-	
-	//dbg_sprintf(dbgout, "Inserted bytes for undo-ing.\n");
-	
-	for (i = 0; i < num_bytes; i++)
-	{
-		ti_Read(cursor->secondary + i, 1, 1, undo_appvar);
-	};
-	
-	if (ti_Resize(ti_GetSize(undo_appvar) - ti_Tell(undo_appvar), undo_appvar) == -1)
-	{
-		gui_DrawMessageDialog_Blocking("Could not delete undo action");
-		return;
-	};
-	
-	editor->is_file_empty = false;
-	cursor->primary = cursor->secondary + num_bytes - 1;
-	cursor->multibyte_selection = true;
-	return;
-}
-
-static uint8_t get_nibble(uint8_t *ptr)
-{
-	uint8_t nibble = *ptr;
-	
-	if (cursor->high_nibble)
-	{
-		nibble = asm_HighToLowNibble(nibble);
-	}
-	else
-	{
-		nibble = asm_LowToHighNibble(nibble);
-		nibble = asm_HighToLowNibble(nibble);
-	};
-	
-	return nibble;
-}
-
-static void write_nibble(uint8_t nibble)
-{
-	uint8_t i;
-	
-	if (cursor->high_nibble)
-	{
-		nibble *= 16;
-	};
-	for (i = 0; i < 4; i++)
-	{
-		*cursor->primary &= ~(1 << (i + (4 * cursor->high_nibble)));
-	};
-	*cursor->primary |= nibble;
-	return;
-}
-
-static bool create_undo_write_nibble_action(uint8_t nibble)
-{
-	ti_var_t undo_appvar;
-	uint8_t undo_code = UNDO_WRITE_NIBBLE;
-	
-	if ((undo_appvar = ti_Open(UNDO_APPVAR, "a")) == 0)
-	{
-		gui_DrawMessageDialog_Blocking(UNDO_APPVAR_OPEN_FAIL);
-		goto ERROR;
-	};
-	
-	if (ti_Resize(ti_GetSize(undo_appvar) + 9, undo_appvar) == -1)
-	{
-		gui_DrawMessageDialog_Blocking(UNDO_APPVAR_RESIZE_FAIL);
-		goto ERROR;
-	};
-	
-	ti_Write(&undo_code, 1, 1, undo_appvar);
-	ti_Write(&editor->window_address, 3, 1, undo_appvar);
-	ti_Write(&cursor->primary, 3, 1, undo_appvar);
-	ti_Write(&cursor->high_nibble, 1, 1, undo_appvar);
-	ti_Write(&nibble, 1, 1, undo_appvar);
-	
-	ti_CloseAll();
-	return true;
-	
-	ERROR:
-	ti_CloseAll();
-	return false;
-}
-
-static void undo_write_nibble(ti_var_t undo_appvar)
-{
-	uint8_t nibble;
-	
-	ti_Read(&editor->window_address, 3, 1, undo_appvar);
-	ti_Read(&cursor->primary, 3, 1, undo_appvar);
-	ti_Read(&cursor->high_nibble, 1, 1, undo_appvar);
-	ti_Read(&nibble, 1, 1, undo_appvar);
-	
-	if (ti_Resize(ti_GetSize(undo_appvar) - ti_Tell(undo_appvar), undo_appvar) == -1)
-	{
-		gui_DrawMessageDialog_Blocking("Could not delete undo action");
-		return;
-	};
-	
-	write_nibble(nibble);
-	cursor->secondary = cursor->primary;
-	return;
-}
-
-static bool undo_action(void)
-{
-	ti_var_t undo_appvar;
-	uint8_t undo_code;
-	
-	if ((undo_appvar = ti_Open(UNDO_APPVAR, "r")) == 0)
-	{
-		gui_DrawMessageDialog_Blocking(UNDO_APPVAR_OPEN_FAIL);
-		return false;
-	};
-	
-	if (ti_GetSize(undo_appvar) == 0)
-	{
-		ti_Close(undo_appvar);
-		return false;
-	};
-	
-	ti_Read(&undo_code, 1, 1, undo_appvar);
-	
-	//dbg_sprintf(dbgout, "undo_code = %d\n", undo_code);
-	
-	switch(undo_code)
-	{
-		case UNDO_INSERT_BYTES:
-		undo_insert_bytes(undo_appvar);
-		ti_Close(undo_appvar);
-		return true;
-		
-		case UNDO_DELETE_BYTES:
-		undo_delete_bytes(undo_appvar);
-		ti_Close(undo_appvar);
-		return true;
-		
-		case UNDO_WRITE_NIBBLE:
-		undo_write_nibble(undo_appvar);
-		ti_Close(undo_appvar);
-		return true;
-		
-		default:
-		ti_Close(undo_appvar);
-		return false;
-	};
-}
-
-static void draw_mem_addresses(uint24_t x, uint8_t y)
-{
-	uint8_t row = 0;
-	uint8_t byte;
-	char hex[7] = {'\0'};
-	
-	gfx_SetTextBGColor(LT_GRAY);
-	gfx_SetTextFGColor(BLACK);
-	gfx_SetTextTransparentColor(LT_GRAY);
-	
-	for (;;)
-	{
-		if (row > ROWS_ONSCREEN || (editor->window_address + (row * COLS_ONSCREEN)) > editor->max_address)
-		{
-			return;
-		};
-		
-		gfx_SetTextXY(x, y);
-		sprintf(hex, "%6x", (unsigned int)(editor->window_address + (row * COLS_ONSCREEN)));
-		byte = 0;
-		
-		while (*(hex + byte) == ' ')
-		{
-			*(hex + byte++) = '0';
-		};
-		gfx_PrintString(hex);
-		
-		row++;
-		y += ROW_HEIGHT;
-	};
-	
-	return;
-}
-
-static void draw_file_offsets(uint24_t x, uint8_t y)
-{
-	uint8_t row = 0;
-	
-	gfx_SetTextBGColor(LT_GRAY);
-	gfx_SetTextFGColor(BLACK);
-	gfx_SetTextTransparentColor(LT_GRAY);
-	for (;;)
-	{
-		if (row > ROWS_ONSCREEN || (editor->window_address + (row * COLS_ONSCREEN)) > editor->max_address)
-		{
-			return;
-		};
-		gfx_SetTextXY(x, y);
-		gfx_PrintUInt((editor->window_address - editor->min_address) + (row * COLS_ONSCREEN), 6);
-		row++;
-		y += ROW_HEIGHT;
-	};
-}
-
-static void print_hex_value(uint24_t x, uint8_t y, uint8_t value)
-{
-	char hex[3] = {'\0'};
-	
-	gfx_SetTextXY(x, y);
-	sprintf(hex, "%2x", value);
-	if (*hex == ' ')
-	{
-		*hex = '0';
-	}
-	gfx_PrintString(hex);
-	return;
-}
-
-static void print_hex_line(uint24_t x, uint8_t y, uint8_t *line)
-{
-	uint8_t byte_num = 0;
-	uint24_t num_bytes_selected;
-	
-	num_bytes_selected = cursor->primary - cursor->secondary;
-	/*
-	If the primary and secondary addresses are the same, num_bytes_selected
-	will initially be zero.
-	*/
-	num_bytes_selected++;
-	
-	for (;;)
-	{
-		if (byte_num == COLS_ONSCREEN || (line + byte_num) > editor->max_address)
-		{
-			return;
-		};
-		if (((line + byte_num) - cursor->secondary) < (int)num_bytes_selected && ((line + byte_num) - cursor->secondary) >= 0)
-		{
-			gfx_SetTextBGColor(CURSOR_COLOR);
-			gfx_SetTextFGColor(WHITE);
-			gfx_SetTextTransparentColor(CURSOR_COLOR);
-			gfx_SetColor(CURSOR_COLOR);
-			gfx_FillRectangle_NoClip(x - 1, y - 1, HEX_COL_WIDTH, ROW_HEIGHT);
-			if ((line + byte_num) == cursor->primary)
-			{
-				gfx_SetColor(BLACK);
-				gfx_HorizLine_NoClip(x - 1 + (9 * !cursor->high_nibble), y + FONT_HEIGHT + 1, 9);
-			}
-		} else {
-			gfx_SetTextBGColor(LT_GRAY);
-			gfx_SetTextFGColor(BLACK);
-			gfx_SetTextTransparentColor(LT_GRAY);
-		};
-		
-		print_hex_value(x, y, *(line + byte_num));
-		
-		x += HEX_COL_WIDTH;
-		byte_num++;
-	};
-}
-
-static void draw_hex_table(uint24_t x, uint8_t y)
-{
-	uint8_t line = 0;
-	
-	for (;;)
-	{
-		if (line > ROWS_ONSCREEN)
-		{
-			return;
-		};
-		print_hex_line(x, y + (line * ROW_HEIGHT), editor->window_address + (line * COLS_ONSCREEN));
-		line++;
-	};
-}
-
-static void print_ascii_value(uint24_t x, uint8_t y, uint8_t c)
-{
-	gfx_SetTextXY(x, y);
-	if (c < 20 || c > 127)
-	{
-		gfx_PrintChar('.');
-	} else {
-		gfx_PrintChar(c);
-	};
-	return;
-}
-
-static void print_ascii_line(uint24_t x, uint8_t y, uint8_t *line)
-{
-	uint8_t byte_num = 0;
-	uint24_t num_bytes_selected;
-	
-	num_bytes_selected = cursor->primary - cursor->secondary;
-	/*
-	If the primary and secondary addresses are the same, num_bytes_selected
-	will initially be zero.
-	*/
-	num_bytes_selected++;
-	
-	for (;;)
-	{
-		if (byte_num == COLS_ONSCREEN || (line + byte_num) > editor->max_address)
-		{
-			return;
-		};
-		if (((line + byte_num) - cursor->secondary) < (int)num_bytes_selected && ((line + byte_num) - cursor->secondary) >= 0)
-		{
-			gfx_SetTextBGColor(CURSOR_COLOR);
-			gfx_SetTextFGColor(WHITE);
-			gfx_SetTextTransparentColor(CURSOR_COLOR);
-			gfx_SetColor(CURSOR_COLOR);
-			gfx_FillRectangle_NoClip(x - 1, y - 1, ASCII_COL_WIDTH, ROW_HEIGHT);
-		} else {
-			gfx_SetTextBGColor(LT_GRAY);
-			gfx_SetTextFGColor(BLACK);
-			gfx_SetTextTransparentColor(LT_GRAY);
-		};
-		
-		print_ascii_value(x, y, *(line + byte_num));
-		
-		x += ASCII_COL_WIDTH;
-		byte_num++;
-	};
-}
-
-static void draw_ascii_table(uint24_t x, uint8_t y)
-{
-	uint8_t line = 0;
-	
-	for (;;)
-	{
-		if (line > ROWS_ONSCREEN)
-		{
-			return;
-		};
-		print_ascii_line(x, y + (line * ROW_HEIGHT), editor->window_address + (line * COLS_ONSCREEN));
-		line++;
-	};
-}
-
-static void draw_empty_file_message(uint24_t hex_x, uint8_t y)
-{
-	char message[] = "-- Empty --";
-	
-	gfx_SetTextBGColor(LT_GRAY);
-	gfx_SetTextFGColor(BLACK);
-	gfx_SetTextTransparentColor(LT_GRAY);
-	gfx_SetTextXY(hex_x + ((COLS_ONSCREEN * HEX_COL_WIDTH) - gfx_GetStringWidth(message)) / 2, y);
-	gfx_PrintString(message);
-	return;
 }
 
 static void move_cursor(uint8_t direction, bool accelerated_cursor)
@@ -855,7 +160,7 @@ static void goto_prompt(char buffer[], uint8_t buffer_size)
 	
 	if (!(kb_Data[6] & kb_Clear))
 	{
-		gotof(goto_input);
+		editact_Goto(editor, cursor, goto_input);
 	};
 	return;
 }
@@ -875,9 +180,9 @@ static bool insert_bytes_prompt(char buffer[], uint8_t buffer_size)
 	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
 	num_bytes_insert = (uint24_t)atoi(gui_Input(buffer, buffer_size, keymap, 0, 1, 62, 225, 99, FONT_HEIGHT + 4));
 	
-	if (create_undo_insert_bytes_action(num_bytes_insert))
+	if (editact_CreateUndoInsertBytesAction(editor, cursor, num_bytes_insert))
 	{
-		if (insert_bytes(cursor->primary, num_bytes_insert))
+		if (editact_InsertBytes(editor, cursor->primary, num_bytes_insert))
 		{
 			editor->num_changes++;
 			return true;
@@ -945,7 +250,7 @@ static bool save_file(char *name, uint8_t type)
 	   the new changed file. */
 	if ((edit_file = ti_Open(EDIT_FILE, "r")) == 0)
 	{
-		gui_DrawMessageDialog_Blocking(EDIT_FILE_OPEN_FAIL);
+		gui_DrawMessageDialog_Blocking("Could not open edit file");
 		return false;
 	};
 	
@@ -1026,9 +331,9 @@ static void run_editor(void)
 		
 		if (editor->type == FILE_EDITOR)
 		{
-			draw_file_offsets(5, 22);
+			editorgui_DrawFileOffsets(editor, 5, 22);
 		} else {
-			draw_mem_addresses(5, 22);
+			editorgui_DrawMemAddresses(editor, 5, 22);
 		};
 		
 		gfx_SetColor(BLACK);
@@ -1041,12 +346,12 @@ static void run_editor(void)
 		
 		if (editor->type == FILE_EDITOR && editor->is_file_empty)
 		{
-			draw_empty_file_message(60, 25);
+			editorgui_DrawEmptyFileMessage(60, 25);
 		}
 		else
 		{
-			draw_hex_table(65, 22);
-			draw_ascii_table(235, 22);
+			editorgui_DrawHexTable(editor, cursor, 65, 22);
+			editorgui_DrawAsciiTable(editor, cursor, 235, 22);
 		};
 		
 		if (redraw_top_bar)
@@ -1076,11 +381,11 @@ static void run_editor(void)
 		/* Since pressing '0' writes a NULL nibble, it is a special case. */
 		if ((EDITOR_HEX[key] != '\0' || key == sk_0) && !cursor->multibyte_selection && (editor->type == FILE_EDITOR || editor->type == RAM_EDITOR))
 		{
-			if (get_nibble(cursor->primary) != EDITOR_HEX[key])
+			if (editact_GetNibble(cursor, cursor->primary) != EDITOR_HEX[key])
 			{
-				if (create_undo_write_nibble_action(get_nibble(cursor->primary)))
+				if (editact_CreateUndoWriteNibbleAction(editor, cursor, editact_GetNibble(cursor, cursor->primary)))
 				{
-					write_nibble(EDITOR_HEX[key]);
+					editact_WriteNibble(cursor, EDITOR_HEX[key]);
 					redraw_top_bar = true;
 					redraw_tool_bar = true;
 					editor->num_changes++;
@@ -1112,14 +417,9 @@ static void run_editor(void)
 		
 		if (key == sk_Del && editor->type == FILE_EDITOR)
 		{
-			//dbg_sprintf(dbgout, "editor->min_address = 0x%6x | cursor->secondary = 0x%6x\n", editor->min_address, cursor->secondary);
-			if (create_delete_bytes_undo_action(cursor->primary - cursor->secondary + 1))
+			if (editact_CreateDeleteBytesUndoAction(editor, cursor, cursor->primary - cursor->secondary + 1))
 			{
-				/* create_delete_bytes_undo_action() opens files, so all of the editor and cursor
-				cursor pointers for the edit file are invalid. delete_bytes() sets them to their
-				proper values. */
-				//dbg_sprintf(dbgout, "editor->min_address = 0x%6x | cursor->secondary = 0x%6x\n", editor->min_address, cursor->secondary);
-				delete_bytes(cursor->secondary, cursor->primary - cursor->secondary + 1);
+				editact_DeleteBytes(editor, cursor, cursor->secondary, cursor->primary - cursor->secondary + 1);
 			};
 			cursor->multibyte_selection = false;
 			redraw_top_bar = true;
@@ -1129,7 +429,7 @@ static void run_editor(void)
 		
 		if (key == sk_Stat && !cursor->multibyte_selection)
 		{
-			sprite_viewer();
+			editact_SpriteViewer(editor, cursor);
 			redraw_top_bar = true;
 			redraw_tool_bar = true;
 		};
@@ -1153,7 +453,7 @@ static void run_editor(void)
 		
 		if (key == sk_Trace && editor->num_changes > 0)
 		{
-			undo_action();
+			editact_UndoAction(editor, cursor);
 			editor->num_changes--;
 			redraw_top_bar = true;
 			if (editor->num_changes == 0)
@@ -1213,7 +513,7 @@ static void run_editor(void)
 				{
 					/* Execute all of the undo actions. */
 					gui_DrawMessageDialog("Undoing changes to RAM...");
-					while (undo_action());
+					while (editact_UndoAction(editor, cursor));
 					return;
 				};
 			};
@@ -1261,7 +561,7 @@ static bool create_edit_file(char *name, uint8_t type)
 	
 	if ((edit_file = ti_Open(EDIT_FILE, "w")) == 0)
 	{
-		gui_DrawMessageDialog_Blocking(EDIT_FILE_OPEN_FAIL);
+		gui_DrawMessageDialog_Blocking("Could not open edit file");
 		goto ERROR;
 	};
 	
@@ -1270,7 +570,7 @@ static bool create_edit_file(char *name, uint8_t type)
 	{
 		if (ti_Resize(file_size, edit_file) <= 0)
 		{
-			gui_DrawMessageDialog_Blocking(EDIT_FILE_RESIZE_FAIL);
+			gui_DrawMessageDialog_Blocking("Could not resize edit file");
 			goto ERROR;
 		};
 		
