@@ -140,7 +140,8 @@ static void move_cursor(uint8_t direction, bool accelerated_cursor)
 
 static void goto_prompt(char buffer[], uint8_t buffer_size)
 {
-	uint24_t goto_input;
+	char *goto_input_str;
+	uint24_t goto_input_decimal;
 	char *keymap[1] = {GOTO_HEX};
 	
 	if (editor->type == FILE_EDITOR)
@@ -156,11 +157,17 @@ static void goto_prompt(char buffer[], uint8_t buffer_size)
 	gfx_SetColor(WHITE);
 	gfx_FillRectangle_NoClip(51, 224, 100, FONT_HEIGHT + 4);
 	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-	goto_input = (uint24_t)decimal(gui_Input(buffer, buffer_size, keymap, 0, 1, 52, 225, 99, FONT_HEIGHT + 4));
+	goto_input_str = gui_Input(buffer, buffer_size, keymap, 0, 1, 52, 225, 99, FONT_HEIGHT + 4);
 	
 	if (!(kb_Data[6] & kb_Clear))
 	{
-		editact_Goto(editor, cursor, goto_input);
+		if (editor->type == FILE_EDITOR)
+		{
+			goto_input_decimal = atoi(goto_input_str);
+		} else {
+			goto_input_decimal = decimal(goto_input_str);
+		};
+		editact_Goto(editor, cursor, goto_input_decimal);
 	};
 	return;
 }
@@ -178,7 +185,12 @@ static bool insert_bytes_prompt(char buffer[], uint8_t buffer_size)
 	gfx_SetColor(WHITE);
 	gfx_FillRectangle_NoClip(61, 224, 100, FONT_HEIGHT + 4);
 	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
+	
+	dbg_sprintf(dbgout, "Preparing to recieve input\n");
+	
 	num_bytes_insert = (uint24_t)atoi(gui_Input(buffer, buffer_size, keymap, 0, 1, 62, 225, 99, FONT_HEIGHT + 4));
+	
+	dbg_sprintf(dbgout, "num_bytes_insert = %d\n", num_bytes_insert);
 	
 	if (editact_CreateUndoInsertBytesAction(editor, cursor, num_bytes_insert))
 	{
@@ -187,6 +199,9 @@ static bool insert_bytes_prompt(char buffer[], uint8_t buffer_size)
 			editor->num_changes++;
 			return true;
 		};
+	} else {
+		dbg_sprintf(dbgout, "Failed to create insert bytes undo action\n");
+		dbg_sprintf(dbgout, "editor->min_address = 0x%6x\n", editor->min_address);
 	};
 	return false;
 }
@@ -322,7 +337,7 @@ static void run_editor(void)
 	
 	char buffer[7] = {'\0'};
 	
-	//dbg_sprintf(dbgout, "window_address = 0x%6x | max_address = 0x%6x\n", editor->window_address, editor->max_address);
+	dbg_sprintf(dbgout, "window_address = 0x%6x | max_address = 0x%6x\n", editor->window_address, editor->max_address);
 	
 	for (;;)
 	{
@@ -346,7 +361,7 @@ static void run_editor(void)
 		
 		if (editor->type == FILE_EDITOR && editor->is_file_empty)
 		{
-			editorgui_DrawEmptyFileMessage(60, 25);
+			editorgui_DrawEmptyFileMessage(60, LCD_HEIGHT / 2 - 4);
 		}
 		else
 		{
@@ -621,7 +636,7 @@ static bool file_normal_start(const char *name, uint8_t type)
 	
 	//dbg_sprintf(dbgout, "min_address = 0x%6x\n", editor->min_address);
 	
-	editor->max_address = editor->min_address + ti_GetSize(slot) - 1;
+	editor->max_address = editor->min_address + ti_GetSize(slot);
 	editor->window_address = editor->min_address;
 	editor->num_changes = 0;
 	editor->file_type = type;

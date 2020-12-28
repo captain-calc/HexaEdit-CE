@@ -67,7 +67,7 @@ void editact_SpriteViewer(editor_t *editor, cursor_t *cursor)
 
 void editact_Goto(editor_t *editor, cursor_t *cursor, uint24_t offset)
 {
-	//dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x\n", editor->min_address, editor->window_address);
+	dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x | offset = %d\n", editor->min_address, editor->window_address, offset);
 	
 	if (editor->type == FILE_EDITOR)
 	{
@@ -115,7 +115,7 @@ bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_p
 	
 	uint24_t num_bytes_shift = deletion_point - editor->min_address;
 	
-	//dbg_sprintf(dbgout, "num_bytes_shift = %d | num_bytes = %d\n", num_bytes_shift, num_bytes);
+	dbg_sprintf(dbgout, "num_bytes_shift = %d | num_bytes = %d\n", num_bytes_shift, num_bytes);
 	
 	ti_var_t edit_file;
 	
@@ -146,9 +146,7 @@ bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_p
 		if (ti_GetSize(edit_file) == 0)
 		{
 			editor->max_address = editor->min_address + ti_GetSize(edit_file);
-		}
-		else
-		{
+		} else {
 			editor->max_address = editor->min_address + ti_GetSize(edit_file) - 1;
 		};
 		
@@ -214,6 +212,8 @@ bool editact_InsertBytes(editor_t *editor, uint8_t *insertion_point, uint24_t nu
 		goto ERROR;
 	};
 	
+	dbg_sprintf(dbgout, "file_data_ptr = 0x%6x | editor->min_address = 0x%6x\n", ti_GetDataPtr(edit_file), editor->min_address);
+	
 	if (ti_Rewind(edit_file) == EOF)
 	{
 		gui_DrawMessageDialog_Blocking("Could not rewind edit file");
@@ -234,7 +234,9 @@ bool editact_InsertBytes(editor_t *editor, uint8_t *insertion_point, uint24_t nu
 		*(insertion_point + i) = '\0';
 	};
 	
-	editor->max_address += num_bytes;
+	/* The first inserted byte replaces the one that the max_address points to, so
+	the distance the max_address has to move is num_bytes - 1. */
+	editor->max_address += num_bytes - 1;
 	editor->is_file_empty = false;
 	
 	ti_Close(edit_file);
