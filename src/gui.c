@@ -15,13 +15,32 @@
 #include <string.h>
 
 
+static uint24_t _get_string_width(char *string)
+{
+	char *character = string;
+	uint24_t width = 0;
+	
+	while (*character != '\0')
+	{
+		if (*character == 0x5b)
+		{
+			width += gfx_GetCharWidth('O');
+		} else {
+			width += gfx_GetCharWidth(*character);
+		};
+		character++;
+	};
+	return width;
+}
+
 void gui_PrintFileName(char *name)
 {
 	char *character = name;
 	
+	gfx_SetColor(BLACK);
 
 	while (*character != '\0') {
-		if (*character == 0x5B) {
+		if (*character == 0x5b) {
 			gfx_PrintChar('O');
 			gfx_HorizLine(gfx_GetTextX() - 6, gfx_GetTextY() + 3, 3);
 		} else {
@@ -126,14 +145,14 @@ char *gui_Input(char buffer[], uint8_t buffer_size, char *keymaps[], uint8_t key
 		gfx_SetTextFGColor(WHITE);
 		gfx_SetTextTransparentColor(BLACK);
 		gfx_SetColor(BLACK);
-		gfx_FillRectangle_NoClip(x + gfx_GetStringWidth(buffer) + 2, y, 9, FONT_HEIGHT + 2);
+		gfx_FillRectangle_NoClip(x + _get_string_width(buffer) + 2, y, 9, FONT_HEIGHT + 2);
 		
 		keymap_indicator = keymap[47];	// Uppercase and lowercase letters
 		if (keymap_indicator == '\0')
 		{
 			keymap_indicator = keymap[33];	// Numbers
 		};
-		gfx_SetTextXY(x + gfx_GetStringWidth(buffer) + 3, y + 1);
+		gfx_SetTextXY(x + _get_string_width(buffer) + 3, y + 1);
 		gfx_PrintChar(keymap_indicator);
 		
 		gfx_BlitRectangle(1, x, y, width, height);

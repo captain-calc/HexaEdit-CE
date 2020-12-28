@@ -2,6 +2,7 @@
 
 #include "colors.h"
 #include "editor.h"
+#include "editor_gui.h"
 #include "gui.h"
 #include "asmutil.h"
 
@@ -553,97 +554,6 @@ static bool undo_action(void)
 	};
 }
 
-static void draw_editing_size(void)
-{
-	uint8_t magnitude = 6;
-	
-	if (editor->type == ROM_VIEWER)
-	{
-		magnitude = 7;
-	};
-	
-	gfx_SetTextXY(100, 6);
-	if (editor->type == FILE_EDITOR && editor->is_file_empty)
-	{
-		gfx_PrintUInt(0, 6);
-	}
-	else
-	{
-		gfx_PrintUInt(editor->max_address - editor->min_address + 1, magnitude);
-	};
-	gfx_PrintString(" B");
-	return;
-}
-
-static void draw_top_bar(void)
-{
-	gfx_SetColor(DK_GRAY);
-	gfx_FillRectangle_NoClip(0, 0, 320, 20);
-	gfx_SetTextBGColor(DK_GRAY);
-	gfx_SetTextFGColor(WHITE);
-	gfx_SetTextTransparentColor(DK_GRAY);
-	
-	draw_editing_size();
-
-	gfx_SetTextXY(5, 6);
-	
-	if (editor->num_changes > 0)
-	{
-		gfx_PrintString("* ");
-	};
-	gui_PrintFileName(editor->name);
-	
-	gui_DrawBatteryStatus();
-	return;
-}
-
-static void draw_tool_bar(void)
-{
-	gfx_SetColor(DK_GRAY);
-	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-	gfx_SetTextBGColor(DK_GRAY);
-	gfx_SetTextFGColor(WHITE);
-	gfx_SetTextTransparentColor(DK_GRAY);
-	gfx_PrintStringXY("Goto", 5, 226);
-	if (editor->type == FILE_EDITOR)
-	{
-		gfx_PrintStringXY("Ins", 70, 226);
-	};
-	if (editor->num_changes > 0)
-	{
-		gfx_PrintStringXY("Undo", 226, 226);
-	};
-	gfx_PrintStringXY("Exit", 286, 226);
-	return;
-}
-
-static void draw_alternate_tool_bar(void)
-{
-	uint8_t i;
-	uint24_t byte_value = 0;
-	
-	gfx_SetColor(DK_GRAY);
-	gfx_FillRectangle_NoClip(0, 220, 140, 20);
-	gfx_FillRectangle_NoClip(226, 220, 50, 20);
-	gfx_SetTextBGColor(DK_GRAY);
-	gfx_SetTextFGColor(WHITE);
-	gfx_SetTextTransparentColor(DK_GRAY);
-	
-	if ((cursor->primary - cursor->secondary) < 3)
-	{
-		gfx_PrintStringXY("DEC:", 5, 226);
-		gfx_SetTextXY(40, 226);
-		
-		for (i = 0; i < (cursor->primary - cursor->secondary + 1); i++)
-		{
-			byte_value += (*(cursor->secondary + i) << (8 * i));
-		};
-		
-		gfx_PrintUInt(byte_value, log10((double)byte_value + 10));
-	};
-	return;
-}
-
 static void draw_mem_addresses(uint24_t x, uint8_t y)
 {
 	uint8_t row = 0;
@@ -1141,19 +1051,19 @@ static void run_editor(void)
 		
 		if (redraw_top_bar)
 		{
-			draw_top_bar();
+			editorgui_DrawTopBar(editor);
 			redraw_top_bar = false;
 		};
 		
 		if (redraw_tool_bar)
 		{
-			draw_tool_bar();
+			editorgui_DrawToolBar(editor);
 			redraw_tool_bar = false;
 		}
 		
 		if (cursor->multibyte_selection)
 		{
-			draw_alternate_tool_bar();
+			editorgui_DrawAltToolBar(cursor);
 		};
 		
 		gfx_BlitBuffer();

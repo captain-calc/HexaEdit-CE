@@ -15,6 +15,10 @@ After extracting the HexaEdit_CE.zip file, send the following file to your calcu
 
 * HEXAEDIT.8xp
 
+**Important**
+
+HexaEdit CE uses the C libraries from the LLVM toolchain. If you encounter a version error when you run HexaEdit, please send the libraries included with the Cemetech download to your calculator. Your other programs will still work with these libraries.
+
 #### Easter Egg Controls
 
 To activate the icon viewer, press [stat].

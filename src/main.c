@@ -477,17 +477,15 @@ static char *print_file_table(char selected_file_name[], uint8_t type, uint24_t 
 	return selected_file_name;
 }
 
-static void search_files(uint24_t *file_num, uint8_t type)
+static void search_files(uint8_t *table_num, uint24_t *file_num)
 {
 	char buffer[9] = {'\0'};
 	uint8_t buffer_size = 8;
 	char *keymap [3] = {UPPERCASE_LETTERS, LOWERCASE_LETTERS, NUMBERS};
-	void *detect_str = 0;
+	void *detect_str;
 	uint24_t file;
-	//uint8_t table;
+	uint8_t curr_table;
 	char *file_name;
-	
-	//uint8_t i;
 	
 	gfx_SetColor(DK_GRAY);
 	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
@@ -504,6 +502,26 @@ static void search_files(uint24_t *file_num, uint8_t type)
 		return;
 	};
 	
+	
+	for (curr_table = APPVAR_TABLE_NUM; curr_table < NUM_TABLES; curr_table++)
+	{
+		detect_str = 0;
+		file = 0;
+		while ((file_name = ti_DetectVar(&detect_str, NULL, table_order[curr_table])) != NULL)
+		{
+			dbg_sprintf(dbgout, "file_name = %s\n", file_name);
+			
+			if (!strcmp(buffer, file_name))
+			{
+				*table_num = curr_table;
+				*file_num = file;
+				return;
+			};
+			file++;
+		};
+	}
+	
+	/*
 	file = 0;
 	while ((file_name = ti_DetectVar(&detect_str, NULL, type)) != NULL)
 	{
@@ -511,13 +529,13 @@ static void search_files(uint24_t *file_num, uint8_t type)
 		
 		if (!strcmp(buffer, file_name))
 		{
-			//*table_num = table;
+			*table_num = table;
 			*file_num = file;
 			return;
 		};
 		file++;
 	};
-	
+	*/
 	gfx_SetColor(DK_GRAY);
 	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
 	gfx_SetTextFGColor(WHITE);
@@ -668,7 +686,7 @@ int main(void)
 		
 		if (key == sk_Zoom && table_type != RECENTS_TYPE)
 		{
-			search_files(&selected_file, table_type);
+			search_files(&table_num, &selected_file);
 			redraw_background = true;
 		};
 		
