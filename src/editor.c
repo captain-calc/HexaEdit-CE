@@ -359,16 +359,17 @@ static bool save_file(char *name, uint8_t type)
 		return false;
 	};
 
-	// Make the new file as big as the temporary file
+	// Make the new file as big as the edit file
 	if (edit_file_size > 0) {
 		if (ti_Resize(edit_file_size, new_file) <= 0)
 		{
 			ti_CloseAll();
+			ti_DeleteVar("HEXATMP2", type);
 			gui_DrawMessageDialog_Blocking("Failed to resize new file");
 			return false;
 		};
 
-		// Copy the contents of the temporary file into the new file
+		// Copy the contents of the edit file into the new file
 		asm_CopyData(ti_GetDataPtr(edit_file), ti_GetDataPtr(new_file), edit_file_size, 1);
 	};
 
@@ -1033,6 +1034,7 @@ static bool load_config_data(void)
 	
 	uint8_t bounds_check_code = 0;
 	uint8_t internally_handled_error = 255;
+	bool config_loaded_success = false;
 	
 	dbg_sprintf(dbgout, "About to load config data\n");
 	
@@ -1047,7 +1049,7 @@ static bool load_config_data(void)
 		dbg_sprintf(dbgout, "About to load color theme data\n");
 		
 		if (ti_GetSize(config_data_slot) - 4 < sizeof(color_theme_config_t))
-			goto ERROR_RETURN;
+			goto RETURN;
 		
 		set_color_theme_from_config(config_data_slot);
 		
@@ -1063,7 +1065,7 @@ static bool load_config_data(void)
 		if (bounds_check_code > 0)
 		{
 			gui_DrawMessageDialog_Blocking(error_message[bounds_check_code]);
-			goto ERROR_RETURN;
+			goto RETURN;
 		};
 	}
 	else if (header->editor_config == FILE_EDITOR)
@@ -1071,24 +1073,24 @@ static bool load_config_data(void)
 		bounds_check_code = load_file_editor_data(editor, cursor, config_data_slot);
 		if (bounds_check_code == internally_handled_error)
 		{
-			goto ERROR_RETURN;
+			goto RETURN;
 		}
 		else if (bounds_check_code > 0)
 		{
 			gui_DrawMessageDialog_Blocking(error_message[bounds_check_code]);
-			goto ERROR_RETURN;
+			goto RETURN;
 		};
 	} else {
 		gui_DrawMessageDialog_Blocking("Unknown editor type");
-		goto ERROR_RETURN;
+		goto RETURN;
 	};
 	
-	ti_Close(config_data_slot);
-	return true;
+	config_loaded_success = true;
 	
-	ERROR_RETURN:
+	RETURN:
+	free(header);
 	ti_Close(config_data_slot);
-	return false;
+	return config_loaded_success;
 }
 
 void editor_HeadlessStart(void)
@@ -1121,122 +1123,3 @@ void editor_HeadlessStart(void)
 	free(cursor);
 	return;
 }
-
-/*
-static bool get_config_data(char *config_appvar_name)
-{
-	ti_var_t config_appvar, file;
-	uint24_t window_offset, cursor_primary_offset, cursor_secondary_offset;
-	
-	memset(editor->name, '\0', EDITOR_NAME_LEN);
-	config_appvar = ti_Open(config_appvar_name, "r");
-	ti_Read(&editor->type, 1, 1, config_appvar);
-	editor->num_changes = 0;
-	
-	if (editor->type == RAM_EDITOR || editor->type == ROM_VIEWER)
-	{
-		ti_Read(&editor->window_address, 3, 1, config_appvar);
-		ti_Read(&cursor->primary, 3, 1, config_appvar);
-		ti_Read(&cursor->secondary, 3, 1, config_appvar);
-		if (editor->type == RAM_EDITOR)
-		{
-			strcpy(editor->name, "RAM Editor");
-			editor->min_address = RAM_MIN_ADDRESS;
-			editor->max_address = RAM_MAX_ADDRESS;
-		} else {
-			strcpy(editor->name, "ROM Viewer");
-			editor->min_address = ROM_MIN_ADDRESS;
-			editor->max_address = ROM_MAX_ADDRESS;
-		};
-		
-		// Sanity checking.
-		if (cursor->primary < cursor->secondary || editor->window_address < editor->min_address || editor->window_address > editor->max_address || cursor->primary < editor->min_address || cursor->primary > editor->max_address || cursor->secondary < editor->min_address || cursor->secondary > editor->max_address)
-		{
-			gui_DrawMessageDialog_Blocking("Invaild cursor or window addresses");
-			return false;
-		}
-		
-		cursor->high_nibble = true;
-		cursor->multibyte_selection = false;
-		if (cursor->primary != cursor->secondary)
-			cursor->multibyte_selection = true;
-		ti_Close(config_appvar);
-		return true;
-	};
-	
-	ti_Read(&editor->name, 8, 1, config_appvar);
-	ti_Read(&editor->file_type, 1, 1, config_appvar);
-	ti_Read(&window_offset, 3, 1, config_appvar);
-	ti_Read(&cursor_primary_offset, 3, 1, config_appvar);
-	ti_Read(&cursor_secondary_offset, 3, 1, config_appvar);
-	ti_Close(config_appvar);
-	
-	//dbg_sprintf(dbgout, "name = %s | type = %d\n", editor->name, editor->file_type);
-	
-	if ((file = ti_OpenVar(editor->name, "r", editor->file_type)) == 0)
-	{
-		gui_DrawMessageDialog_Blocking("Could not open file");
-		return false;
-	};
-	
-	editor->min_address = ti_GetDataPtr(file);
-	editor->max_address = editor->min_address + ti_GetSize(file) - 1;
-	editor->is_file_empty = false;
-	if (ti_GetSize(file) == 0)
-		editor->is_file_empty = true;
-	ti_Close(file);
-	
-	editor->window_address = editor->min_address + window_offset;
-	cursor->primary = editor->min_address + cursor_primary_offset;
-	cursor->secondary = editor->min_address + cursor_secondary_offset;
-	
-	// Sanity checking.
-	if (cursor->primary < cursor->secondary || editor->window_address < editor->min_address || editor->window_address > editor->max_address || cursor->primary < editor->min_address || cursor->primary > editor->max_address || cursor->secondary < editor->min_address || cursor->secondary > editor->max_address)
-	{
-		gui_DrawMessageDialog_Blocking("Invaild cursor or window addresses");
-		return false;
-	}
-	
-	
-	cursor->high_nibble = true;
-	cursor->multibyte_selection = false;
-	if (cursor->primary != cursor->secondary)
-		cursor->multibyte_selection = true;
-	return true;
-}
-
-void editor_HeadlessStart(char *config_appvar_name)
-{
-	if (!is_file_accessible(config_appvar_name, TI_APPVAR_TYPE))
-	{
-		gui_DrawMessageDialog_Blocking("Could not open file config appvar");
-		return;
-	};
-	
-	if (!create_undo_appvar())
-	{
-		gui_DrawMessageDialog_Blocking("Could not create undo file");
-		return;
-	};
-	
-	editor = malloc(sizeof(editor_t));
-	cursor = malloc(sizeof(cursor_t));
-	
-	if (!get_config_data(config_appvar_name))
-	{
-		goto RETURN;
-	};
-	
-	run_editor();
-	
-	RETURN:
-	ti_Delete(UNDO_APPVAR);
-	
-	Delete the configuraton appvar, so HexaEdit can be run normally the next
-	time it is opened.
-	ti_Delete(config_appvar_name);
-	free(editor);
-	free(cursor);
-	return;
-}
-*/
