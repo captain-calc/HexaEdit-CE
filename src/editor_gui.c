@@ -32,11 +32,11 @@ static void draw_editing_size(editor_t *editor)
 
 void editorgui_DrawTopBar(editor_t *editor)
 {
-	gfx_SetColor(DK_GRAY);
+	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(0, 0, 320, 20);
-	gfx_SetTextBGColor(DK_GRAY);
-	gfx_SetTextFGColor(WHITE);
-	gfx_SetTextTransparentColor(DK_GRAY);
+	gfx_SetTextBGColor(color_theme.bar_color);
+	gfx_SetTextFGColor(color_theme.bar_text_color);
+	gfx_SetTextTransparentColor(color_theme.bar_color);
 	
 	draw_editing_size(editor);
 
@@ -54,11 +54,11 @@ void editorgui_DrawTopBar(editor_t *editor)
 
 void editorgui_DrawToolBar(editor_t *editor)
 {
-	gfx_SetColor(DK_GRAY);
+	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-	gfx_SetTextBGColor(DK_GRAY);
-	gfx_SetTextFGColor(WHITE);
-	gfx_SetTextTransparentColor(DK_GRAY);
+	gfx_SetTextBGColor(color_theme.bar_color);
+	gfx_SetTextFGColor(color_theme.bar_text_color);
+	gfx_SetTextTransparentColor(color_theme.bar_color);
 	gfx_PrintStringXY("Goto", 5, 226);
 	if (editor->type == FILE_EDITOR)
 	{
@@ -77,12 +77,12 @@ void editorgui_DrawAltToolBar(cursor_t *cursor)
 	uint8_t i;
 	uint24_t byte_value = 0;
 	
-	gfx_SetColor(DK_GRAY);
+	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(0, 220, 140, 20);
 	gfx_FillRectangle_NoClip(226, 220, 50, 20);
-	gfx_SetTextBGColor(DK_GRAY);
-	gfx_SetTextFGColor(WHITE);
-	gfx_SetTextTransparentColor(DK_GRAY);
+	gfx_SetTextBGColor(color_theme.bar_color);
+	gfx_SetTextFGColor(color_theme.bar_text_color);
+	gfx_SetTextTransparentColor(color_theme.bar_color);
 	
 	if ((cursor->primary - cursor->secondary) < 3)
 	{
@@ -105,9 +105,9 @@ void editorgui_DrawMemAddresses(editor_t *editor, uint24_t x, uint8_t y)
 	uint8_t byte;
 	char hex[7] = {'\0'};
 	
-	gfx_SetTextBGColor(LT_GRAY);
-	gfx_SetTextFGColor(BLACK);
-	gfx_SetTextTransparentColor(LT_GRAY);
+	gfx_SetTextBGColor(color_theme.background_color);
+	gfx_SetTextFGColor(color_theme.table_text_color);
+	gfx_SetTextTransparentColor(color_theme.background_color);
 	
 	for (;;)
 	{
@@ -137,9 +137,9 @@ void editorgui_DrawFileOffsets(editor_t *editor, uint24_t x, uint8_t y)
 {
 	uint8_t row = 0;
 	
-	gfx_SetTextBGColor(LT_GRAY);
-	gfx_SetTextFGColor(BLACK);
-	gfx_SetTextTransparentColor(LT_GRAY);
+	gfx_SetTextBGColor(color_theme.background_color);
+	gfx_SetTextFGColor(color_theme.table_text_color);
+	gfx_SetTextTransparentColor(color_theme.background_color);
 	for (;;)
 	{
 		if (row > ROWS_ONSCREEN || (editor->window_address + (row * COLS_ONSCREEN)) > editor->max_address)
@@ -197,20 +197,20 @@ static void print_hex_line(editor_t *editor, cursor_t *cursor, uint24_t x, uint8
 		};
 		if (is_current_byte_selected(cursor, line, byte_num, num_bytes_selected))
 		{
-			gfx_SetTextBGColor(CURSOR_COLOR);
-			gfx_SetTextFGColor(WHITE);
-			gfx_SetTextTransparentColor(CURSOR_COLOR);
-			gfx_SetColor(CURSOR_COLOR);
+			gfx_SetTextBGColor(color_theme.cursor_color);
+			gfx_SetTextFGColor(color_theme.selected_table_text_color);
+			gfx_SetTextTransparentColor(color_theme.cursor_color);
+			gfx_SetColor(color_theme.cursor_color);
 			gfx_FillRectangle_NoClip(x - 1, y - 1, HEX_COL_WIDTH, ROW_HEIGHT);
 			if ((line + byte_num) == cursor->primary)
 			{
-				gfx_SetColor(BLACK);
+				gfx_SetColor(color_theme.table_text_color);
 				gfx_HorizLine_NoClip(x - 1 + (9 * !cursor->high_nibble), y + FONT_HEIGHT + 1, 9);
 			}
 		} else {
-			gfx_SetTextBGColor(LT_GRAY);
-			gfx_SetTextFGColor(BLACK);
-			gfx_SetTextTransparentColor(LT_GRAY);
+			gfx_SetTextBGColor(color_theme.table_bg_color);
+			gfx_SetTextFGColor(color_theme.table_text_color);
+			gfx_SetTextTransparentColor(color_theme.table_bg_color);
 		};
 		
 		print_hex_value(x, y, *(line + byte_num));
@@ -267,15 +267,15 @@ static void print_ascii_line(editor_t *editor, cursor_t *cursor, uint24_t x, uin
 		};
 		if (is_current_byte_selected(cursor, line, byte_num, num_bytes_selected))
 		{
-			gfx_SetTextBGColor(CURSOR_COLOR);
-			gfx_SetTextFGColor(WHITE);
-			gfx_SetTextTransparentColor(CURSOR_COLOR);
-			gfx_SetColor(CURSOR_COLOR);
+			gfx_SetTextBGColor(color_theme.cursor_color);
+			gfx_SetTextFGColor(color_theme.selected_table_text_color);
+			gfx_SetTextTransparentColor(color_theme.cursor_color);
+			gfx_SetColor(color_theme.cursor_color);
 			gfx_FillRectangle_NoClip(x - 1, y - 1, ASCII_COL_WIDTH, ROW_HEIGHT);
 		} else {
-			gfx_SetTextBGColor(LT_GRAY);
-			gfx_SetTextFGColor(BLACK);
-			gfx_SetTextTransparentColor(LT_GRAY);
+			gfx_SetTextBGColor(color_theme.background_color);
+			gfx_SetTextFGColor(color_theme.table_text_color);
+			gfx_SetTextTransparentColor(color_theme.background_color);
 		};
 		
 		print_ascii_value(x, y, *(line + byte_num));
@@ -304,9 +304,9 @@ void editorgui_DrawEmptyFileMessage(uint24_t hex_x, uint8_t y)
 {
 	char message[] = "-- Empty --";
 	
-	gfx_SetTextBGColor(LT_GRAY);
-	gfx_SetTextFGColor(BLACK);
-	gfx_SetTextTransparentColor(LT_GRAY);
+	gfx_SetTextBGColor(color_theme.background_color);
+	gfx_SetTextFGColor(color_theme.table_text_color);
+	gfx_SetTextTransparentColor(color_theme.background_color);
 	gfx_SetTextXY(hex_x + ((COLS_ONSCREEN * HEX_COL_WIDTH) - gfx_GetStringWidth(message)) / 2, y);
 	gfx_PrintString(message);
 	return;

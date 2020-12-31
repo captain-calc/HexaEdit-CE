@@ -33,6 +33,83 @@ set or after the pointers are no longer needed.
 */
 
 
+/**
+ * The Headless Start feature uses the following data configuration in the
+ * TI variable Ans (Note: Always include the general configuration data!):
+ *
+ *
+ * General Configuration (4 bytes)
+ * ==============================
+ * Ans Headless Start Flag	3 bytes
+ * Color Theme/Editor Type	1
+ *
+ *
+ * Color Theme Override (7 bytes)
+ * ==============================
+ * Background Color		1
+ * Bar Color			1
+ * Bar Text Color		1
+ * Table BG Color		1
+ * Table Text Color		1
+ * Selected Table Text Color	1
+ * Cursor Color			1
+ * ==============================
+ *
+ *
+ * RAM Editor/ROM Viewer (9 bytes)
+ * ==============================
+ * Editor Window Address	3
+ * Cursor Primary Address	3
+ * Cursor Secondary Address	3
+ * ==============================
+ *
+ *
+ * File Editor (18 bytes)
+ * ==============================
+ * File Name			8
+ * File Type			1
+ * Editor Window Offset		3
+ * Cursor Primary Offset	3
+ * Cursor Secondary Offset	3
+ * ==============================
+ *
+ *
+ * Only include the data sections you will need. For example, if you wanted to
+ * start a file editor and override the default color scheme, you would include
+ * the following sections:
+ *
+ * ===========================
+ * General Configuration Data
+ * Color Theme Override
+ * File Editor
+ * ===========================
+ *
+ *
+ * Configuration Data Notes
+ * =================================
+ * The Ans Headless Start Flag is the byte sequence "\x00\x48\x58".
+ *
+ * The Color Theme/Editor Type byte looks like this:
+ *
+ * 0000 0000
+ * ^      ^
+ * |      |
+ * |      * The two least significant bytes specify the editor type (ROM = 0, RAM = 1, File = 2)
+ * |
+ * * The most significant byte should be set to specify a color override. It should be set to 0 if
+ *   you do not want to change the color scheme.
+ *
+ * If you want to override the color scheme and open a file editor, for example, the byte would look
+ * like: 1000 0010.
+ *
+ *
+ * You may notice that the values for the window and cursor pointers for the file editor are OFFSETS
+ * instead of memory pointers. This is because HexaEdit does not edit the specified file directly but,
+ * rather, a copy of it. HexaEdit does not create this copy until after it reads out the configuration
+ * data and creates the necessary memory pointers out of the file offsets.
+*/
+
+
 static uint24_t decimal(const char *hex)
 {
 	const char *hex_chars = {"0123456789abcdef"};
@@ -149,12 +226,12 @@ static void goto_prompt(char buffer[], uint8_t buffer_size)
 		keymap[0] = NUMBERS;
 	};
 	
-	gfx_SetColor(DK_GRAY);
+	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
 	gfx_PrintStringXY("Goto:", 5, 226);
-	gfx_SetColor(BLACK);
+	gfx_SetColor(color_theme.table_text_color);
 	gfx_FillRectangle_NoClip(50, 223, 102, FONT_HEIGHT + 6);
-	gfx_SetColor(WHITE);
+	gfx_SetColor(color_theme.table_bg_color);
 	gfx_FillRectangle_NoClip(51, 224, 100, FONT_HEIGHT + 4);
 	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
 	goto_input_str = gui_Input(buffer, buffer_size, keymap, 0, 1, 52, 225, 99, FONT_HEIGHT + 4);
@@ -177,12 +254,12 @@ static bool insert_bytes_prompt(char buffer[], uint8_t buffer_size)
 	uint24_t num_bytes_insert;
 	char *keymap[1] = {NUMBERS};
 	
-	gfx_SetColor(DK_GRAY);
+	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
 	gfx_PrintStringXY("Insert:", 5, 226);
-	gfx_SetColor(BLACK);
+	gfx_SetColor(color_theme.table_text_color);
 	gfx_FillRectangle_NoClip(60, 223, 102, FONT_HEIGHT + 6);
-	gfx_SetColor(WHITE);
+	gfx_SetColor(color_theme.table_bg_color);
 	gfx_FillRectangle_NoClip(61, 224, 100, FONT_HEIGHT + 4);
 	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
 	
@@ -213,11 +290,11 @@ static uint8_t save_prompt(void)
 {
 	int8_t key;
 	
-	gfx_SetColor(DK_GRAY);
+	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-	gfx_SetTextBGColor(DK_GRAY);
-	gfx_SetTextFGColor(WHITE);
-	gfx_SetTextTransparentColor(DK_GRAY);
+	gfx_SetTextBGColor(color_theme.bar_color);
+	gfx_SetTextFGColor(color_theme.bar_text_color);
+	gfx_SetTextTransparentColor(color_theme.bar_color);
 	
 	gfx_PrintStringXY("Save changes?", 5, 226);
 	gfx_PrintStringXY("No", 152, 226);
@@ -345,7 +422,7 @@ static void run_editor(void)
 	
 	for (;;)
 	{
-		gfx_SetColor(LT_GRAY);
+		gfx_SetColor(color_theme.background_color);
 		gfx_FillRectangle_NoClip(0, 20, LCD_WIDTH, LCD_HEIGHT - 40);
 		
 		if (editor->type == FILE_EDITOR)
@@ -360,7 +437,7 @@ static void run_editor(void)
 		gfx_VertLine_NoClip(59, 20, LCD_HEIGHT - 40);
 		gfx_VertLine_NoClip(228, 20, LCD_HEIGHT - 40);
 		gfx_VertLine_NoClip(229, 20, LCD_HEIGHT - 40);
-		gfx_SetColor(WHITE);
+		gfx_SetColor(color_theme.table_bg_color);
 		gfx_FillRectangle_NoClip(60, 20, 168, LCD_HEIGHT - 40);
 		
 		if (editor->type == FILE_EDITOR && editor->is_file_empty)
@@ -761,6 +838,265 @@ void editor_ROMViewer(void)
 	return;
 }
 
+static void set_color_theme_from_config(ti_var_t slot)
+{
+	color_theme_config_t *color_theme_config = malloc(sizeof(color_theme_config_t));
+	
+	ti_Read(color_theme_config, sizeof(color_theme_config_t), 1, slot);
+	
+	color_theme.background_color = color_theme_config->background_color;
+	color_theme.bar_color = color_theme_config->bar_color;
+	color_theme.bar_text_color = color_theme_config->bar_text_color;
+	color_theme.table_bg_color = color_theme_config->table_bg_color;
+	color_theme.table_text_color = color_theme_config->table_text_color;
+	color_theme.selected_table_text_color = color_theme_config->selected_table_text_color;
+	color_theme.table_selector_color = color_theme_config->table_selector_color;
+	color_theme.cursor_color = color_theme_config->cursor_color;
+	free(color_theme_config);
+	return;
+}
+
+static uint8_t bounds_check_mem_pointers(uint8_t *min_address, uint8_t *max_address, uint8_t *window_address, uint8_t *cursor_primary, uint8_t *cursor_secondary)
+{
+	if (min_address > max_address)
+	{
+		return 1;
+	}
+	else if (min_address < RAM_MIN_ADDRESS || min_address > RAM_MAX_ADDRESS)
+	{
+		return 2;
+	}
+	else if (max_address > RAM_MAX_ADDRESS || max_address < RAM_MIN_ADDRESS)
+	{
+		return 3;
+	}
+	else if (window_address < min_address || window_address > max_address)
+	{
+		return 4;
+	}
+	else if (cursor_primary < cursor_secondary)
+	{
+		return 5;
+	}
+	else if (cursor_primary < window_address || cursor_secondary < window_address)
+	{
+		return 6;
+	}
+	else if (cursor_primary > max_address || cursor_secondary > max_address)
+	{
+		return 7;
+	}
+	else if (cursor_primary > window_address + (COLS_ONSCREEN * ROWS_ONSCREEN))
+	{
+		return 8;
+	}
+	else if (cursor_secondary > window_address + (COLS_ONSCREEN * ROWS_ONSCREEN))
+	{
+		return 9;
+	};
+	return 0;
+}
+
+static bool load_mem_editor_data(editor_t *editor, cursor_t *cursor, ti_var_t slot, uint8_t editor_type)
+{
+	mem_editor_config_t *mem_editor = malloc(sizeof(mem_editor_config_t));
+	
+	ti_Read(mem_editor, sizeof(mem_editor_config_t), 1, slot);
+	
+	editor->window_address = mem_editor->window_address;
+	cursor->primary = mem_editor->cursor_primary;
+	cursor->secondary = mem_editor->cursor_secondary;
+	
+	if (editor_type == RAM_EDITOR)
+	{
+		strcpy(editor->name, "RAM Editor");
+		editor->min_address = RAM_MIN_ADDRESS;
+		editor->max_address = RAM_MAX_ADDRESS;
+	} else {
+		strcpy(editor->name, "ROM Viewer");
+		editor->min_address = ROM_MIN_ADDRESS;
+		editor->max_address = ROM_MAX_ADDRESS;
+	};
+	return bounds_check_mem_pointers(editor->min_address, editor->max_address, editor->window_address, cursor->primary, cursor->secondary);
+}
+
+static uint8_t bounds_check_file_offsets(uint24_t window_offset, uint24_t cursor_primary, uint24_t cursor_secondary, uint24_t file_size)
+{
+	if (window_offset > file_size)
+	{
+		return 4;
+	}
+	else if (cursor_primary < cursor_secondary)
+	{
+		return 5;
+	}
+	else if (cursor_primary > file_size || cursor_secondary > file_size)
+	{
+		return 7;
+	}
+	else if (cursor_primary > window_offset + (COLS_ONSCREEN * ROWS_ONSCREEN))
+	{
+		return 8;
+	}
+	else if (cursor_secondary > window_offset + (COLS_ONSCREEN * ROWS_ONSCREEN))
+	{
+		return 9;
+	};
+	return 0;
+}
+
+static uint8_t load_file_editor_data(editor_t *editor, cursor_t *cursor, ti_var_t config_data_slot)
+{
+	ti_var_t edit_file_slot;
+	uint24_t edit_file_size;
+	uint24_t window_offset, cursor_primary_offset, cursor_secondary_offset;
+	uint8_t bounds_check_code = 0;
+	
+	file_editor_config_t *file_editor = malloc(sizeof(file_editor_config_t));
+	
+	ti_Read(file_editor, sizeof(file_editor_config_t), 1, config_data_slot);
+	
+	strcpy(editor->name, file_editor->file_name);
+	editor->file_type = file_editor->file_type;
+	window_offset = file_editor->window_offset;
+	cursor_primary_offset = file_editor->cursor_primary_offset;
+	cursor_secondary_offset = file_editor->cursor_secondary_offset;
+	
+	if (!create_edit_file(editor->name, editor->type))
+	{
+		gui_DrawMessageDialog_Blocking("Could not create edit file");
+		return 255;
+	};
+	
+	if ((edit_file_slot = ti_Open(EDIT_FILE, "r")) == 0)
+	{
+		gui_DrawMessageDialog_Blocking("Could not open edit file");
+		return 255;
+	}
+	
+	edit_file_size = ti_GetSize(edit_file_slot);
+	ti_Close(edit_file_slot);
+	
+	bounds_check_code = bounds_check_file_offsets(window_offset, cursor_primary_offset, cursor_secondary_offset, edit_file_size);
+	
+	if (bounds_check_code > 0)
+		return bounds_check_code;
+	
+	editor->window_address = editor->min_address + window_offset;
+	cursor->primary = editor->min_address + cursor_primary_offset;
+	cursor->secondary = editor->min_address + cursor_secondary_offset;
+	return 0;
+}
+
+static bool load_config_data(void)
+{
+	const char *error_message[9] = {
+		"Min addr is greater than max addr",
+		"Min address out of range",
+		"Max address out of range",
+		"Window address out of range",
+		"Cursor primary greater than secondary",
+		"Cursor pointer less than window addr",
+		"Cursor pointer too large",
+		"Cursor primary not onscreen",
+		"Cursor secondary not onscreen"
+	};
+	
+	ti_var_t config_data_slot;
+	
+	header_config_t *header = malloc(sizeof(header_config_t));
+	
+	uint8_t bounds_check_code = 0;
+	uint8_t internally_handled_error = 255;
+	
+	dbg_sprintf(dbgout, "About to load config data\n");
+	
+	/* If code execution reached here, Ans must be accessible. */
+	ti_CloseAll();
+	config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r");
+	
+	ti_Read(header, sizeof(header_config_t), 1, config_data_slot);
+	
+	if (header->editor_config & (1 << 7))
+	{
+		dbg_sprintf(dbgout, "About to load color theme data\n");
+		
+		if (ti_GetSize(config_data_slot) - 4 < sizeof(color_theme_config_t))
+			goto ERROR_RETURN;
+		
+		set_color_theme_from_config(config_data_slot);
+		
+		/* Reset the color theme bit so editor tests are simpler. */
+		header->editor_config ^= (1 << 7);
+	};
+	
+	dbg_sprintf(dbgout, "header->editor_config = %d", header->editor_config);
+	
+	if (header->editor_config == ROM_VIEWER || header->editor_config == RAM_EDITOR)
+	{
+		bounds_check_code = load_mem_editor_data(editor, cursor, config_data_slot, header->editor_config);
+		if (bounds_check_code > 0)
+		{
+			gui_DrawMessageDialog_Blocking(error_message[bounds_check_code]);
+			goto ERROR_RETURN;
+		};
+	}
+	else if (header->editor_config == FILE_EDITOR)
+	{
+		bounds_check_code = load_file_editor_data(editor, cursor, config_data_slot);
+		if (bounds_check_code > 0 && bounds_check_code != internally_handled_error)
+		{
+			gui_DrawMessageDialog_Blocking(error_message[bounds_check_code]);
+			goto ERROR_RETURN;
+		}
+	} else {
+		gui_DrawMessageDialog_Blocking("Unknown editor type");
+		goto ERROR_RETURN;
+	};
+	
+	ti_Close(config_data_slot);
+	return true;
+	
+	ERROR_RETURN:
+	ti_Close(config_data_slot);
+	return false;
+}
+
+bool editor_HeadlessStart(void)
+{
+	bool return_code = true;
+	
+	if (!create_undo_appvar())
+	{
+		gui_DrawMessageDialog_Blocking("Could not create undo file");
+		return false;
+	};
+	
+	editor = malloc(sizeof(editor_t));
+	cursor = malloc(sizeof(cursor_t));
+	
+	if (!load_config_data())
+	{
+		return_code = false;
+		goto RETURN;
+	};
+	
+	run_editor();
+	
+	RETURN:
+	ti_Delete(UNDO_APPVAR);
+	
+	/* Delete the Headless Start configuration appvar so HexaEdit can be run normally
+	the next time it is opened. If the configuration was faulty, however, do not delete
+	it so the programmer can review the configuration. */
+	if (return_code == true)
+		ti_Delete(HS_CONFIG_APPVAR);
+	free(editor);
+	free(cursor);
+	return return_code;
+}
+
+/*
 static bool get_config_data(char *config_appvar_name)
 {
 	ti_var_t config_appvar, file;
@@ -787,7 +1123,7 @@ static bool get_config_data(char *config_appvar_name)
 			editor->max_address = ROM_MAX_ADDRESS;
 		};
 		
-		/* Sanity checking. */
+		// Sanity checking.
 		if (cursor->primary < cursor->secondary || editor->window_address < editor->min_address || editor->window_address > editor->max_address || cursor->primary < editor->min_address || cursor->primary > editor->max_address || cursor->secondary < editor->min_address || cursor->secondary > editor->max_address)
 		{
 			gui_DrawMessageDialog_Blocking("Invaild cursor or window addresses");
@@ -828,7 +1164,7 @@ static bool get_config_data(char *config_appvar_name)
 	cursor->primary = editor->min_address + cursor_primary_offset;
 	cursor->secondary = editor->min_address + cursor_secondary_offset;
 	
-	/* Sanity checking. */
+	// Sanity checking.
 	if (cursor->primary < cursor->secondary || editor->window_address < editor->min_address || editor->window_address > editor->max_address || cursor->primary < editor->min_address || cursor->primary > editor->max_address || cursor->secondary < editor->min_address || cursor->secondary > editor->max_address)
 	{
 		gui_DrawMessageDialog_Blocking("Invaild cursor or window addresses");
@@ -870,10 +1206,11 @@ void editor_HeadlessStart(char *config_appvar_name)
 	RETURN:
 	ti_Delete(UNDO_APPVAR);
 	
-	/* Delete the configuraton appvar, so HexaEdit can be run normally the next
-	time it is opened. */
+	Delete the configuraton appvar, so HexaEdit can be run normally the next
+	time it is opened.
 	ti_Delete(config_appvar_name);
 	free(editor);
 	free(cursor);
 	return;
 }
+*/

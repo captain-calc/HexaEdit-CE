@@ -56,11 +56,11 @@ void gui_DrawMessageDialog(const char *message)
 {
 	uint24_t message_width = gfx_GetStringWidth(message);
 	
-	gfx_SetColor(DK_GRAY);
+	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(150 - message_width / 2, 100, message_width + 20, 40);
-	gfx_SetTextBGColor(DK_GRAY);
-	gfx_SetTextFGColor(WHITE);
-	gfx_SetTextTransparentColor(DK_GRAY);
+	gfx_SetTextBGColor(color_theme.bar_color);
+	gfx_SetTextFGColor(color_theme.bar_text_color);
+	gfx_SetTextTransparentColor(color_theme.bar_color);
 	gfx_PrintStringXY(message, 160 - gfx_GetStringWidth(message) / 2, 117);
 	gfx_BlitBuffer();
 	return;
@@ -88,7 +88,7 @@ void gui_DrawBatteryStatus(void)
 	gfx_FillRectangle_NoClip(309, 6, 6, 8);
 	gfx_SetColor(colors[status]);
 	gfx_FillRectangle_NoClip(309, 14 - (2 * status), 6, 2 * status);
-	gfx_SetTextFGColor(WHITE);
+	gfx_SetTextFGColor(color_theme.bar_text_color);
 	sprintf(status_str, "%d", 25 * status);
 	if (status == 4) {
 		*(status_str + 3) = '%';
@@ -104,11 +104,11 @@ void gui_DrawTime(uint24_t xPos)
 	uint8_t seconds = 0, minutes = 0, hour = 0;
 	const char *time_ind[2] = {"AM", "PM"};
 	
-	gfx_SetColor(DK_GRAY);
+	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(xPos, 6, 55, 7);
-	gfx_SetTextBGColor(DK_GRAY);
-	gfx_SetTextFGColor(WHITE);
-	gfx_SetTextTransparentColor(DK_GRAY);
+	gfx_SetTextBGColor(color_theme.bar_color);
+	gfx_SetTextFGColor(color_theme.bar_text_color);
+	gfx_SetTextTransparentColor(color_theme.bar_color);
 	
 	boot_GetTime(&seconds, &minutes, &hour);
 	gfx_SetTextXY(xPos, 6);
@@ -134,17 +134,17 @@ char *gui_Input(char buffer[], uint8_t buffer_size, char *keymaps[], uint8_t key
 	memset(buffer, '\0', buffer_size);
 	
 	for (;;) {
-		gfx_SetColor(WHITE);
+		gfx_SetColor(color_theme.table_bg_color);
 		gfx_FillRectangle_NoClip(x, y, width, FONT_HEIGHT + 2);
 		gfx_SetTextXY(x + 1, y + 1);
-		gfx_SetTextBGColor(WHITE);
-		gfx_SetTextFGColor(BLACK);
-		gfx_SetTextTransparentColor(WHITE);
+		gfx_SetTextBGColor(color_theme.table_bg_color);
+		gfx_SetTextFGColor(color_theme.table_text_color);
+		gfx_SetTextTransparentColor(color_theme.table_bg_color);
 		gui_PrintFileName(buffer);
-		gfx_SetTextBGColor(BLACK);
-		gfx_SetTextFGColor(WHITE);
-		gfx_SetTextTransparentColor(BLACK);
-		gfx_SetColor(BLACK);
+		gfx_SetTextBGColor(color_theme.table_selector_color);
+		gfx_SetTextFGColor(color_theme.selected_table_text_color);
+		gfx_SetTextTransparentColor(color_theme.table_selector_color);
+		gfx_SetColor(color_theme.table_selector_color);
 		gfx_FillRectangle_NoClip(x + _get_string_width(buffer) + 2, y, 9, FONT_HEIGHT + 2);
 		
 		keymap_indicator = keymap[47];	// Uppercase and lowercase letters

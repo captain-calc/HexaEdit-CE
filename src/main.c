@@ -26,7 +26,6 @@
 #define PROGRAM_NAME		"HexaEdit"
 #define PROGRAM_VERSION		"2.0.0"
 #define RECENT_FILES_APPVAR	"HEXARCF"
-#define HS_CONFIG_APPVAR	"HEXAHSCA"
 
 #define NUM_FILES_ONSCREEN	15
 
@@ -59,6 +58,20 @@ uint8_t col_widths[] = {69, 30, 75, 70, 64};
 #define TABLE_ROW_HEIGHT	11
 #define TABLE_NUM_COLS		5
 
+color_theme_config_t color_theme;
+
+
+static void load_default_color_theme(void)
+{
+	color_theme.background_color = LT_GRAY;
+	color_theme.bar_color = DK_GRAY;
+	color_theme.bar_text_color = WHITE;
+	color_theme.table_bg_color = WHITE;
+	color_theme.table_text_color = BLACK;
+	color_theme.selected_table_text_color = WHITE;
+	color_theme.cursor_color = BLUE;
+	return;
+}
 
 static bool create_recents_appvar(void)
 {
@@ -227,11 +240,11 @@ static char *get_recent_file(uint24_t num)
 
 static void draw_title_bar(void)
 {
-	gfx_SetColor(DK_GRAY);
+	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(0, 0, LCD_WIDTH, 20);
-	gfx_SetTextBGColor(DK_GRAY);
-	gfx_SetTextFGColor(WHITE);
-	gfx_SetTextTransparentColor(DK_GRAY);
+	gfx_SetTextBGColor(color_theme.bar_color);
+	gfx_SetTextFGColor(color_theme.bar_text_color);
+	gfx_SetTextTransparentColor(color_theme.bar_color);
 	gfx_PrintStringXY(PROGRAM_NAME, 5, 6);
 	gfx_PrintStringXY(PROGRAM_VERSION, 9 + gfx_GetStringWidth(PROGRAM_NAME), 6);
 	gui_DrawBatteryStatus();
@@ -240,13 +253,13 @@ static void draw_title_bar(void)
 
 static void draw_menu_bar(void)
 {
-	gfx_SetColor(DK_GRAY);
+	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(0, 220, LCD_WIDTH, 20);
-	gfx_SetColor(LT_GRAY);
+	gfx_SetColor(color_theme.background_color);
 	gfx_VertLine_NoClip(281, 221, 18);
-	gfx_SetTextBGColor(DK_GRAY);
-	gfx_SetTextTransparentColor(DK_GRAY);
-	gfx_SetTextFGColor(WHITE);
+	gfx_SetTextBGColor(color_theme.bar_color);
+	gfx_SetTextTransparentColor(color_theme.bar_color);
+	gfx_SetTextFGColor(color_theme.bar_text_color);
 	gfx_PrintStringXY("RAM", 5, 226);
 	gfx_PrintStringXY("ROM", 70, 226);
 	gfx_PrintStringXY("Search", 130, 226);
@@ -313,19 +326,19 @@ static void draw_file_list_header(uint8_t y, uint8_t table_num)
 	uint24_t x = 5;
 	uint8_t i;
 	
-	gfx_SetColor(DK_GRAY);
+	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(0, y, LCD_WIDTH, 12);
-	gfx_SetTextBGColor(DK_GRAY);
-	gfx_SetTextTransparentColor(DK_GRAY);
+	gfx_SetTextBGColor(color_theme.bar_color);
+	gfx_SetTextTransparentColor(color_theme.bar_color);
 	gfx_SetColor(LT_GRAY);
 	
 	for (i = 0; i < NUM_TABLES; i++)
 	{
-		gfx_SetTextFGColor(WHITE);
+		gfx_SetTextFGColor(color_theme.selected_table_text_color);
 		if (table_num == i)
 		{
 			gfx_FillRectangle_NoClip(x - 3, y, gfx_GetStringWidth(table_names[i]) + 4, 12);
-			gfx_SetTextFGColor(BLACK);
+			gfx_SetTextFGColor(color_theme.table_selector_color);
 		};
 		gfx_PrintStringXY(table_names[i], x, y + 2);
 		x += gfx_GetStringWidth(table_names[i]) + 15;
@@ -338,11 +351,11 @@ static void draw_table_header(uint8_t y)
 	uint8_t x = TABLE_LEFT_MARGIN + 1;
 	uint8_t col;
 	
-	gfx_SetColor(DK_GRAY);
+	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(TABLE_LEFT_MARGIN - 2, y, TABLE_WIDTH + 4, 16);
-	gfx_SetTextBGColor(DK_GRAY);
-	gfx_SetTextFGColor(WHITE);
-	gfx_SetTextTransparentColor(DK_GRAY);
+	gfx_SetTextBGColor(color_theme.bar_color);
+	gfx_SetTextFGColor(color_theme.bar_text_color);
+	gfx_SetTextTransparentColor(color_theme.bar_color);
 	
 	y += 4;
 	
@@ -423,7 +436,7 @@ static char *print_file_table(char selected_file_name[], uint8_t type, uint24_t 
 	
 	gfx_SetColor(BLACK);
 	gfx_FillRectangle_NoClip(TABLE_LEFT_MARGIN - 2, TABLE_FIRST_ROW_Y - 3, TABLE_WIDTH + 4, NUM_FILES_ONSCREEN * TABLE_ROW_HEIGHT + 2);
-	gfx_SetColor(WHITE);
+	gfx_SetColor(color_theme.table_bg_color);
 	gfx_FillRectangle_NoClip(TABLE_LEFT_MARGIN - 1, TABLE_FIRST_ROW_Y - 2, TABLE_WIDTH + 2, NUM_FILES_ONSCREEN * TABLE_ROW_HEIGHT);
 	
 	for(;;)
@@ -449,9 +462,9 @@ static char *print_file_table(char selected_file_name[], uint8_t type, uint24_t 
 			
 			if (*file_name != '!' && *file_name != '#') {
 				
-				gfx_SetTextBGColor(WHITE);
-				gfx_SetTextFGColor(BLACK);
-				gfx_SetTextTransparentColor(WHITE);
+				gfx_SetTextBGColor(color_theme.table_bg_color);
+				gfx_SetTextFGColor(color_theme.table_text_color);
+				gfx_SetTextTransparentColor(color_theme.table_bg_color);
 				gfx_SetColor(BLACK);
 				if (num_files_printed == selected_file_offset) {
 					gfx_SetTextBGColor(BLACK);
@@ -546,6 +559,29 @@ static void search_files(uint8_t *table_num, uint24_t *file_num)
 	return;
 }
 
+static bool check_for_headless_start(void)
+{
+	ti_var_t config_data_slot;
+	header_config_t *header = malloc(sizeof(header_config_t));
+	
+	if ((config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r")) != 0)
+	{
+		ti_Read(header, 3, 1, config_data_slot);
+		
+		dbg_sprintf(dbgout, "headless_start_flag = 0x%6x\n", header->headless_start_flag);
+		dbg_sprintf(dbgout, "HEADLESS_START_FLAG = 0x%6x\n", HEADLESS_START_FLAG);
+		
+		ti_Close(config_data_slot);
+		if (!memcmp(header->headless_start_flag, HEADLESS_START_FLAG, HEADLESS_START_FLAG_LENGTH))
+		{
+			dbg_sprintf(dbgout, "Starting headlessly...\n");
+			
+			return editor_HeadlessStart();
+		};
+	};
+	return false;
+}
+
 int main(void)
 {
 	uint8_t table_num = RECENTS_TABLE_NUM;
@@ -559,9 +595,10 @@ int main(void)
 	gfx_Begin();
 	gfx_SetDrawBuffer();
 	
-	if (ti_Open(HS_CONFIG_APPVAR, "r") != 0)
+	ti_CloseAll();
+	
+	if (check_for_headless_start())
 	{
-		editor_HeadlessStart(HS_CONFIG_APPVAR);
 		gfx_End();
 		return 0;
 	};
@@ -579,6 +616,8 @@ int main(void)
 	get_num_appvars();
 	get_num_protected_prgms();
 	get_num_prgms();
+	
+	load_default_color_theme();
 	
 	for (;;)
 	{

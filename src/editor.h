@@ -5,8 +5,9 @@
 
 #include <stdint.h>
 
-#define EDIT_FILE	"HEXATMP"
-#define UNDO_APPVAR	"HEXAUNDO"
+#define EDIT_FILE		"HEXATMP"
+#define UNDO_APPVAR		"HEXAUNDO"
+#define HS_CONFIG_APPVAR	"HEXAHSCA"
 
 #define UNDO_INSERT_BYTES	0
 #define UNDO_DELETE_BYTES	1
@@ -16,10 +17,13 @@
 #define RAM_EDITOR	1
 #define ROM_VIEWER	2
 
-#define ROM_MIN_ADDRESS	(uint8_t *)0x000000
-#define ROM_MAX_ADDRESS	(uint8_t *)0x3fffff
-#define RAM_MIN_ADDRESS	(uint8_t *)0xd00000
-#define RAM_MAX_ADDRESS	(uint8_t *)0xd65800
+#define HEADLESS_START_FLAG		("\x00\x48\x58")
+#define HEADLESS_START_FLAG_LENGTH	3
+
+#define ROM_MIN_ADDRESS	((uint8_t *)0x000000)
+#define ROM_MAX_ADDRESS	((uint8_t *)0x3fffff)
+#define RAM_MIN_ADDRESS	((uint8_t *)0xd00000)
+#define RAM_MAX_ADDRESS	((uint8_t *)0xd65800)
 
 #define ROWS_ONSCREEN		17
 #define COLS_ONSCREEN		8
@@ -68,9 +72,30 @@ typedef struct
 	bool multibyte_selection;
 } cursor_t;
 
+/* These structures are for the Headless Start. */
+
+typedef struct {
+	char headless_start_flag[3];
+	uint8_t editor_config;
+} header_config_t;
+
+typedef struct {
+	uint8_t *window_address;
+	uint8_t *cursor_primary;
+	uint8_t *cursor_secondary;
+} mem_editor_config_t;
+
+typedef struct {
+	char file_name[8];
+	uint8_t file_type;
+	uint24_t window_offset;
+	uint24_t cursor_primary_offset;
+	uint24_t cursor_secondary_offset;
+} file_editor_config_t;
+
 void editor_FileNormalStart(char *name, uint8_t type);
 void editor_RAMNormalStart(void);
 void editor_ROMViewer(void);
-void editor_HeadlessStart(char *config_appvar_name);
+bool editor_HeadlessStart(void);
 
 #endif
