@@ -646,7 +646,6 @@ static bool create_edit_file(char *name, uint8_t type)
 	ti_var_t file, edit_file;
 	uint24_t file_size;
 	
-	ti_CloseAll();
 	if ((file = ti_OpenVar(name, "r", type)) == 0)
 	{
 		gui_DrawMessageDialog_Blocking("Failed to open file");
@@ -906,6 +905,13 @@ static bool load_mem_editor_data(editor_t *editor, cursor_t *cursor, ti_var_t sl
 	editor->window_address = mem_editor->window_address;
 	cursor->primary = mem_editor->cursor_primary;
 	cursor->secondary = mem_editor->cursor_secondary;
+	free(mem_editor);
+	
+	editor->num_changes = 0;
+	cursor->high_nibble = true;
+	cursor->multibyte_selection = false;
+	if (cursor->primary != cursor->secondary)
+		cursor->multibyte_selection = true;
 	
 	if (editor_type == RAM_EDITOR)
 	{
@@ -961,10 +967,12 @@ static uint8_t load_file_editor_data(editor_t *editor, cursor_t *cursor, ti_var_
 	window_offset = file_editor->window_offset;
 	cursor_primary_offset = file_editor->cursor_primary_offset;
 	cursor_secondary_offset = file_editor->cursor_secondary_offset;
+	free(file_editor);
 	
-	if (!create_edit_file(editor->name, editor->type))
+	dbg_sprintf(dbgout, "name = %s | type = %d\n", editor->name, editor->file_type);
+	
+	if (!create_edit_file(editor->name, editor->file_type))
 	{
-		gui_DrawMessageDialog_Blocking("Could not create edit file");
 		return 255;
 	};
 	
@@ -975,6 +983,7 @@ static uint8_t load_file_editor_data(editor_t *editor, cursor_t *cursor, ti_var_
 	}
 	
 	edit_file_size = ti_GetSize(edit_file_slot);
+	editor->min_address = ti_GetDataPtr(edit_file_slot);
 	ti_Close(edit_file_slot);
 	
 	bounds_check_code = bounds_check_file_offsets(window_offset, cursor_primary_offset, cursor_secondary_offset, edit_file_size);
@@ -982,9 +991,25 @@ static uint8_t load_file_editor_data(editor_t *editor, cursor_t *cursor, ti_var_
 	if (bounds_check_code > 0)
 		return bounds_check_code;
 	
+	if (edit_file_size == 0)
+	{
+		editor->is_file_empty = true;
+		editor->max_address = editor->min_address;
+	} else {
+		editor->is_file_empty = false;
+		editor->max_address = editor->min_address + edit_file_size - 1;
+	};
+	
 	editor->window_address = editor->min_address + window_offset;
 	cursor->primary = editor->min_address + cursor_primary_offset;
 	cursor->secondary = editor->min_address + cursor_secondary_offset;
+	
+	editor->num_changes = 0;
+	cursor->high_nibble = true;
+	cursor->multibyte_selection = false;
+	if (cursor->primary != cursor->secondary)
+		cursor->multibyte_selection = true;
+	
 	return 0;
 }
 
@@ -1044,11 +1069,15 @@ static bool load_config_data(void)
 	else if (header->editor_config == FILE_EDITOR)
 	{
 		bounds_check_code = load_file_editor_data(editor, cursor, config_data_slot);
-		if (bounds_check_code > 0 && bounds_check_code != internally_handled_error)
+		if (bounds_check_code == internally_handled_error)
+		{
+			goto ERROR_RETURN;
+		}
+		else if (bounds_check_code > 0)
 		{
 			gui_DrawMessageDialog_Blocking(error_message[bounds_check_code]);
 			goto ERROR_RETURN;
-		}
+		};
 	} else {
 		gui_DrawMessageDialog_Blocking("Unknown editor type");
 		goto ERROR_RETURN;
@@ -1062,22 +1091,19 @@ static bool load_config_data(void)
 	return false;
 }
 
-bool editor_HeadlessStart(void)
+void editor_HeadlessStart(void)
 {
-	bool return_code = true;
+	bool headless_start_succeeded = true;
 	
 	if (!create_undo_appvar())
-	{
-		gui_DrawMessageDialog_Blocking("Could not create undo file");
-		return false;
-	};
+		return;
 	
 	editor = malloc(sizeof(editor_t));
 	cursor = malloc(sizeof(cursor_t));
 	
 	if (!load_config_data())
 	{
-		return_code = false;
+		headless_start_succeeded = false;
 		goto RETURN;
 	};
 	
@@ -1089,11 +1115,11 @@ bool editor_HeadlessStart(void)
 	/* Delete the Headless Start configuration appvar so HexaEdit can be run normally
 	the next time it is opened. If the configuration was faulty, however, do not delete
 	it so the programmer can review the configuration. */
-	if (return_code == true)
+	if (headless_start_succeeded)
 		ti_Delete(HS_CONFIG_APPVAR);
 	free(editor);
 	free(cursor);
-	return return_code;
+	return;
 }
 
 /*

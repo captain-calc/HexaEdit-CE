@@ -571,12 +571,14 @@ static bool check_for_headless_start(void)
 		dbg_sprintf(dbgout, "headless_start_flag = 0x%6x\n", header->headless_start_flag);
 		dbg_sprintf(dbgout, "HEADLESS_START_FLAG = 0x%6x\n", HEADLESS_START_FLAG);
 		
+		free(header);
 		ti_Close(config_data_slot);
-		if (!memcmp(header->headless_start_flag, HEADLESS_START_FLAG, HEADLESS_START_FLAG_LENGTH))
+		if (!memcmp(header->headless_start_flag, HEADLESS_START_FLAG, strlen(HEADLESS_START_FLAG)))
 		{
 			dbg_sprintf(dbgout, "Starting headlessly...\n");
 			
-			return editor_HeadlessStart();
+			editor_HeadlessStart();
+			return true;
 		};
 	};
 	return false;
@@ -597,6 +599,8 @@ int main(void)
 	
 	ti_CloseAll();
 	
+	load_default_color_theme();
+	
 	if (check_for_headless_start())
 	{
 		gfx_End();
@@ -616,8 +620,6 @@ int main(void)
 	get_num_appvars();
 	get_num_protected_prgms();
 	get_num_prgms();
-	
-	load_default_color_theme();
 	
 	for (;;)
 	{

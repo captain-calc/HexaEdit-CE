@@ -86,7 +86,7 @@ typedef struct {
 } mem_editor_config_t;
 
 typedef struct {
-	char file_name[8];
+	char file_name[9];
 	uint8_t file_type;
 	uint24_t window_offset;
 	uint24_t cursor_primary_offset;
@@ -96,6 +96,6 @@ typedef struct {
 void editor_FileNormalStart(char *name, uint8_t type);
 void editor_RAMNormalStart(void);
 void editor_ROMViewer(void);
-bool editor_HeadlessStart(void);
+void editor_HeadlessStart(void);
 
 #endif
