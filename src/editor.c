@@ -35,13 +35,12 @@ set or after the pointers are no longer needed.
 
 /**
  * The Headless Start feature uses the following data configuration in the
- * TI variable Ans (Note: Always include the general configuration data!):
+ * Headless Start appvar (Note: Always include the general configuration data!):
  *
  *
- * General Configuration (4 bytes)
+ * General Configuration
  * ==============================
- * Ans Headless Start Flag	3 bytes
- * Color Theme/Editor Type	1
+ * Color Theme/Editor Type	1 byte
  *
  *
  * Color Theme Override (7 bytes)
@@ -87,7 +86,6 @@ set or after the pointers are no longer needed.
  *
  * Configuration Data Notes
  * =================================
- * The Ans Headless Start Flag is the byte sequence "\x00\x48\x58".
  *
  * The Color Theme/Editor Type byte looks like this:
  *
@@ -1029,12 +1027,11 @@ static bool load_config_data(void)
 	};
 	
 	ti_var_t config_data_slot;
-	
-	header_config_t *header;
+	uint8_t editor_config;
 	
 	uint8_t bounds_check_code = 0;
 	uint8_t internally_handled_error = 255;
-	bool config_loaded_success = false;
+	bool config_load_status = false;
 	
 	dbg_sprintf(dbgout, "About to load config data\n");
 	
@@ -1042,35 +1039,33 @@ static bool load_config_data(void)
 	if ((config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r")) == 0)
 		return false;
 	
-	header = malloc(sizeof(header_config_t));
+	ti_Read(&editor_config, 1, 1, config_data_slot);
 	
-	ti_Read(header, sizeof(header_config_t), 1, config_data_slot);
-	
-	if (header->editor_config & (1 << 7))
+	if (editor_config & (1 << 7))
 	{
 		dbg_sprintf(dbgout, "About to load color theme data\n");
 		
-		if (ti_GetSize(config_data_slot) - 4 < sizeof(color_theme_config_t))
+		if (ti_GetSize(config_data_slot) - 1 < sizeof(color_theme_config_t))
 			goto RETURN;
 		
 		set_color_theme_from_config(config_data_slot);
 		
 		// Reset the color theme bit so editor tests are simpler.
-		header->editor_config ^= (1 << 7);
+		editor_config ^= (1 << 7);
 	};
 	
-	dbg_sprintf(dbgout, "header->editor_config = %d", header->editor_config);
+	dbg_sprintf(dbgout, "editor_config = %d", editor_config);
 	
-	if (header->editor_config == ROM_VIEWER || header->editor_config == RAM_EDITOR)
+	if (editor_config == ROM_VIEWER || editor_config == RAM_EDITOR)
 	{
-		bounds_check_code = load_mem_editor_data(editor, cursor, config_data_slot, header->editor_config);
+		bounds_check_code = load_mem_editor_data(editor, cursor, config_data_slot, editor_config);
 		if (bounds_check_code > 0)
 		{
 			gui_DrawMessageDialog_Blocking(error_message[bounds_check_code]);
 			goto RETURN;
 		};
 	}
-	else if (header->editor_config == FILE_EDITOR)
+	else if (editor_config == FILE_EDITOR)
 	{
 		// load_file_editor_data creates the temporary edit file.
 		
@@ -1089,12 +1084,11 @@ static bool load_config_data(void)
 		goto RETURN;
 	};
 	
-	config_loaded_success = true;
+	config_load_status = true;
 	
 	RETURN:
-	free(header);
 	ti_Close(config_data_slot);
-	return config_loaded_success;
+	return config_load_status;
 }
 
 void editor_HeadlessStart(void)
