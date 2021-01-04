@@ -12,6 +12,7 @@
 #include "colors.h"
 #include "editor.h"
 #include "gui.h"
+#include "menu.h"
 
 #include <string.h>
 
@@ -22,41 +23,6 @@
 
 // Debugging
 #include "debug.h"
-
-#define PROGRAM_NAME		"HexaEdit"
-#define PROGRAM_VERSION		"2.0.0"
-#define RECENT_FILES_APPVAR	"HEXARCF"
-
-#define NUM_FILES_ONSCREEN	15
-
-/* This is not a regular TI file type, but it is treated like one for menu purposes. */
-#define RECENTS_TYPE	7
-
-#define NUM_TABLES		4
-#define RECENTS_TABLE_NUM	0
-#define APPVAR_TABLE_NUM	1
-#define PROT_PRGM_TABLE_NUM	2
-#define PGRM_TABLE_NUM		3
-
-uint8_t num_files[NUM_TABLES];
-uint8_t table_order[] = {RECENTS_TYPE, TI_APPVAR_TYPE, TI_PPRGM_TYPE, TI_PRGM_TYPE};
-char *table_names[] = {"Recents", "Appvars", "Prot. Prgms", "Prgms"};
-
-const char *column_headers[] = {"Name", "Arc", "VAT Ptr", "Data Ptr", "Size"};
-uint8_t col_widths[] = {69, 30, 75, 70, 64};
-
-#define COL_1_X		TABLE_LEFT_MARGIN
-#define COL_2_X		COL_1_X + col_widths[0]
-#define COL_3_X		COL_2_X + col_widths[1]
-#define COL_4_X		COL_3_X + col_widths[2]
-#define COL_5_X		COL_4_X + col_widths[3]
-
-#define TABLE_LEFT_MARGIN	6
-#define TABLE_RIGHT_MARGIN	314
-#define TABLE_WIDTH		(TABLE_RIGHT_MARGIN - TABLE_LEFT_MARGIN)
-#define TABLE_FIRST_ROW_Y	55
-#define TABLE_ROW_HEIGHT	11
-#define TABLE_NUM_COLS		5
 
 color_theme_config_t color_theme;
 
@@ -73,6 +39,7 @@ static void load_default_color_theme(void)
 	return;
 }
 
+/*
 static bool create_recents_appvar(void)
 {
 	ti_var_t appvar;
@@ -233,7 +200,7 @@ static char *get_recent_file(uint24_t num)
 	
 	//dbg_sprintf(dbgout, "offset = %d\n", num * 9);
 	
-	/* Seek past the file type. */
+	// Seek past the file type.
 	ti_Read(&file_name, 8, 1, rf_appvar);
 	return file_name;
 }
@@ -475,7 +442,8 @@ static char *print_file_table(char selected_file_name[], uint8_t type, uint24_t 
 					strcpy(selected_file_name, file_name);
 				};
 				
-				print_file_entry(file_name, type, TABLE_FIRST_ROW_Y + (TABLE_ROW_HEIGHT * num_files_printed++));
+				print_appvar_data(file_data, num_files_retrieved, TABLE_FIRST_ROW_Y + (TABLE_ROW_HEIGHT * num_files_printed));
+				// print_file_entry(file_name, type, TABLE_FIRST_ROW_Y + (TABLE_ROW_HEIGHT * num_files_printed++));
 			};
 		};
 	};
@@ -534,21 +502,6 @@ static void search_files(uint8_t *table_num, uint24_t *file_num)
 		};
 	}
 	
-	/*
-	file = 0;
-	while ((file_name = ti_DetectVar(&detect_str, NULL, type)) != NULL)
-	{
-		//dbg_sprintf(dbgout, "file_name = %s\n", file_name);
-		
-		if (!strcmp(buffer, file_name))
-		{
-			*table_num = table;
-			*file_num = file;
-			return;
-		};
-		file++;
-	};
-	*/
 	gfx_SetColor(DK_GRAY);
 	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
 	gfx_SetTextFGColor(WHITE);
@@ -558,7 +511,7 @@ static void search_files(uint8_t *table_num, uint24_t *file_num)
 	while (!os_GetCSC());
 	return;
 }
-
+*/
 static bool check_for_headless_start(void)
 {
 	ti_var_t config_data_slot;
@@ -586,6 +539,30 @@ static bool check_for_headless_start(void)
 
 int main(void)
 {
+	gfx_Begin();
+	gfx_SetDrawBuffer();
+	ti_CloseAll();
+	
+	load_default_color_theme();
+	
+	if (check_for_headless_start())
+	{
+		gfx_End();
+		return 0;
+	};
+	
+	main_menu();
+	
+	gfx_End();
+	return 0;
+}
+
+/*
+int main(void)
+{
+	file_data_t *main_file_data = malloc(sizeof(file_data_t));
+	file_data_t *recent_file_data;
+	
 	uint8_t table_num = RECENTS_TABLE_NUM;
 	uint8_t table_type;
 	uint24_t selected_file = 0;
@@ -606,6 +583,9 @@ int main(void)
 		gfx_End();
 		return 0;
 	};
+	
+	load_main_files(main_file_data);
+	dbg_sprintf(dbgout, "file_data = 0x%6x\n", main_file_data);
 	
 	gfx_FillScreen(WHITE);
 	gui_DrawMessageDialog("Loading files...");
@@ -737,6 +717,9 @@ int main(void)
 		};
 	};
 	
+	
+	free_files(main_file_data);
 	gfx_End();
 	return 0;
 }
+*/

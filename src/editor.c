@@ -419,7 +419,7 @@ static void run_editor(void)
 	
 	char buffer[7] = {'\0'};
 	
-	dbg_sprintf(dbgout, "window_address = 0x%6x | max_address = 0x%6x\n", editor->window_address, editor->max_address);
+	// dbg_sprintf(dbgout, "window_address = 0x%6x | max_address = 0x%6x\n", editor->window_address, editor->max_address);
 	
 	for (;;)
 	{
@@ -536,8 +536,6 @@ static void run_editor(void)
 			goto_prompt(buffer, 6);
 			redraw_tool_bar = true;
 		};
-		
-		dbg_sprintf(dbgout, "multibyte_selection = %d\n", cursor->multibyte_selection);
 		
 		if (key == sk_Window && editor->type == FILE_EDITOR && !cursor->multibyte_selection)
 		{
@@ -740,6 +738,8 @@ static bool file_normal_start(const char *name, uint8_t type)
 
 void editor_FileNormalStart(char *name, uint8_t type)
 {
+	dbg_sprintf(dbgout, "FileNormalStart:\n\tname = \"%s\"\n\ttype = %d\n", name, type);
+	
 	if (!is_file_accessible(name, type))
 	{
 		gui_DrawMessageDialog_Blocking("Could not open file");
