@@ -26,7 +26,7 @@ IMPORTANT:
 
 If any files are created after the editor and cursor pointers have been set inside the edit file,
 the contents of RAM will be shifted by an indeterminate amount, rendering all of the editor and
-cursor pointers invaild.
+cursor pointers invalid.
 
 Any files that the editor needs must be created either before the editor and cursor pointers are
 set or after the pointers are no longer needed.
@@ -1030,7 +1030,7 @@ static bool load_config_data(void)
 	
 	ti_var_t config_data_slot;
 	
-	header_config_t *header = malloc(sizeof(header_config_t));
+	header_config_t *header;
 	
 	uint8_t bounds_check_code = 0;
 	uint8_t internally_handled_error = 255;
@@ -1038,9 +1038,11 @@ static bool load_config_data(void)
 	
 	dbg_sprintf(dbgout, "About to load config data\n");
 	
-	/* If code execution reached here, Ans must be accessible. */
 	ti_CloseAll();
-	config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r");
+	if ((config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r")) == 0)
+		return false;
+	
+	header = malloc(sizeof(header_config_t));
 	
 	ti_Read(header, sizeof(header_config_t), 1, config_data_slot);
 	
@@ -1053,7 +1055,7 @@ static bool load_config_data(void)
 		
 		set_color_theme_from_config(config_data_slot);
 		
-		/* Reset the color theme bit so editor tests are simpler. */
+		// Reset the color theme bit so editor tests are simpler.
 		header->editor_config ^= (1 << 7);
 	};
 	
@@ -1070,6 +1072,8 @@ static bool load_config_data(void)
 	}
 	else if (header->editor_config == FILE_EDITOR)
 	{
+		// load_file_editor_data creates the temporary edit file.
+		
 		bounds_check_code = load_file_editor_data(editor, cursor, config_data_slot);
 		if (bounds_check_code == internally_handled_error)
 		{
