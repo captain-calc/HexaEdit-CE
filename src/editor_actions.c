@@ -116,6 +116,7 @@ bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_p
 	uint24_t num_bytes_shift = deletion_point - editor->min_address;
 	
 	dbg_sprintf(dbgout, "num_bytes_shift = %d | num_bytes = %d\n", num_bytes_shift, num_bytes);
+	dbg_sprintf(dbgout, "deletion_point = 0x%6x\n", deletion_point);
 	
 	ti_var_t edit_file;
 	
@@ -132,11 +133,11 @@ bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_p
 	
 	if (num_bytes_shift > 0)
 	{
-		asm_CopyData(deletion_point - 1, cursor->primary, num_bytes_shift, 0);
+		asm_CopyData(deletion_point - 1, deletion_point + num_bytes - 1, num_bytes_shift, 0);
 	};
 	
-	//dbg_sprintf(dbgout, "Before re-assignment\neditor->min_address = 0x%6x\n", editor->min_address);
-	//dbg_sprintf(dbgout, "primary = 0x%6x | secondary = 0x%6x\n", cursor->primary, cursor->secondary);
+	dbg_sprintf(dbgout, "Before re-assignment\neditor->min_address = 0x%6x\n", editor->min_address);
+	dbg_sprintf(dbgout, "primary = 0x%6x | secondary = 0x%6x\n", cursor->primary, cursor->secondary);
 	
 	if (ti_Resize(ti_GetSize(edit_file) - num_bytes, edit_file) != -1)
 	{
@@ -183,7 +184,7 @@ bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_p
 		editor->is_file_empty = true;
 	};
 	
-	//dbg_sprintf(dbgout, "After re-assignment\neditor->min_address = 0x%6x\n", editor->min_address);
+	dbg_sprintf(dbgout, "After re-assignment\neditor->min_address = 0x%6x\n", editor->min_address);
 	
 	ti_Close(edit_file);
 	return true;

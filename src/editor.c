@@ -423,13 +423,15 @@ static void run_editor(void)
 	{
 		gfx_SetColor(color_theme.background_color);
 		gfx_FillRectangle_NoClip(0, 20, LCD_WIDTH, LCD_HEIGHT - 40);
-		
+		/*
 		if (editor->type == FILE_EDITOR)
 		{
 			editorgui_DrawFileOffsets(editor, 5, 22);
 		} else {
 			editorgui_DrawMemAddresses(editor, 5, 22);
 		};
+		*/
+		editorgui_DrawMemAddresses(editor, 5, 22);
 		
 		gfx_SetColor(BLACK);
 		gfx_VertLine_NoClip(58, 20, LCD_HEIGHT - 40);
