@@ -67,7 +67,7 @@ void editact_SpriteViewer(editor_t *editor, cursor_t *cursor)
 
 void editact_Goto(editor_t *editor, cursor_t *cursor, uint24_t offset)
 {
-	dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x | offset = %d\n", editor->min_address, editor->window_address, offset);
+	// dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x | offset = %d\n", editor->min_address, editor->window_address, offset);
 	
 	if (editor->type == FILE_EDITOR)
 	{
@@ -115,8 +115,8 @@ bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_p
 	
 	uint24_t num_bytes_shift = deletion_point - editor->min_address;
 	
-	dbg_sprintf(dbgout, "num_bytes_shift = %d | num_bytes = %d\n", num_bytes_shift, num_bytes);
-	dbg_sprintf(dbgout, "deletion_point = 0x%6x\n", deletion_point);
+	// dbg_sprintf(dbgout, "num_bytes_shift = %d | num_bytes = %d\n", num_bytes_shift, num_bytes);
+	// dbg_sprintf(dbgout, "deletion_point = 0x%6x\n", deletion_point);
 	
 	ti_var_t edit_file;
 	
@@ -136,8 +136,8 @@ bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_p
 		asm_CopyData(deletion_point - 1, deletion_point + num_bytes - 1, num_bytes_shift, 0);
 	};
 	
-	dbg_sprintf(dbgout, "Before re-assignment\neditor->min_address = 0x%6x\n", editor->min_address);
-	dbg_sprintf(dbgout, "primary = 0x%6x | secondary = 0x%6x\n", cursor->primary, cursor->secondary);
+	// dbg_sprintf(dbgout, "Before re-assignment\neditor->min_address = 0x%6x\n", editor->min_address);
+	// dbg_sprintf(dbgout, "primary = 0x%6x | secondary = 0x%6x\n", cursor->primary, cursor->secondary);
 	
 	if (ti_Resize(ti_GetSize(edit_file) - num_bytes, edit_file) != -1)
 	{
@@ -184,7 +184,7 @@ bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_p
 		editor->is_file_empty = true;
 	};
 	
-	dbg_sprintf(dbgout, "After re-assignment\neditor->min_address = 0x%6x\n", editor->min_address);
+	// dbg_sprintf(dbgout, "After re-assignment\neditor->min_address = 0x%6x\n", editor->min_address);
 	
 	ti_Close(edit_file);
 	return true;
@@ -213,7 +213,7 @@ bool editact_InsertBytes(editor_t *editor, uint8_t *insertion_point, uint24_t nu
 		goto ERROR;
 	};
 	
-	dbg_sprintf(dbgout, "file_data_ptr = 0x%6x | editor->min_address = 0x%6x\n", ti_GetDataPtr(edit_file), editor->min_address);
+	// dbg_sprintf(dbgout, "file_data_ptr = 0x%6x | editor->min_address = 0x%6x\n", ti_GetDataPtr(edit_file), editor->min_address);
 	
 	if (ti_Rewind(edit_file) == EOF)
 	{
@@ -338,7 +338,7 @@ bool editact_CreateDeleteBytesUndoAction(editor_t *editor, cursor_t *cursor, uin
 	
 	for (i = 0; i < num_bytes; i++)
 	{
-		dbg_sprintf(dbgout, "0x%2x ", *(cursor->secondary + i));
+		// dbg_sprintf(dbgout, "0x%2x ", *(cursor->secondary + i));
 		ti_Write(cursor->secondary + i, 1, 1, undo_appvar);
 	};
 	
@@ -358,11 +358,11 @@ void undo_delete_bytes(editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar)
 	ti_Read(&cursor->secondary, 3, 1, undo_appvar);
 	ti_Read(&num_bytes, 3, 1, undo_appvar);
 	
-	dbg_sprintf(dbgout, "num_bytes = %d\n", num_bytes);
+	// dbg_sprintf(dbgout, "num_bytes = %d\n", num_bytes);
 	
 	editact_InsertBytes(editor, cursor->secondary, num_bytes);
 	
-	dbg_sprintf(dbgout, "Inserted bytes for undo-ing.\n");
+	// dbg_sprintf(dbgout, "Inserted bytes for undo-ing.\n");
 	
 	for (i = 0; i < num_bytes; i++)
 	{

@@ -163,7 +163,7 @@ char *gui_Input(char buffer[], uint8_t buffer_size, char *keymaps[], uint8_t key
 			kb_Scan();
 		} while ((key = asm_GetCSC()) == -1);
 		
-		//dbg_sprintf(dbgout, "input key = %d\n", key);
+		// dbg_sprintf(dbgout, "input key = %d\n", key);
 		
 		if (keymap[key] != '\0' && i < buffer_size)
 		{

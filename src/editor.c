@@ -92,7 +92,7 @@ set or after the pointers are no longer needed.
  * 0000 0000
  * ^      ^
  * |      |
- * |      * The two least significant bytes specify the editor type (ROM = 0, RAM = 1, File = 2)
+ * |      * The two least significant bytes specify the editor type (File = 0, RAM = 1, ROM = 2)
  * |
  * * The most significant byte should be set to specify a color override. It should be set to 0 if
  *   you do not want to change the color scheme.
@@ -261,14 +261,14 @@ static bool insert_bytes_prompt(char buffer[], uint8_t buffer_size)
 	gfx_FillRectangle_NoClip(61, 224, 100, FONT_HEIGHT + 4);
 	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
 	
-	dbg_sprintf(dbgout, "Preparing to recieve input\n");
+	// dbg_sprintf(dbgout, "Preparing to recieve input\n");
 	
 	num_bytes_insert = (uint24_t)atoi(gui_Input(buffer, buffer_size, keymap, 0, 1, 62, 225, 99, FONT_HEIGHT + 4));
 	
 	if (kb_Data[6] & kb_Clear)
 		return false;
 	
-	dbg_sprintf(dbgout, "num_bytes_insert = %d\n", num_bytes_insert);
+	// dbg_sprintf(dbgout, "num_bytes_insert = %d\n", num_bytes_insert);
 	
 	if (editact_CreateUndoInsertBytesAction(editor, cursor, num_bytes_insert))
 	{
@@ -278,8 +278,8 @@ static bool insert_bytes_prompt(char buffer[], uint8_t buffer_size)
 			return true;
 		};
 	} else {
-		dbg_sprintf(dbgout, "Failed to create insert bytes undo action\n");
-		dbg_sprintf(dbgout, "editor->min_address = 0x%6x\n", editor->min_address);
+		// dbg_sprintf(dbgout, "Failed to create insert bytes undo action\n");
+		// dbg_sprintf(dbgout, "editor->min_address = 0x%6x\n", editor->min_address);
 	};
 	return false;
 }
@@ -300,7 +300,7 @@ static uint8_t save_prompt(void)
 	gfx_PrintStringXY("Cancel", 270, 226);
 	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
 	
-	/* Prevent long keypress from triggering fall-through. */
+	// Prevent long keypress from triggering fall-through.
 	delay(500);
 	
 	do {
@@ -340,8 +340,8 @@ static bool save_file(char *name, uint8_t type)
 
 	ti_CloseAll();
 
-	/* Open the editor's edit file and another file that will become
-	   the new changed file. */
+	// Open the editor's edit file and another file that will become
+	// the new changed file.
 	if ((edit_file = ti_Open(EDIT_FILE, "r")) == 0)
 	{
 		gui_DrawMessageDialog_Blocking("Could not open edit file");
@@ -423,15 +423,13 @@ static void run_editor(void)
 	{
 		gfx_SetColor(color_theme.background_color);
 		gfx_FillRectangle_NoClip(0, 20, LCD_WIDTH, LCD_HEIGHT - 40);
-		/*
+		
 		if (editor->type == FILE_EDITOR)
 		{
 			editorgui_DrawFileOffsets(editor, 5, 22);
 		} else {
 			editorgui_DrawMemAddresses(editor, 5, 22);
 		};
-		*/
-		editorgui_DrawMemAddresses(editor, 5, 22);
 		
 		gfx_SetColor(BLACK);
 		gfx_VertLine_NoClip(58, 20, LCD_HEIGHT - 40);
@@ -475,7 +473,7 @@ static void run_editor(void)
 		} while ((key = asm_GetCSC()) == -1);
 		//dbg_sprintf(dbgout, "key = %d\n", key);
 		
-		/* Since pressing '0' writes a NULL nibble, it is a special case. */
+		// Since pressing '0' writes a NULL nibble, it is a special case.
 		if ((EDITOR_HEX[key] != '\0' || key == sk_0) && !cursor->multibyte_selection && (editor->type == FILE_EDITOR || editor->type == RAM_EDITOR))
 		{
 			if (editact_GetNibble(cursor, cursor->primary) != EDITOR_HEX[key])
@@ -535,6 +533,7 @@ static void run_editor(void)
 		{
 			goto_prompt(buffer, 6);
 			redraw_tool_bar = true;
+			delay(200);
 		};
 		
 		if (key == sk_Window && editor->type == FILE_EDITOR && !cursor->multibyte_selection)
@@ -557,9 +556,9 @@ static void run_editor(void)
 			};
 		};
 		
-		/* If arrow key pressed, move cursor. If two keys are pressed simultaneously,
-		asm_GetCSC only detects the first one it finds in the key registers, so kb_Data
-		should be used for simultaneous keypresses. */
+		// If arrow key pressed, move cursor. If two keys are pressed simultaneously,
+		// asm_GetCSC only detects the first one it finds in the key registers, so kb_Data
+		// should be used for simultaneous keypresses.
 		if (kb_Data[7])
 		{
 			if (kb_Data[7] & kb_Up)
@@ -606,7 +605,7 @@ static void run_editor(void)
 			{
 				if (editor->type == RAM_EDITOR)
 				{
-					/* Execute all of the undo actions. */
+					// Execute all of the undo actions.
 					gui_DrawMessageDialog("Undoing changes to RAM...");
 					while (editact_UndoAction(editor, cursor));
 					return;
@@ -738,7 +737,7 @@ static bool file_normal_start(const char *name, uint8_t type)
 
 void editor_FileNormalStart(char *name, uint8_t type)
 {
-	dbg_sprintf(dbgout, "FileNormalStart:\n\tname = \"%s\"\n\ttype = %d\n", name, type);
+	// dbg_sprintf(dbgout, "FileNormalStart:\n\tname = \"%s\"\n\ttype = %d\n", name, type);
 	
 	if (!is_file_accessible(name, type))
 	{
@@ -858,41 +857,29 @@ static void set_color_theme_from_config(ti_var_t slot)
 
 static uint8_t bounds_check_mem_pointers(uint8_t *min_address, uint8_t *max_address, uint8_t *window_address, uint8_t *cursor_primary, uint8_t *cursor_secondary)
 {
-	if (min_address > max_address)
+	if (window_address < min_address || window_address > max_address)
 	{
 		return 1;
 	}
-	else if (min_address < RAM_MIN_ADDRESS || min_address > RAM_MAX_ADDRESS)
+	else if (cursor_primary < cursor_secondary)
 	{
 		return 2;
 	}
-	else if (max_address > RAM_MAX_ADDRESS || max_address < RAM_MIN_ADDRESS)
+	else if (cursor_primary < window_address || cursor_secondary < window_address)
 	{
 		return 3;
 	}
-	else if (window_address < min_address || window_address > max_address)
+	else if (cursor_primary > max_address || cursor_secondary > max_address)
 	{
 		return 4;
 	}
-	else if (cursor_primary < cursor_secondary)
+	else if (cursor_primary > window_address + (COLS_ONSCREEN * ROWS_ONSCREEN))
 	{
 		return 5;
 	}
-	else if (cursor_primary < window_address || cursor_secondary < window_address)
-	{
-		return 6;
-	}
-	else if (cursor_primary > max_address || cursor_secondary > max_address)
-	{
-		return 7;
-	}
-	else if (cursor_primary > window_address + (COLS_ONSCREEN * ROWS_ONSCREEN))
-	{
-		return 8;
-	}
 	else if (cursor_secondary > window_address + (COLS_ONSCREEN * ROWS_ONSCREEN))
 	{
-		return 9;
+		return 6;
 	};
 	return 0;
 }
@@ -924,6 +911,9 @@ static bool load_mem_editor_data(editor_t *editor, cursor_t *cursor, ti_var_t sl
 		editor->min_address = ROM_MIN_ADDRESS;
 		editor->max_address = ROM_MAX_ADDRESS;
 	};
+	
+	dbg_sprintf(dbgout, "load_mem_editor_data\n\tmin = 0x%6x\n\tmax = 0x%6x\n\twindow = 0x%6x\n", editor->min_address, editor->max_address, editor->window_address);
+	
 	return bounds_check_mem_pointers(editor->min_address, editor->max_address, editor->window_address, cursor->primary, cursor->secondary);
 }
 
@@ -931,23 +921,23 @@ static uint8_t bounds_check_file_offsets(uint24_t window_offset, uint24_t cursor
 {
 	if (window_offset > file_size)
 	{
-		return 4;
+		return 1;
 	}
 	else if (cursor_primary < cursor_secondary)
 	{
-		return 5;
+		return 2;
 	}
 	else if (cursor_primary > file_size || cursor_secondary > file_size)
 	{
-		return 7;
+		return 4;
 	}
 	else if (cursor_primary > window_offset + (COLS_ONSCREEN * ROWS_ONSCREEN))
 	{
-		return 8;
+		return 5;
 	}
 	else if (cursor_secondary > window_offset + (COLS_ONSCREEN * ROWS_ONSCREEN))
 	{
-		return 9;
+		return 6;
 	};
 	return 0;
 }
@@ -970,7 +960,7 @@ static uint8_t load_file_editor_data(editor_t *editor, cursor_t *cursor, ti_var_
 	cursor_secondary_offset = file_editor->cursor_secondary_offset;
 	free(file_editor);
 	
-	dbg_sprintf(dbgout, "name = %s | type = %d\n", editor->name, editor->file_type);
+	// dbg_sprintf(dbgout, "name = %s | type = %d\n", editor->name, editor->file_type);
 	
 	if (!create_edit_file(editor->name, editor->file_type))
 	{
@@ -1017,9 +1007,7 @@ static uint8_t load_file_editor_data(editor_t *editor, cursor_t *cursor, ti_var_
 static bool load_config_data(void)
 {
 	const char *error_message[9] = {
-		"Min addr is greater than max addr",
-		"Min address out of range",
-		"Max address out of range",
+		"",
 		"Window address out of range",
 		"Cursor primary greater than secondary",
 		"Cursor pointer less than window addr",
@@ -1035,7 +1023,7 @@ static bool load_config_data(void)
 	uint8_t internally_handled_error = 255;
 	bool config_load_status = false;
 	
-	dbg_sprintf(dbgout, "About to load config data\n");
+	// dbg_sprintf(dbgout, "About to load config data\n");
 	
 	ti_CloseAll();
 	if ((config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r")) == 0)
@@ -1045,7 +1033,7 @@ static bool load_config_data(void)
 	
 	if (editor_config & (1 << 7))
 	{
-		dbg_sprintf(dbgout, "About to load color theme data\n");
+		// dbg_sprintf(dbgout, "About to load color theme data\n");
 		
 		if (ti_GetSize(config_data_slot) - 1 < sizeof(color_theme_config_t))
 			goto RETURN;
@@ -1056,7 +1044,7 @@ static bool load_config_data(void)
 		editor_config ^= (1 << 7);
 	};
 	
-	dbg_sprintf(dbgout, "editor_config = %d", editor_config);
+	// dbg_sprintf(dbgout, "editor_config = %d", editor_config);
 	
 	if (editor_config == ROM_VIEWER || editor_config == RAM_EDITOR)
 	{

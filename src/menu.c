@@ -46,7 +46,7 @@ static file_data_t *get_appvar_data(const char *name)
 	if ((slot = ti_Open(name, "r")) == 0)
 		return NULL;
 	
-	dbg_sprintf(dbgout, "Adding appvar \"%s\"\n", name);
+	// dbg_sprintf(dbgout, "Adding appvar \"%s\"\n", name);
 	
 	appvar_data = malloc(sizeof(file_data_t));
 	
@@ -181,7 +181,7 @@ static void load_main_programs(file_list_t *main_file_list, uint8_t ti_type)
 		ti_Read(&asm_program_flag, 2, 1, test_slot);
 		ti_Close(test_slot);
 		
-		dbg_sprintf(dbgout, "Adding program \"%s\"\n", program);
+		// dbg_sprintf(dbgout, "Adding program \"%s\"\n", program);
 		
 		if (asm_program_flag == ASM_PROGRAM_FLAG)
 		{
@@ -199,6 +199,12 @@ static void load_main_programs(file_list_t *main_file_list, uint8_t ti_type)
 
 static void load_main_files(file_list_t *main_file_list)
 {
+	// Since malloc does not initialize the memory it allocates, these
+	// counters must be initialized in order to avoid undefined behavior.
+	main_file_list->num_appvars = 0;
+	main_file_list->num_asm_programs = 0;
+	main_file_list->num_basic_programs = 0;
+	
 	load_main_appvars(main_file_list);
 	load_main_programs(main_file_list, TI_PPRGM_TYPE);
 	load_main_programs(main_file_list, TI_PRGM_TYPE);
@@ -228,35 +234,35 @@ static void add_recent_file(recent_file_list_t *recent_file_list, const char *na
 	
 	temp_rf_list->num_files = 1;
 	
-	dbg_sprintf(dbgout, "add_recent_file\n\tname = \"%s\"\n\thexaedit_type = %d\n", name, hexaedit_type);
+	// dbg_sprintf(dbgout, "add_recent_file\n\tname = \"%s\"\n\thexaedit_type = %d\n", name, hexaedit_type);
 	
 	// Copy all of the file data pointers from the recent_file_list into the temporary list.
-	// This will exclude any copies of the file being added and will
-	// prevent the list from going over the MAX_NUM_RECENT_FILES.
+	// If a pointer is found with the same file data as the one being added, free it and
+	// overwrite its place in the recent_file_list pointer array.
 	
 	while (file_num < recent_file_list->num_files && temp_rf_list->num_files < MAX_NUM_RECENT_FILES)
 	{
 		if ((strcmp(name, recent_file_list->files[file_num]->name)) || (recent_file_list->files[file_num]->hexaedit_type != hexaedit_type))
 		{
-			temp_rf_list->files[file_num + 1] = recent_file_list->files[file_num];
-			temp_rf_list->num_files++;
+			temp_rf_list->files[temp_rf_list->num_files++] = recent_file_list->files[file_num];
+		} else {
+			free(recent_file_list->files[file_num]);
 		};
 		file_num++;
 	};
 	
-	dbg_sprintf(dbgout, "\tCopied files from recent_file_list | file_num = %d\n", file_num);
+	// dbg_sprintf(dbgout, "\tCopied files from recent_file_list | file_num = %d\n", file_num);
 	
-	for(;;)
+	file_num = 0;
+	
+	while (file_num < temp_rf_list->num_files)
 	{
 		recent_file_list->files[file_num] = temp_rf_list->files[file_num];
-		
-		if (file_num == 0)
-			break;
-		
-		file_num--;
+		file_num++;
 	};
 	
 	recent_file_list->num_files = temp_rf_list->num_files;
+	free(temp_rf_list);
 	
 	return;
 }
@@ -536,7 +542,7 @@ static void print_recent_files_table(recent_file_list_t *recent_file_list, uint8
 	
 	for (;;)
 	{
-		dbg_sprintf(dbgout, "num_files = %d\n", recent_file_list->num_files);
+		// dbg_sprintf(dbgout, "num_files = %d\n", recent_file_list->num_files);
 		
 		// Since the maximum number of recent files can never exceed one table, a list offset
 		// and NUM_FILES_ONSCREEN test is unnecessary, unlike print_main_files_table().
@@ -651,7 +657,7 @@ static void search_main_files(file_list_t *file_list, uint8_t *table_num, uint8_
 		{
 			if (curr_table_num == APPVAR_TABLE_NUM)
 			{
-				dbg_sprintf(dbgout, "Searching appvars...\n");
+				// dbg_sprintf(dbgout, "Searching appvars...\n");
 				
 				if (file == file_list->num_appvars)
 					break;
@@ -661,7 +667,7 @@ static void search_main_files(file_list_t *file_list, uint8_t *table_num, uint8_
 			}
 			else if (curr_table_num == ASM_PRGM_TABLE_NUM)
 			{
-				dbg_sprintf(dbgout, "Search asm programs...\n");
+				// dbg_sprintf(dbgout, "Search asm programs...\n");
 				
 				if (file == file_list->num_asm_programs)
 					break;
@@ -672,7 +678,7 @@ static void search_main_files(file_list_t *file_list, uint8_t *table_num, uint8_
 			else if (curr_table_num == BASIC_PRGM_TABLE_NUM)
 			{
 				
-				dbg_sprintf(dbgout, "Searching basic programs...\n");
+				// dbg_sprintf(dbgout, "Searching basic programs...\n");
 				
 				if (file == file_list->num_basic_programs)
 					break;
@@ -818,7 +824,8 @@ void main_menu(void)
 	NUM_FILES_PER_TYPE[APPVAR_TABLE_NUM] = main_file_list->num_appvars;
 	NUM_FILES_PER_TYPE[ASM_PRGM_TABLE_NUM] = main_file_list->num_asm_programs;
 	NUM_FILES_PER_TYPE[BASIC_PRGM_TABLE_NUM] = main_file_list->num_basic_programs;
-	dbg_sprintf(dbgout, "main_file_list = 0x%6x | size = %d\n", main_file_list, (uint24_t)sizeof(file_list_t));
+	
+	// dbg_sprintf(dbgout, "main_file_list = 0x%6x | size = %d\n", main_file_list, (uint24_t)sizeof(file_list_t));
 	
 	if (ti_Open(RECENT_FILES_APPVAR, "r") == 0)
 	{
@@ -832,7 +839,8 @@ void main_menu(void)
 		gui_DrawMessageDialog_Blocking("Could not load Recent Files");
 		return;
 	};
-	dbg_sprintf(dbgout, "recent_file_list = 0x%6x | size = %d\n", recent_file_list, (uint24_t)sizeof(recent_file_list_t));
+	
+	// dbg_sprintf(dbgout, "recent_file_list = 0x%6x | size = %d\n", recent_file_list, (uint24_t)sizeof(recent_file_list_t));
 	NUM_FILES_PER_TYPE[RECENTS_TABLE_NUM] = recent_file_list->num_files;
 	
 	for (;;)
