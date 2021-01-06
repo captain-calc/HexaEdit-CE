@@ -923,7 +923,7 @@ static uint8_t load_mem_editor_data(editor_t *editor, cursor_t *cursor, ti_var_t
 		editor->max_address = ROM_MAX_ADDRESS;
 	};
 	
-	dbg_sprintf(dbgout, "load_mem_editor_data\n\tmin = 0x%6x\n\tmax = 0x%6x\n\twindow = 0x%6x\n", editor->min_address, editor->max_address, editor->window_address);
+	// dbg_sprintf(dbgout, "load_mem_editor_data\n\tmin = 0x%6x\n\tmax = 0x%6x\n\twindow = 0x%6x\n", editor->min_address, editor->max_address, editor->window_address);
 	
 	return bounds_check_mem_pointers((uintptr_t)editor->min_address, (uintptr_t)editor->max_address, (uintptr_t)editor->window_address, (uintptr_t)cursor->primary, (uintptr_t)cursor->secondary);
 }
@@ -1058,9 +1058,7 @@ static bool load_config_data(void)
 	
 	if (editor_config == ROM_VIEWER || editor_config == RAM_EDITOR)
 	{
-		dbg_sprintf(dbgout, "About to bounds-check mem_editor\n");
 		bounds_check_code = load_mem_editor_data(editor, cursor, config_data_slot, editor_config);
-		dbg_sprintf(dbgout, "bounds_check_code = %d\n", bounds_check_code);
 		if (bounds_check_code > 0)
 		{
 			gui_DrawMessageDialog_Blocking(error_message[bounds_check_code - 1]);
