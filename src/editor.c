@@ -63,9 +63,9 @@ set or after the pointers are no longer needed.
  * ==============================
  *
  *
- * File Editor (18 bytes)
+ * File Editor (19 bytes)
  * ==============================
- * File Name			8
+ * File Name			9
  * File Type			1
  * Editor Window Offset		3
  * Cursor Primary Offset	3
