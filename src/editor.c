@@ -855,36 +855,46 @@ static void set_color_theme_from_config(ti_var_t slot)
 	return;
 }
 
-static uint8_t bounds_check_mem_pointers(uint8_t *min_address, uint8_t *max_address, uint8_t *window_address, uint8_t *cursor_primary, uint8_t *cursor_secondary)
+static uint8_t bounds_check_mem_pointers(uintptr_t min_address, uintptr_t max_address, uintptr_t window_address, uintptr_t cursor_primary, uintptr_t cursor_secondary)
 {
-	if (window_address < min_address || window_address > max_address)
+	if ((window_address - min_address) < 0)
 	{
 		return 1;
-	}
-	else if (cursor_primary < cursor_secondary)
+	};
+	
+	if ((max_address - window_address) < 0)
+	{
+		return 1;
+	};
+	
+	if (cursor_primary < cursor_secondary)
 	{
 		return 2;
-	}
-	else if (cursor_primary < window_address || cursor_secondary < window_address)
+	};
+	
+	if (cursor_primary < window_address || cursor_secondary < window_address)
 	{
 		return 3;
-	}
-	else if (cursor_primary > max_address || cursor_secondary > max_address)
+	};
+	
+	if (cursor_primary > max_address || cursor_secondary > max_address)
 	{
 		return 4;
-	}
-	else if (cursor_primary > window_address + (COLS_ONSCREEN * ROWS_ONSCREEN))
+	};
+	
+	if (cursor_primary > (window_address + (COLS_ONSCREEN * ROWS_ONSCREEN)))
 	{
 		return 5;
-	}
-	else if (cursor_secondary > window_address + (COLS_ONSCREEN * ROWS_ONSCREEN))
+	};
+	
+	if (cursor_secondary > (window_address + (COLS_ONSCREEN * ROWS_ONSCREEN)))
 	{
 		return 6;
 	};
 	return 0;
 }
 
-static bool load_mem_editor_data(editor_t *editor, cursor_t *cursor, ti_var_t slot, uint8_t editor_type)
+static uint8_t load_mem_editor_data(editor_t *editor, cursor_t *cursor, ti_var_t slot, uint8_t editor_type)
 {
 	mem_editor_config_t *mem_editor = malloc(sizeof(mem_editor_config_t));
 	
@@ -895,6 +905,7 @@ static bool load_mem_editor_data(editor_t *editor, cursor_t *cursor, ti_var_t sl
 	cursor->secondary = mem_editor->cursor_secondary;
 	free(mem_editor);
 	
+	editor->type = editor_type;
 	editor->num_changes = 0;
 	cursor->high_nibble = true;
 	cursor->multibyte_selection = false;
@@ -914,7 +925,7 @@ static bool load_mem_editor_data(editor_t *editor, cursor_t *cursor, ti_var_t sl
 	
 	dbg_sprintf(dbgout, "load_mem_editor_data\n\tmin = 0x%6x\n\tmax = 0x%6x\n\twindow = 0x%6x\n", editor->min_address, editor->max_address, editor->window_address);
 	
-	return bounds_check_mem_pointers(editor->min_address, editor->max_address, editor->window_address, cursor->primary, cursor->secondary);
+	return bounds_check_mem_pointers((uintptr_t)editor->min_address, (uintptr_t)editor->max_address, (uintptr_t)editor->window_address, (uintptr_t)cursor->primary, (uintptr_t)cursor->secondary);
 }
 
 static uint8_t bounds_check_file_offsets(uint24_t window_offset, uint24_t cursor_primary, uint24_t cursor_secondary, uint24_t file_size)
@@ -931,11 +942,11 @@ static uint8_t bounds_check_file_offsets(uint24_t window_offset, uint24_t cursor
 	{
 		return 4;
 	}
-	else if (cursor_primary > window_offset + (COLS_ONSCREEN * ROWS_ONSCREEN))
+	else if (cursor_primary > (window_offset + (COLS_ONSCREEN * ROWS_ONSCREEN)))
 	{
 		return 5;
 	}
-	else if (cursor_secondary > window_offset + (COLS_ONSCREEN * ROWS_ONSCREEN))
+	else if (cursor_secondary > (window_offset + (COLS_ONSCREEN * ROWS_ONSCREEN)))
 	{
 		return 6;
 	};
@@ -1006,10 +1017,9 @@ static uint8_t load_file_editor_data(editor_t *editor, cursor_t *cursor, ti_var_
 
 static bool load_config_data(void)
 {
-	const char *error_message[9] = {
-		"",
+	const char *error_message[6] = {
 		"Window address out of range",
-		"Cursor primary greater than secondary",
+		"Cursor secondary greater than primary",
 		"Cursor pointer less than window addr",
 		"Cursor pointer too large",
 		"Cursor primary not onscreen",
@@ -1048,10 +1058,12 @@ static bool load_config_data(void)
 	
 	if (editor_config == ROM_VIEWER || editor_config == RAM_EDITOR)
 	{
+		dbg_sprintf(dbgout, "About to bounds-check mem_editor\n");
 		bounds_check_code = load_mem_editor_data(editor, cursor, config_data_slot, editor_config);
+		dbg_sprintf(dbgout, "bounds_check_code = %d\n", bounds_check_code);
 		if (bounds_check_code > 0)
 		{
-			gui_DrawMessageDialog_Blocking(error_message[bounds_check_code]);
+			gui_DrawMessageDialog_Blocking(error_message[bounds_check_code - 1]);
 			goto RETURN;
 		};
 	}
@@ -1066,7 +1078,7 @@ static bool load_config_data(void)
 		}
 		else if (bounds_check_code > 0)
 		{
-			gui_DrawMessageDialog_Blocking(error_message[bounds_check_code]);
+			gui_DrawMessageDialog_Blocking(error_message[bounds_check_code - 1]);
 			goto RETURN;
 		};
 	} else {
