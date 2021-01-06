@@ -33,7 +33,7 @@ To activate the icon viewer, press [stat].
 #### Change Log
 
 v2.0.0 - Complete rewrite; Added Headless Start. "Undo" action now works for more than one change.
-         Reworked GUI.
+         Reworked GUI. Increased file search range to all file types.
 
 v1.2.1 - Added [Enter] key support for selection and submitting actions; Upgraded the sprite
          viewer to handle any sprite size
