@@ -213,15 +213,22 @@ static void move_cursor(uint8_t direction, bool accelerated_cursor)
 	return;
 }
 
-static void goto_prompt(char buffer[], uint8_t buffer_size)
+static void goto_prompt(editor_t *editor, cursor_t *cursor, uint8_t editor_index_method)
 {
+	char buffer[8] = {'\0'};
+	uint8_t buffer_size;
+	
 	char *goto_input_str;
 	uint24_t goto_input_decimal;
-	char *keymap[1] = {GOTO_HEX};
+	char *keymap[1];
 	
-	if (editor->type == FILE_EDITOR)
+	if (editor_index_method == OFFSET_INDEXING)
 	{
 		keymap[0] = NUMBERS;
+		buffer_size = 7;
+	} else {
+		keymap[0] = GOTO_HEX;
+		buffer_size = 6;
 	};
 	
 	gfx_SetColor(color_theme.bar_color);
@@ -237,18 +244,22 @@ static void goto_prompt(char buffer[], uint8_t buffer_size)
 	if (kb_Data[6] & kb_Clear)
 		return;
 	
-	if (editor->type == FILE_EDITOR)
+	if (editor_index_method == OFFSET_INDEXING)
 	{
 		goto_input_decimal = atoi(goto_input_str);
+		goto_input_decimal += (uint24_t)editor->min_address;
 	} else {
 		goto_input_decimal = decimal(goto_input_str);
 	};
-	editact_Goto(editor, cursor, goto_input_decimal);
+	editact_Goto(editor, cursor, (uint8_t *)goto_input_decimal);
 	return;
 }
 
-static bool insert_bytes_prompt(char buffer[], uint8_t buffer_size)
+static bool insert_bytes_prompt(editor_t *editor, cursor_t *cursor)
 {
+	char buffer[6] = {'\0'};
+	uint8_t buffer_size = 5;
+	
 	uint24_t num_bytes_insert;
 	char *keymap[1] = {NUMBERS};
 	
@@ -282,6 +293,288 @@ static bool insert_bytes_prompt(char buffer[], uint8_t buffer_size)
 		// dbg_sprintf(dbgout, "editor->min_address = 0x%6x\n", editor->min_address);
 	};
 	return false;
+}
+
+static void draw_editor_contents(editor_t *editor, cursor_t *cursor, uint8_t editor_index_method)
+{
+	gfx_SetColor(color_theme.background_color);
+	gfx_FillRectangle_NoClip(0, 20, LCD_WIDTH, LCD_HEIGHT - 40);
+	
+	if (editor_index_method == OFFSET_INDEXING)
+	{
+		editorgui_DrawFileOffsets(editor, 3, 22);
+	} else {
+		editorgui_DrawMemAddresses(editor, 3, 22);
+	};
+	
+	gfx_SetColor(BLACK);
+	gfx_VertLine_NoClip(58, 20, LCD_HEIGHT - 40);
+	gfx_VertLine_NoClip(59, 20, LCD_HEIGHT - 40);
+	gfx_VertLine_NoClip(228, 20, LCD_HEIGHT - 40);
+	gfx_VertLine_NoClip(229, 20, LCD_HEIGHT - 40);
+	gfx_SetColor(color_theme.table_bg_color);
+	gfx_FillRectangle_NoClip(60, 20, 168, LCD_HEIGHT - 40);
+	
+	if (editor->type == FILE_EDITOR && editor->is_file_empty)
+	{
+		editorgui_DrawEmptyFileMessage(60, LCD_HEIGHT / 2 - 4);
+	}
+	else
+	{
+		editorgui_DrawHexTable(editor, cursor, 65, 22);
+		editorgui_DrawAsciiTable(editor, cursor, 235, 22);
+	};
+	
+	return;
+}
+
+static void ascii_to_nibble(const char *in, char *out, uint8_t in_len)
+{
+	const char *hex_chars = "0123456789abcdef";
+	uint8_t byte;
+	uint8_t read_offset = 0;
+	uint8_t write_offset = 0;
+	
+	while (read_offset < in_len - 1)
+	{
+		// Read out two ascii characters and convert them into one byte
+		byte = (uint8_t)(strchr(hex_chars, (int)(*(in + read_offset++))) - hex_chars);
+		byte *= 16;
+		byte += (uint8_t)(strchr(hex_chars, (int)(*(in + read_offset++))) - hex_chars);
+		
+		dbg_sprintf(dbgout, "byte = %x\n", byte);
+		
+		*(out + write_offset++) = (unsigned char)byte;
+	};
+	
+	return;
+}
+
+static uint8_t * asm_FindPhrase(const char phrase[], uint8_t phrase_len, uint8_t *start, uint8_t *end)
+{
+	uint8_t *curr = start;
+	
+	while (curr < end)
+	{
+		if (!memcmp(curr, phrase, phrase_len))
+			return curr;
+		
+		curr++;
+	};
+	
+	return NULL;
+}
+
+static uint8_t find_all_phrase_occurances(uint8_t *start, uint8_t *min, uint8_t *max, char phrase[], uint8_t phrase_len, uint8_t **occurances)
+{
+	uint8_t i = 0;
+	uint8_t *curr_occurance;
+	uint8_t max_num_occurances = 255;
+	
+	while (i < max_num_occurances)
+	{
+		curr_occurance = asm_FindPhrase(phrase, phrase_len, start, max);
+		
+		dbg_sprintf(dbgout, "curr_occurance = 0x%6x\n", curr_occurance);
+		
+		if (curr_occurance == NULL)
+		{
+			// If the top of the file or storage space has been reached
+			// and no match found in the entire storage space, return.
+			
+			if (start == min)
+				return 0;
+			
+			start = min;
+			gui_DrawMessageDialog("Started again from top");
+			gfx_BlitBuffer();
+		} else {
+			*(occurances + i) = curr_occurance;
+			
+			if ((i > 0) && (curr_occurance == *occurances))
+				return i;
+			
+			start = curr_occurance + phrase_len;
+			i++;
+		};
+	};
+	
+	return i;
+}
+
+static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t editor_index_method)
+{
+	char buffer[17] = {'\0'};
+	char phrase[17] = {'\0'};
+	char draw_buffer[8] = {'\0'};
+	uint8_t prev_buffer_length;
+	uint8_t phrase_len;
+	
+	const char *prompt = "Find:";
+	uint8_t input_box_x = gfx_GetStringWidth(prompt) + 10;
+	uint8_t input_box_width = 200;
+	int8_t key;
+	
+	const char *keymaps[] = {
+		GOTO_HEX,
+		UPPERCASE_LETTERS,
+		LOWERCASE_LETTERS,
+		NUMBERS
+	};
+	const char keymap_indicators[] = {'x', 'A', 'a', '0'};
+	uint8_t keymap_num = 0;
+	
+	uint8_t **occurances = (uint8_t **)malloc(255 * sizeof(uint8_t *));
+	uint8_t num_occurances = 0;
+	uint8_t occurance_offset = 0;
+	
+	
+	for (;;)
+	{
+		gfx_SetColor(color_theme.bar_color);
+		gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
+		
+		gfx_SetTextBGColor(color_theme.bar_color);
+		gfx_SetTextFGColor(color_theme.bar_text_color);
+		gfx_SetTextTransparentColor(color_theme.bar_color);
+		gfx_PrintStringXY(prompt, 5, 226);
+		
+		// Draw occurance_offset and number of occurances
+		memset(draw_buffer, '\0', sizeof(draw_buffer));
+		
+		if (num_occurances == 0)
+		{
+			sprintf(draw_buffer, "%d/%d", occurance_offset, num_occurances);
+		} else {
+			sprintf(draw_buffer, "%d/%d", occurance_offset + 1, num_occurances);
+		};
+		
+		gfx_PrintStringXY(
+			draw_buffer,
+			LCD_WIDTH - 5 - gfx_GetStringWidth(draw_buffer),
+			226
+		);
+		
+		gfx_SetColor(color_theme.table_text_color);
+		gfx_FillRectangle_NoClip(input_box_x, 223, input_box_width, FONT_HEIGHT + 6);
+		
+		gfx_SetColor(color_theme.table_bg_color);
+		gfx_FillRectangle_NoClip(
+			input_box_x + 1,
+			224,
+			input_box_width - 2,
+			FONT_HEIGHT + 4
+		);
+		gui_DrawKeymapIndicator(
+			keymap_indicators[keymap_num],
+			input_box_x + input_box_width + 1,
+			223
+		);
+		gfx_BlitBuffer();
+		
+		gfx_SetTextBGColor(color_theme.table_bg_color);
+		gfx_SetTextFGColor(color_theme.table_text_color);
+		gfx_SetTextTransparentColor(color_theme.table_bg_color);
+		
+		prev_buffer_length = strlen(buffer);
+		
+		key = gui_AltInput(buffer, 17, input_box_x, 224, input_box_width, keymaps[keymap_num]);
+		
+		delay(200);
+		
+		dbg_sprintf(dbgout, "num_occurances = %d | occurance_offset = %d\n", num_occurances, occurance_offset);
+		
+		if (key == sk_Down)
+		{
+			if (occurance_offset + 1 < num_occurances)
+			{
+				occurance_offset++;
+			} else {
+				occurance_offset = 0;
+			};
+		}
+		else if (key == sk_Up)
+		{
+			if (occurance_offset > 0)
+			{
+				occurance_offset--;
+			} else if (num_occurances > 0) {
+				occurance_offset = num_occurances - 1;
+			};
+		}
+		else if (key == sk_Alpha)
+		{
+			if (keymap_num < 4)
+			{
+				keymap_num++;
+			} else {
+				keymap_num = 0;
+			};
+		}
+		else if (key == sk_Clear)
+		{
+			break;
+		};
+		
+		if (prev_buffer_length != strlen(buffer))
+		{
+			// If the keymap is hexadecimal, each character is equivalent to
+			// one nibble. ascii_to_nibble() converts each character in buffer
+			// into a nibble in phrase, e.g. "30ab" -> "\x30\xab". This process is
+			// not necessary for letter or number input since those are already in
+			// the proper byte format.
+			
+			if (keymap_num == 0)
+			{
+				ascii_to_nibble(buffer, phrase, strlen(buffer));
+				phrase_len = strlen(buffer) / 2;
+			} else {
+				strcpy(phrase, buffer);
+				phrase_len = strlen(buffer);
+			};
+			
+			if (phrase_len < 2)
+			{
+				num_occurances = 0;
+				goto SKIP_FIND_PHRASE;
+			};
+			
+			// If hexadecimal input is being used, do not call the find
+			// phrase routine, unless the buffer input is divisible by two
+			// (the phrase contains no half-bytes or nibbles at the end).
+			
+			if (keymap_num == 0 && (strlen(buffer) % 2 != 0))
+			{
+				num_occurances = 0;
+				goto SKIP_FIND_PHRASE;
+			};
+			
+			num_occurances = find_all_phrase_occurances(
+				cursor->primary,
+				editor->min_address,
+				editor->max_address,
+				phrase,
+				phrase_len,
+				occurances
+			);
+			
+			occurance_offset = 0;
+		};
+		
+		SKIP_FIND_PHRASE:
+		
+		if (num_occurances > 0)
+		{
+			editact_Goto(editor, cursor, occurances[occurance_offset]);
+			cursor->primary += phrase_len - 1;
+			cursor->multibyte_selection = true;
+		};
+		
+		// Redraw the editor contents
+		draw_editor_contents(editor, cursor, editor_index_method);
+	};
+	
+	return;
 }
 
 static uint8_t save_prompt(void)
@@ -411,43 +704,19 @@ static bool save_file(char *name, uint8_t type)
 static void run_editor(void)
 {
 	int8_t key;
+	uint8_t editor_index_method = ADDRESS_INDEXING;
 	bool redraw_top_bar = true;
 	bool redraw_tool_bar = true;
 	uint8_t save_code;
 	
-	char buffer[7] = {'\0'};
-	
 	// dbg_sprintf(dbgout, "window_address = 0x%6x | max_address = 0x%6x\n", editor->window_address, editor->max_address);
+	
+	if (editor->type == FILE_EDITOR)
+		editor_index_method = OFFSET_INDEXING;
 	
 	for (;;)
 	{
-		gfx_SetColor(color_theme.background_color);
-		gfx_FillRectangle_NoClip(0, 20, LCD_WIDTH, LCD_HEIGHT - 40);
-		
-		if (editor->type == FILE_EDITOR)
-		{
-			editorgui_DrawFileOffsets(editor, 5, 22);
-		} else {
-			editorgui_DrawMemAddresses(editor, 5, 22);
-		};
-		
-		gfx_SetColor(BLACK);
-		gfx_VertLine_NoClip(58, 20, LCD_HEIGHT - 40);
-		gfx_VertLine_NoClip(59, 20, LCD_HEIGHT - 40);
-		gfx_VertLine_NoClip(228, 20, LCD_HEIGHT - 40);
-		gfx_VertLine_NoClip(229, 20, LCD_HEIGHT - 40);
-		gfx_SetColor(color_theme.table_bg_color);
-		gfx_FillRectangle_NoClip(60, 20, 168, LCD_HEIGHT - 40);
-		
-		if (editor->type == FILE_EDITOR && editor->is_file_empty)
-		{
-			editorgui_DrawEmptyFileMessage(60, LCD_HEIGHT / 2 - 4);
-		}
-		else
-		{
-			editorgui_DrawHexTable(editor, cursor, 65, 22);
-			editorgui_DrawAsciiTable(editor, cursor, 235, 22);
-		};
+		draw_editor_contents(editor, cursor, editor_index_method);
 		
 		if (redraw_top_bar)
 		{
@@ -529,16 +798,35 @@ static void run_editor(void)
 			redraw_tool_bar = true;
 		};
 		
-		if (key == sk_Yequ && !cursor->multibyte_selection)
+		
+		if (key == sk_Yequ)
 		{
-			goto_prompt(buffer, 6);
+			phrase_search_prompt(editor, cursor, editor_index_method);
+			redraw_tool_bar = true;
+		};
+		
+		
+		if (key == sk_Mode)
+		{
+			if (editor_index_method == ADDRESS_INDEXING)
+			{
+				editor_index_method = OFFSET_INDEXING;
+			} else {
+				editor_index_method = ADDRESS_INDEXING;
+			};
+			redraw_tool_bar = true;
+		};
+		
+		if (key == sk_Zoom && !cursor->multibyte_selection)
+		{
+			goto_prompt(editor, cursor, editor_index_method);
 			redraw_tool_bar = true;
 			delay(200);
 		};
 		
 		if (key == sk_Window && editor->type == FILE_EDITOR && !cursor->multibyte_selection)
 		{
-			if (insert_bytes_prompt(buffer, 5))
+			if (insert_bytes_prompt(editor, cursor))
 			{
 				redraw_top_bar = true;
 			};

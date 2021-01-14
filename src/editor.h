@@ -17,8 +17,9 @@
 #define RAM_EDITOR	1
 #define ROM_VIEWER	2
 
-#define HEADLESS_START_FLAG		("\x00\x48\x58")
-#define HEADLESS_START_FLAG_LENGTH	3
+/* Editor indexing formats */
+#define OFFSET_INDEXING		0
+#define ADDRESS_INDEXING	1
 
 #define ROM_MIN_ADDRESS	((uint8_t *)0x000000)
 #define ROM_MAX_ADDRESS	((uint8_t *)0x3fffff)

@@ -59,14 +59,18 @@ void editorgui_DrawToolBar(editor_t *editor)
 	gfx_SetTextBGColor(color_theme.bar_color);
 	gfx_SetTextFGColor(color_theme.bar_text_color);
 	gfx_SetTextTransparentColor(color_theme.bar_color);
-	gfx_PrintStringXY("Goto", 5, 226);
+	
+	gfx_PrintStringXY("Find", 5, 226);
+	
+	gfx_PrintStringXY("Goto", 138, 226);
+	
 	if (editor->type == FILE_EDITOR)
 	{
 		gfx_PrintStringXY("Ins", 70, 226);
 	};
 	if (editor->num_changes > 0)
 	{
-		gfx_PrintStringXY("Undo", 226, 226);
+		gfx_PrintStringXY("Undo", 224, 226);
 	};
 	gfx_PrintStringXY("Exit", 286, 226);
 	return;
@@ -78,8 +82,7 @@ void editorgui_DrawAltToolBar(cursor_t *cursor)
 	uint24_t byte_value = 0;
 	
 	gfx_SetColor(color_theme.bar_color);
-	gfx_FillRectangle_NoClip(0, 220, 140, 20);
-	gfx_FillRectangle_NoClip(226, 220, 50, 20);
+	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, 280, 20);
 	gfx_SetTextBGColor(color_theme.bar_color);
 	gfx_SetTextFGColor(color_theme.bar_text_color);
 	gfx_SetTextTransparentColor(color_theme.bar_color);

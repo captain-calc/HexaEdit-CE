@@ -17,7 +17,12 @@
 #include <string.h>
 
 uint8_t NUM_FILES_PER_TYPE[NUM_TABLES];
-uint8_t TABLE_ORDER[] = {HEXAEDIT_RECENTS_TYPE, HEXAEDIT_APPVAR_TYPE, HEXAEDIT_ASM_PRGM_TYPE, HEXAEDIT_BASIC_PRGM_TYPE};
+uint8_t TABLE_ORDER[4] = {
+	HEXAEDIT_RECENTS_TYPE,
+	HEXAEDIT_APPVAR_TYPE,
+	HEXAEDIT_ASM_PRGM_TYPE,
+	HEXAEDIT_BASIC_PRGM_TYPE
+};
 char *TABLE_NAMES[] = {"Recents", "Appvars", "ASM Prgms", "BASIC Prgms"};
 
 const char *COLUMN_HEADERS[] = {"Name", "Arc", "Lock", "VAT", "Data", "Size"};
@@ -644,7 +649,7 @@ static void search_main_files(file_list_t *file_list, uint8_t *table_num, uint8_
 	gfx_SetColor(WHITE);
 	gfx_FillRectangle_NoClip(99, 224, 100, FONT_HEIGHT + 4);
 	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-	gui_Input(buffer, buffer_size, keymap, 0, 3, 100, 225, 100, FONT_HEIGHT + 4);
+	gui_Input(buffer, buffer_size, keymap, 0, 3, 100, 225, 99, FONT_HEIGHT + 4);
 	
 	if (*buffer == '\0')
 		return;

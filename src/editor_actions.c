@@ -65,10 +65,22 @@ void editact_SpriteViewer(editor_t *editor, cursor_t *cursor)
 	return;
 }
 
-void editact_Goto(editor_t *editor, cursor_t *cursor, uint24_t offset)
+void editact_Goto(editor_t *editor, cursor_t *cursor, uint8_t *ptr)
 {
-	// dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x | offset = %d\n", editor->min_address, editor->window_address, offset);
+	dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x | offset = 0x%6x\n", editor->min_address, editor->window_address, ptr);
 	
+	cursor->primary = ptr;
+	
+	if (cursor->primary > editor->max_address)
+	{
+		cursor->primary = editor->max_address;
+	}
+	else if (cursor->primary <= editor->min_address)
+	{
+		cursor->primary = editor->min_address;
+	};
+	
+	/*
 	if (editor->type == FILE_EDITOR)
 	{
 		offset += (uint24_t)editor->min_address;
@@ -86,6 +98,7 @@ void editact_Goto(editor_t *editor, cursor_t *cursor, uint24_t offset)
 	{
 		cursor->primary = (uint8_t *)offset;
 	};
+	*/
 	cursor->secondary = cursor->primary;
 	
 	while (cursor->primary > editor->window_address + (((ROWS_ONSCREEN - 1) * COLS_ONSCREEN) / 2))

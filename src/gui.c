@@ -15,7 +15,7 @@
 #include <string.h>
 
 
-static uint24_t _get_string_width(char *string)
+static uint24_t get_string_width(char *string)
 {
 	char *character = string;
 	uint24_t width = 0;
@@ -145,14 +145,14 @@ char *gui_Input(char buffer[], uint8_t buffer_size, char *keymaps[], uint8_t key
 		gfx_SetTextFGColor(color_theme.selected_table_text_color);
 		gfx_SetTextTransparentColor(color_theme.table_selector_color);
 		gfx_SetColor(color_theme.table_selector_color);
-		gfx_FillRectangle_NoClip(x + _get_string_width(buffer) + 2, y, 9, FONT_HEIGHT + 2);
+		gfx_FillRectangle_NoClip(x + get_string_width(buffer) + 2, y, 9, FONT_HEIGHT + 2);
 		
 		keymap_indicator = keymap[47];	// Uppercase and lowercase letters
 		if (keymap_indicator == '\0')
 		{
 			keymap_indicator = keymap[33];	// Numbers
 		};
-		gfx_SetTextXY(x + _get_string_width(buffer) + 3, y + 1);
+		gfx_SetTextXY(x + get_string_width(buffer) + 3, y + 1);
 		gfx_PrintChar(keymap_indicator);
 		
 		gfx_BlitRectangle(1, x, y, width, height);
@@ -197,4 +197,64 @@ char *gui_Input(char buffer[], uint8_t buffer_size, char *keymaps[], uint8_t key
 		
 		delay(200);
 	};
+}
+
+void gui_DrawKeymapIndicator(const char indicator, uint24_t x, uint8_t y)
+{
+	gfx_SetColor(color_theme.table_selector_color);
+	gfx_FillRectangle_NoClip(x, y, gfx_GetCharWidth(indicator) + 3, FONT_HEIGHT + 6);
+	
+	gfx_SetTextBGColor(color_theme.table_selector_color);
+	gfx_SetTextFGColor(color_theme.selected_table_text_color);
+	gfx_SetTextTransparentColor(color_theme.table_selector_color);
+	gfx_SetTextXY(x + 2, y + 3);
+	gfx_PrintChar(indicator);
+	return;
+}
+
+int8_t gui_AltInput(char buffer[], uint8_t buffer_size, uint24_t x, uint8_t y, uint24_t width, const char keymap[])
+{
+	int8_t key;
+	uint8_t i = 0;
+	uint8_t offset = strlen(buffer);
+	
+	gfx_SetTextXY(x + 2, y + 2);
+	gui_PrintFileName(buffer);
+	
+	gfx_BlitRectangle(1, x, y, width, FONT_HEIGHT + 4);
+	
+	do {
+		kb_Scan();
+		
+		gfx_SetColor(color_theme.table_bg_color);
+		
+		if (i < 120)
+		{
+			gfx_SetColor(color_theme.table_text_color);
+		};
+		
+		gfx_FillRectangle_NoClip(x + gfx_GetStringWidth(buffer) + 2, y + 1, 2, FONT_HEIGHT + 2);
+		gfx_BlitRectangle(1, x + gfx_GetStringWidth(buffer) + 2, y + 1, 2, FONT_HEIGHT + 2);
+		
+		if (i++ > 240)
+			i = 0;
+		
+	} while ((key = asm_GetCSC()) == -1);
+	
+	// dbg_sprintf(dbgout, "input key = %d\n", key);
+	
+	if (keymap[key] != '\0' && offset < buffer_size)
+	{
+		buffer[offset++] = keymap[key];
+	};
+	
+	if (key == sk_Del && offset > 0)
+	{
+		buffer[--offset] = '\0';
+	};
+	
+	if (key == sk_Clear)
+		memset(buffer, '\0', buffer_size);
+	
+	return key;
 }

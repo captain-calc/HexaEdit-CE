@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 void editact_SpriteViewer(editor_t *editor, cursor_t *cursor);
-void editact_Goto(editor_t *editor, cursor_t *cursor, uint24_t offset);
+void editact_Goto(editor_t *editor, cursor_t *cursor, uint8_t *ptr);
 bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_point, uint24_t num_bytes);
 bool editact_InsertBytes(editor_t *editor, uint8_t *insertion_point, uint24_t num_bytes);
 bool editact_CreateUndoInsertBytesAction(editor_t *editor, cursor_t *cursor, uint24_t num_bytes);

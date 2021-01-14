@@ -42,24 +42,11 @@ static void load_default_color_theme(void)
 static bool check_for_headless_start(void)
 {
 	ti_var_t config_data_slot;
-	header_config_t *header = malloc(sizeof(header_config_t));
 	
 	if ((config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r")) != 0)
 	{
-		ti_Read(header, 3, 1, config_data_slot);
-		
-		// dbg_sprintf(dbgout, "headless_start_flag = 0x%6x\n", header->headless_start_flag);
-		// dbg_sprintf(dbgout, "HEADLESS_START_FLAG = 0x%6x\n", HEADLESS_START_FLAG);
-		
-		free(header);
-		ti_Close(config_data_slot);
-		if (!memcmp(header->headless_start_flag, HEADLESS_START_FLAG, strlen(HEADLESS_START_FLAG)))
-		{
-			// dbg_sprintf(dbgout, "Starting headlessly...\n");
-			
-			editor_HeadlessStart();
-			return true;
-		};
+		editor_HeadlessStart();
+		return true;
 	};
 	return false;
 }
