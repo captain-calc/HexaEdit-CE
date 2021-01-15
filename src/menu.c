@@ -230,6 +230,12 @@ static void add_recent_file(recent_file_list_t *recent_file_list, const char *na
 	uint8_t file_num = 0;
 	recent_file_list_t *temp_rf_list = malloc(sizeof(recent_file_list_t));
 	
+	if (temp_rf_list == NULL)
+	{
+		gui_DrawMessageDialog_Blocking("Failed to add recent file");
+		return;
+	};
+	
 	if (hexaedit_type == HEXAEDIT_APPVAR_TYPE)
 	{
 		temp_rf_list->files[0] = get_appvar_data(name);
@@ -239,7 +245,7 @@ static void add_recent_file(recent_file_list_t *recent_file_list, const char *na
 	
 	temp_rf_list->num_files = 1;
 	
-	// dbg_sprintf(dbgout, "add_recent_file\n\tname = \"%s\"\n\thexaedit_type = %d\n", name, hexaedit_type);
+	dbg_sprintf(dbgout, "add_recent_file\n\tname = \"%s\"\n\thexaedit_type = %d\n", name, hexaedit_type);
 	
 	// Copy all of the file data pointers from the recent_file_list into the temporary list.
 	// If a pointer is found with the same file data as the one being added, free it and
@@ -262,6 +268,7 @@ static void add_recent_file(recent_file_list_t *recent_file_list, const char *na
 	
 	while (file_num < temp_rf_list->num_files)
 	{
+		free(recent_file_list->files[file_num]);
 		recent_file_list->files[file_num] = temp_rf_list->files[file_num];
 		file_num++;
 	};
@@ -275,7 +282,7 @@ static void add_recent_file(recent_file_list_t *recent_file_list, const char *na
 static bool load_recent_files(recent_file_list_t *recent_file_list)
 {
 	ti_var_t recent_files_appvar, test_slot;
-	char file_name[9];
+	char file_name[10];
 	uint8_t hexaedit_type;
 	
 	if ((recent_files_appvar = ti_Open(RECENT_FILES_APPVAR, "r")) == 0)
@@ -283,8 +290,8 @@ static bool load_recent_files(recent_file_list_t *recent_file_list)
 	
 	while (ti_Tell(recent_files_appvar) < ti_GetSize(recent_files_appvar) - 1)
 	{
-		memset(file_name, '\0', 9);
-		ti_Read(&file_name, 8, 1, recent_files_appvar);
+		memset(file_name, '\0', 10);
+		ti_Read(&file_name, 9, 1, recent_files_appvar);
 		hexaedit_type = (uint8_t)ti_GetC(recent_files_appvar);
 		
 		test_slot = ti_OpenVar(file_name, "r", TI_APPVAR_TYPE);
@@ -336,7 +343,7 @@ static void save_recent_files(recent_file_list_t *recent_file_list)
 	
 	while (file_num < recent_file_list->num_files)
 	{
-		ti_Write(&recent_file_list->files[file_num]->name, 8, 1, recent_files_appvar);
+		ti_Write(&recent_file_list->files[file_num]->name, 9, 1, recent_files_appvar);
 		ti_PutC((char)(recent_file_list->files[file_num]->hexaedit_type), recent_files_appvar);
 		
 		file_num++;
@@ -637,19 +644,42 @@ static void search_main_files(file_list_t *file_list, uint8_t *table_num, uint8_
 {
 	char buffer[9] = {'\0'};
 	uint8_t buffer_size = 8;
-	char *keymap [3] = {UPPERCASE_LETTERS, LOWERCASE_LETTERS, NUMBERS};
+	const char *keymaps[3] = {UPPERCASE_LETTERS, LOWERCASE_LETTERS, NUMBERS};
+	const char keymap_indicators[3] = {'A', 'a', '0'};
+	uint8_t keymap_num = 0;
+	int8_t key;
+	
 	uint8_t file;
 	uint8_t curr_table_num = *table_num;
 	
-	gfx_SetColor(DK_GRAY);
-	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-	gfx_PrintStringXY("Search Files:", 5, 226);
-	gfx_SetColor(BLACK);
-	gfx_FillRectangle_NoClip(98, 223, 102, FONT_HEIGHT + 6);
-	gfx_SetColor(WHITE);
-	gfx_FillRectangle_NoClip(99, 224, 100, FONT_HEIGHT + 4);
-	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-	gui_Input(buffer, buffer_size, keymap, 0, 3, 100, 225, 99, FONT_HEIGHT + 4);
+	
+	for (;;)
+	{
+		gui_DrawInputPrompt("Search Files:", 102);
+		gui_DrawKeymapIndicator(keymap_indicators[keymap_num], 201, 223);
+		gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
+		
+		gfx_SetTextBGColor(color_theme.table_bg_color);
+		gfx_SetTextFGColor(color_theme.table_text_color);
+		gfx_SetTextTransparentColor(color_theme.table_bg_color);
+		
+		key = gui_Input(buffer, buffer_size, 98, 224, 99, keymaps[keymap_num]);
+		
+		if (key == sk_Alpha)
+		{
+			if (keymap_num < 2)
+			{
+				keymap_num++;
+			} else {
+				keymap_num = 0;
+			};
+		};
+		
+		if (key == sk_Clear || key == sk_2nd || key == sk_Enter)
+			break;
+		
+		delay(200);
+	};
 	
 	if (*buffer == '\0')
 		return;
@@ -708,7 +738,9 @@ static void search_main_files(file_list_t *file_list, uint8_t *table_num, uint8_
 	
 	gfx_SetColor(DK_GRAY);
 	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-	gfx_SetTextFGColor(WHITE);
+	gfx_SetTextBGColor(color_theme.bar_color);
+	gfx_SetTextFGColor(color_theme.bar_text_color);
+	gfx_SetTextTransparentColor(color_theme.bar_color);
 	gfx_PrintStringXY("File not found!", 5, 226);
 	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
 	delay(500);

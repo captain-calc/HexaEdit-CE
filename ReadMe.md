@@ -28,9 +28,11 @@ To activate the icon viewer, press [stat].
 
 * Platform: TI-84 Plus CE
 * Language: C
-* Latest Version: 2.0.0
+* Latest Version: 2.0.1
 
 #### Change Log
+
+v2.0.1 - Fixed Headless Start bug. Added phrase search to editor. Modified input functions.
 
 v2.0.0 - Complete rewrite; Added Headless Start. "Undo" action now works for more than one change.
          Reworked GUI. Increased file search range to all file types.

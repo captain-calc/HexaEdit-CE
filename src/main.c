@@ -1,7 +1,7 @@
 
 /*-----------------------------------------
  * Program Name: HexaEdit CE
- * Version:      2.0.0 CE
+ * Version:      2.0.1 CE
  * Author:       Captain Calc   
  * Description:  A hex editor for the TI-84
  *               Plus CE.

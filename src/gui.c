@@ -123,80 +123,26 @@ void gui_DrawTime(uint24_t xPos)
 	return;
 }
 
-/* buffer_size excludes the null terminator. */
-char *gui_Input(char buffer[], uint8_t buffer_size, char *keymaps[], uint8_t keymap_num, uint8_t num_keymaps, uint24_t x, uint8_t y, uint24_t width, uint8_t height)
+void gui_DrawInputPrompt(const char *prompt, uint24_t input_field_width)
 {
-	uint8_t i = 0;
-	int8_t key;
-	char *keymap = keymaps[keymap_num];
-	char keymap_indicator;
+	uint24_t x = gfx_GetStringWidth(prompt) + 10;
 	
-	memset(buffer, '\0', buffer_size);
+	gfx_SetColor(color_theme.bar_color);
+	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
 	
-	for (;;) {
-		gfx_SetColor(color_theme.table_bg_color);
-		gfx_FillRectangle_NoClip(x, y, width, FONT_HEIGHT + 2);
-		gfx_SetTextXY(x + 1, y + 1);
-		gfx_SetTextBGColor(color_theme.table_bg_color);
-		gfx_SetTextFGColor(color_theme.table_text_color);
-		gfx_SetTextTransparentColor(color_theme.table_bg_color);
-		gui_PrintFileName(buffer);
-		gfx_SetTextBGColor(color_theme.table_selector_color);
-		gfx_SetTextFGColor(color_theme.selected_table_text_color);
-		gfx_SetTextTransparentColor(color_theme.table_selector_color);
-		gfx_SetColor(color_theme.table_selector_color);
-		gfx_FillRectangle_NoClip(x + get_string_width(buffer) + 2, y, 9, FONT_HEIGHT + 2);
-		
-		keymap_indicator = keymap[47];	// Uppercase and lowercase letters
-		if (keymap_indicator == '\0')
-		{
-			keymap_indicator = keymap[33];	// Numbers
-		};
-		gfx_SetTextXY(x + get_string_width(buffer) + 3, y + 1);
-		gfx_PrintChar(keymap_indicator);
-		
-		gfx_BlitRectangle(1, x, y, width, height);
-		
-		dbg_sprintf(dbgout, "Before key loop\n");
-		
-		do {
-			kb_Scan();
-		} while ((key = asm_GetCSC()) == -1);
-		
-		// dbg_sprintf(dbgout, "input key = %d\n", key);
-		
-		if (keymap[key] != '\0' && i < buffer_size)
-		{
-			buffer[i++] = keymap[key];
-		};
-		
-		if (key == sk_Del && i > 0)
-		{
-			buffer[--i] = '\0';
-		};
-		
-		if (key == sk_Alpha)
-		{
-			if (++keymap_num > num_keymaps - 1)
-			{
-				keymap_num = 0;
-			};
-			keymap = keymaps[keymap_num];
-		};
-		
-		if (key == sk_2nd || key == sk_Enter)
-		{
-			return buffer;
-		};
-		
-		if (key == sk_Clear)
-		{
-			memset(buffer, '\0', buffer_size);
-			return buffer;
-		};
-		
-		delay(200);
-	};
+	gfx_SetTextBGColor(color_theme.bar_color);
+	gfx_SetTextFGColor(color_theme.bar_text_color);
+	gfx_SetTextTransparentColor(color_theme.bar_color);
+	
+	gfx_PrintStringXY(prompt, 5, 226);
+	
+	gfx_SetColor(color_theme.table_text_color);
+	gfx_FillRectangle_NoClip(x, 223, input_field_width, FONT_HEIGHT + 6);
+	
+	gfx_SetColor(color_theme.table_bg_color);
+	gfx_FillRectangle_NoClip(x + 1, 224, input_field_width - 2, FONT_HEIGHT + 4);
+	
+	return;
 }
 
 void gui_DrawKeymapIndicator(const char indicator, uint24_t x, uint8_t y)
@@ -212,7 +158,8 @@ void gui_DrawKeymapIndicator(const char indicator, uint24_t x, uint8_t y)
 	return;
 }
 
-int8_t gui_AltInput(char buffer[], uint8_t buffer_size, uint24_t x, uint8_t y, uint24_t width, const char keymap[])
+/* buffer_size excludes the null terminator. */
+int8_t gui_Input(char buffer[], uint8_t buffer_size, uint24_t x, uint8_t y, uint24_t width, const char keymap[])
 {
 	int8_t key;
 	uint8_t i = 0;
@@ -233,8 +180,8 @@ int8_t gui_AltInput(char buffer[], uint8_t buffer_size, uint24_t x, uint8_t y, u
 			gfx_SetColor(color_theme.table_text_color);
 		};
 		
-		gfx_FillRectangle_NoClip(x + gfx_GetStringWidth(buffer) + 2, y + 1, 2, FONT_HEIGHT + 2);
-		gfx_BlitRectangle(1, x + gfx_GetStringWidth(buffer) + 2, y + 1, 2, FONT_HEIGHT + 2);
+		gfx_FillRectangle_NoClip(x + get_string_width(buffer) + 2, y + 1, 2, FONT_HEIGHT + 2);
+		gfx_BlitRectangle(1, x + get_string_width(buffer) + 2, y + 1, 2, FONT_HEIGHT + 2);
 		
 		if (i++ > 240)
 			i = 0;

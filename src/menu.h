@@ -10,7 +10,7 @@
 
 /* General program data. */
 #define PROGRAM_NAME		"HexaEdit"
-#define PROGRAM_VERSION		"2.0.0"
+#define PROGRAM_VERSION		"2.0.1"
 #define RECENT_FILES_APPVAR	"HEXARCF"
 
 
@@ -41,7 +41,7 @@ Although appvars cannot be "locked" and the unused boolean variable does
 cause some wasted space, the convenience and efficiency of having only one
 file data structure far outweighs this overhead. */
 typedef struct {
-	char name[9];
+	char name[10];
 	uint8_t hexaedit_type;
 	bool is_archived;
 	bool is_protected;

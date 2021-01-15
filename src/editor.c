@@ -39,12 +39,12 @@ set or after the pointers are no longer needed.
  *
  *
  * General Configuration
- * ==============================
+ * ===============================
  * Color Theme/Editor Type	1 byte
  *
  *
  * Color Theme Override (7 bytes)
- * ==============================
+ * ===============================
  * Background Color		1
  * Bar Color			1
  * Bar Text Color		1
@@ -52,25 +52,25 @@ set or after the pointers are no longer needed.
  * Table Text Color		1
  * Selected Table Text Color	1
  * Cursor Color			1
- * ==============================
+ * ===============================
  *
  *
  * RAM Editor/ROM Viewer (9 bytes)
- * ==============================
+ * ===============================
  * Editor Window Address	3
  * Cursor Primary Address	3
  * Cursor Secondary Address	3
- * ==============================
+ * ===============================
  *
  *
- * File Editor (19 bytes)
- * ==============================
- * File Name			9
+ * File Editor (20 bytes)
+ * ===============================
+ * File Name			10
  * File Type			1
  * Editor Window Offset		3
  * Cursor Primary Offset	3
  * Cursor Secondary Offset	3
- * ==============================
+ * ===============================
  *
  *
  * Only include the data sections you will need. For example, if you wanted to
@@ -217,39 +217,50 @@ static void goto_prompt(editor_t *editor, cursor_t *cursor, uint8_t editor_index
 {
 	char buffer[8] = {'\0'};
 	uint8_t buffer_size;
+	int8_t key;
 	
-	char *goto_input_str;
 	uint24_t goto_input_decimal;
-	char *keymap[1];
+	char *keymap;
+	char keymap_indicator;
 	
 	if (editor_index_method == OFFSET_INDEXING)
 	{
-		keymap[0] = NUMBERS;
+		keymap = NUMBERS;
+		keymap_indicator = '0';
 		buffer_size = 7;
 	} else {
-		keymap[0] = GOTO_HEX;
+		keymap = GOTO_HEX;
+		keymap_indicator = 'x';
 		buffer_size = 6;
 	};
 	
-	gfx_SetColor(color_theme.bar_color);
-	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-	gfx_PrintStringXY("Goto:", 5, 226);
-	gfx_SetColor(color_theme.table_text_color);
-	gfx_FillRectangle_NoClip(50, 223, 102, FONT_HEIGHT + 6);
-	gfx_SetColor(color_theme.table_bg_color);
-	gfx_FillRectangle_NoClip(51, 224, 100, FONT_HEIGHT + 4);
-	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-	goto_input_str = gui_Input(buffer, buffer_size, keymap, 0, 1, 52, 225, 99, FONT_HEIGHT + 4);
-	
-	if (kb_Data[6] & kb_Clear)
-		return;
+	for (;;)
+	{
+		gui_DrawInputPrompt("Goto:", 102);
+		gui_DrawKeymapIndicator(keymap_indicator, 147, 223);
+		gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
+		
+		gfx_SetTextBGColor(color_theme.table_bg_color);
+		gfx_SetTextFGColor(color_theme.table_text_color);
+		gfx_SetTextTransparentColor(color_theme.table_bg_color);
+		
+		key = gui_Input(buffer, buffer_size, 44, 224, 99, keymap);
+		
+		if (key == sk_Clear)
+			return;
+		
+		if (key == sk_2nd || key == sk_Enter)
+			break;
+		
+		delay(200);
+	};
 	
 	if (editor_index_method == OFFSET_INDEXING)
 	{
-		goto_input_decimal = atoi(goto_input_str);
+		goto_input_decimal = atoi(buffer);
 		goto_input_decimal += (uint24_t)editor->min_address;
 	} else {
-		goto_input_decimal = decimal(goto_input_str);
+		goto_input_decimal = decimal(buffer);
 	};
 	editact_Goto(editor, cursor, (uint8_t *)goto_input_decimal);
 	return;
@@ -259,25 +270,32 @@ static bool insert_bytes_prompt(editor_t *editor, cursor_t *cursor)
 {
 	char buffer[6] = {'\0'};
 	uint8_t buffer_size = 5;
+	int8_t key;
 	
 	uint24_t num_bytes_insert;
-	char *keymap[1] = {NUMBERS};
 	
-	gfx_SetColor(color_theme.bar_color);
-	gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-	gfx_PrintStringXY("Insert:", 5, 226);
-	gfx_SetColor(color_theme.table_text_color);
-	gfx_FillRectangle_NoClip(60, 223, 102, FONT_HEIGHT + 6);
-	gfx_SetColor(color_theme.table_bg_color);
-	gfx_FillRectangle_NoClip(61, 224, 100, FONT_HEIGHT + 4);
-	gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
+	for (;;)
+	{
+		gui_DrawInputPrompt("Insert:", 102);
+		gui_DrawKeymapIndicator('0', 163, 223);
+		gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
+		
+		gfx_SetTextBGColor(color_theme.table_bg_color);
+		gfx_SetTextFGColor(color_theme.table_text_color);
+		gfx_SetTextTransparentColor(color_theme.table_bg_color);
+		
+		key = gui_Input(buffer, buffer_size, 60, 224, 99, NUMBERS);
+		
+		if (key == sk_Clear)
+			return false;
+		
+		if (key == sk_2nd || key == sk_Enter)
+			break;
+		
+		delay(200);
+	};
 	
-	// dbg_sprintf(dbgout, "Preparing to recieve input\n");
-	
-	num_bytes_insert = (uint24_t)atoi(gui_Input(buffer, buffer_size, keymap, 0, 1, 62, 225, 99, FONT_HEIGHT + 4));
-	
-	if (kb_Data[6] & kb_Clear)
-		return false;
+	num_bytes_insert = (uint24_t)atoi(buffer);
 	
 	// dbg_sprintf(dbgout, "num_bytes_insert = %d\n", num_bytes_insert);
 	
@@ -289,8 +307,7 @@ static bool insert_bytes_prompt(editor_t *editor, cursor_t *cursor)
 			return true;
 		};
 	} else {
-		// dbg_sprintf(dbgout, "Failed to create insert bytes undo action\n");
-		// dbg_sprintf(dbgout, "editor->min_address = 0x%6x\n", editor->min_address);
+		gui_DrawMessageDialog_Blocking("Could not insert bytes");
 	};
 	return false;
 }
@@ -342,7 +359,7 @@ static void ascii_to_nibble(const char *in, char *out, uint8_t in_len)
 		byte *= 16;
 		byte += (uint8_t)(strchr(hex_chars, (int)(*(in + read_offset++))) - hex_chars);
 		
-		dbg_sprintf(dbgout, "byte = %x\n", byte);
+		// dbg_sprintf(dbgout, "byte = %x\n", byte);
 		
 		*(out + write_offset++) = (unsigned char)byte;
 	};
@@ -350,7 +367,7 @@ static void ascii_to_nibble(const char *in, char *out, uint8_t in_len)
 	return;
 }
 
-static uint8_t * asm_FindPhrase(const char phrase[], uint8_t phrase_len, uint8_t *start, uint8_t *end)
+static uint8_t *asm_FindPhrase(const char phrase[], uint8_t phrase_len, uint8_t *start, uint8_t *end)
 {
 	uint8_t *curr = start;
 	
@@ -375,7 +392,7 @@ static uint8_t find_all_phrase_occurances(uint8_t *start, uint8_t *min, uint8_t 
 	{
 		curr_occurance = asm_FindPhrase(phrase, phrase_len, start, max);
 		
-		dbg_sprintf(dbgout, "curr_occurance = 0x%6x\n", curr_occurance);
+		// dbg_sprintf(dbgout, "curr_occurance = 0x%6x\n", curr_occurance);
 		
 		if (curr_occurance == NULL)
 		{
@@ -431,13 +448,12 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 	
 	for (;;)
 	{
-		gfx_SetColor(color_theme.bar_color);
-		gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-		
-		gfx_SetTextBGColor(color_theme.bar_color);
-		gfx_SetTextFGColor(color_theme.bar_text_color);
-		gfx_SetTextTransparentColor(color_theme.bar_color);
-		gfx_PrintStringXY(prompt, 5, 226);
+		gui_DrawInputPrompt(prompt, input_box_width);
+		gui_DrawKeymapIndicator(
+			keymap_indicators[keymap_num],
+			input_box_x + input_box_width + 1,
+			223
+		);
 		
 		// Draw occurance_offset and number of occurances
 		memset(draw_buffer, '\0', sizeof(draw_buffer));
@@ -454,22 +470,6 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 			LCD_WIDTH - 5 - gfx_GetStringWidth(draw_buffer),
 			226
 		);
-		
-		gfx_SetColor(color_theme.table_text_color);
-		gfx_FillRectangle_NoClip(input_box_x, 223, input_box_width, FONT_HEIGHT + 6);
-		
-		gfx_SetColor(color_theme.table_bg_color);
-		gfx_FillRectangle_NoClip(
-			input_box_x + 1,
-			224,
-			input_box_width - 2,
-			FONT_HEIGHT + 4
-		);
-		gui_DrawKeymapIndicator(
-			keymap_indicators[keymap_num],
-			input_box_x + input_box_width + 1,
-			223
-		);
 		gfx_BlitBuffer();
 		
 		gfx_SetTextBGColor(color_theme.table_bg_color);
@@ -478,11 +478,11 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 		
 		prev_buffer_length = strlen(buffer);
 		
-		key = gui_AltInput(buffer, 17, input_box_x, 224, input_box_width, keymaps[keymap_num]);
+		key = gui_Input(buffer, 17, input_box_x, 224, input_box_width, keymaps[keymap_num]);
 		
 		delay(200);
 		
-		dbg_sprintf(dbgout, "num_occurances = %d | occurance_offset = %d\n", num_occurances, occurance_offset);
+		// dbg_sprintf(dbgout, "num_occurances = %d | occurance_offset = %d\n", num_occurances, occurance_offset);
 		
 		if (key == sk_Down)
 		{
@@ -504,7 +504,7 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 		}
 		else if (key == sk_Alpha)
 		{
-			if (keymap_num < 4)
+			if (keymap_num < 3)
 			{
 				keymap_num++;
 			} else {

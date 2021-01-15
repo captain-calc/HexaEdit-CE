@@ -19,10 +19,8 @@ void gui_DrawMessageDialog_Blocking(const char *message);
 void gui_DrawBatteryStatus(void);
 void gui_DrawTime(uint24_t xPos);
 void gui_PrintFileName(char *name);
-char *gui_Input(char buffer[], uint8_t buffer_size, char *keymaps[], uint8_t keymap_num, uint8_t num_keymaps, uint24_t x, uint8_t y, uint24_t width, uint8_t height);
-
+void gui_DrawInputPrompt(const char *prompt, uint24_t input_field_width);
 void gui_DrawKeymapIndicator(const char indicator, uint24_t x, uint8_t y);
-
-int8_t gui_AltInput(char buffer[], uint8_t buffer_size, uint24_t x, uint8_t y, uint24_t width, const char keymap[]);
+int8_t gui_Input(char buffer[], uint8_t buffer_size, uint24_t x, uint8_t y, uint24_t width, const char keymap[]);
 
 #endif

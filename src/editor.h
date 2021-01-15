@@ -87,7 +87,7 @@ typedef struct {
 } mem_editor_config_t;
 
 typedef struct {
-	char file_name[9];
+	char file_name[10];
 	uint8_t file_type;
 	uint24_t window_offset;
 	uint24_t cursor_primary_offset;
