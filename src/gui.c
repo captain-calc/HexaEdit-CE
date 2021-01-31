@@ -220,21 +220,3 @@ int8_t gui_Input(char buffer[], uint8_t buffer_size, uint24_t xPos, uint8_t yPos
 	
 	return key;
 }
-
-void gui_DrawProgressBar(uint24_t xPos, uint8_t yPos, uint24_t width, uint8_t progress, uint8_t range)
-{
-	uint8_t i;
-	uint8_t spacing, block_width;
-	
-	spacing = (uint8_t)(width / 80);
-	block_width = (uint8_t)(width / range - spacing);
-	
-	gfx_SetColor(color_theme.bar_text_color);
-	gfx_Rectangle_NoClip(xPos, yPos, width, 8);
-	
-	for (i = 0; i < progress; i++)
-	{
-		gfx_FillRectangle_NoClip(xPos + 2 + i * (block_width + spacing), yPos + 2, block_width, 4);
-	};
-	return;
-}
