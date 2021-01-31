@@ -404,7 +404,6 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 	char buffer[17] = {'\0'};
 	char phrase[17] = {'\0'};
 	char draw_buffer[8] = {'\0'};
-	uint8_t prev_buffer_length;
 	uint8_t phrase_len;
 	
 	const char *prompt = "Find:";
@@ -432,8 +431,7 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 	
 	search_range = settings_GetPhraseSearchRange();
 	
-	dbg_sprintf(dbgout, "search_range = %d\n", search_range);
-	dbg_sprintf(dbgout, "Flush buffer\n");
+	// dbg_sprintf(dbgout, "search_range = %d\n", search_range);
 	
 	for (;;)
 	{
@@ -465,9 +463,7 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 		gfx_SetTextFGColor(color_theme.table_text_color);
 		gfx_SetTextTransparentColor(color_theme.table_bg_color);
 		
-		prev_buffer_length = strlen(buffer);
-		
-		key = gui_Input(buffer, 17, input_box_x, 224, input_box_width, keymaps[keymap_num]);
+		key = gui_Input(buffer, 16, input_box_x, 224, input_box_width, keymaps[keymap_num]);
 		
 		delay(100);
 		
@@ -491,8 +487,10 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 				occurance_offset = num_occurances - 1;
 			};
 		}
-		else if (key == sk_Alpha)
+		else if (key == sk_Alpha && *buffer == '\0')
 		{
+			// Only allow keymap switching when there is no data in the buffer
+			
 			if (keymap_num < 3)
 			{
 				keymap_num++;
@@ -505,7 +503,7 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 			break;
 		};
 		
-		if (prev_buffer_length != strlen(buffer))
+		if (key == sk_2nd || key == sk_Enter)
 		{
 			// If the keymap is hexadecimal, each character is equivalent to
 			// one nibble. ascii_to_nibble() converts each character in buffer
