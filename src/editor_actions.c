@@ -522,19 +522,6 @@ bool editact_UndoAction(editor_t *editor, cursor_t *cursor)
 	};
 }
 
-static uint8_t *find_phrase(const char phrase[], uint8_t phrase_len, uint8_t *start, uint8_t *end)
-{
-	uint8_t *curr = start;
-	
-	while ((curr + phrase_len - 1) <= end)
-	{
-		if (!memcmp(curr, phrase, phrase_len))
-			break;
-		curr++;
-	};
-	
-	return curr;
-}
 
 // Finds all occurances of PHRASE starting from START in MIN to MAX.
 // Returns number of occurances found (max = 255).
@@ -558,24 +545,6 @@ uint8_t editact_FindPhraseOccurances(
 	
 	if (search_range > (uint24_t)(search_max - search_min))
 		search_range = search_max - search_min + 1;
-	
-	/*
-	search_range_end = orig_search_start + search_range;
-	
-	if (search_range_end < search_max)
-	{
-		search_end = search_max - phrase_len - 1;
-	} else {
-		search_range_end = search_min + ((orig_search_start + search_range) - search_max);
-		
-		if (search_range_end < orig_search_start)
-		{
-			search_end = search_range_end;
-		} else {
-			search_end = orig_search_start;
-		};
-	};
-	*/
 	
 	gui_DrawMessageDialog("Searching...");
 	
