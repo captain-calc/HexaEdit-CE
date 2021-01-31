@@ -46,7 +46,7 @@ void editorgui_DrawTopBar(editor_t *editor)
 	{
 		gfx_PrintString("* ");
 	};
-	gui_PrintFileName(editor->name);
+	gui_PrintFileName(editor->name, color_theme.bar_text_color);
 	
 	gui_DrawBatteryStatus();
 	return;
@@ -108,10 +108,6 @@ void editorgui_DrawMemAddresses(editor_t *editor, uint24_t x, uint8_t y)
 	uint8_t byte;
 	char hex[7] = {'\0'};
 	
-	gfx_SetTextBGColor(color_theme.background_color);
-	gfx_SetTextFGColor(color_theme.table_text_color);
-	gfx_SetTextTransparentColor(color_theme.background_color);
-	
 	for (;;)
 	{
 		if (row > ROWS_ONSCREEN || (editor->window_address + (row * COLS_ONSCREEN)) > editor->max_address)
@@ -140,9 +136,6 @@ void editorgui_DrawFileOffsets(editor_t *editor, uint24_t x, uint8_t y)
 {
 	uint8_t row = 0;
 	
-	gfx_SetTextBGColor(color_theme.background_color);
-	gfx_SetTextFGColor(color_theme.table_text_color);
-	gfx_SetTextTransparentColor(color_theme.background_color);
 	for (;;)
 	{
 		if (row > ROWS_ONSCREEN || (editor->window_address + (row * COLS_ONSCREEN)) > editor->max_address)

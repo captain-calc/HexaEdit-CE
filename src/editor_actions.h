@@ -16,6 +16,15 @@ uint8_t editact_GetNibble(cursor_t *cursor, uint8_t *ptr);
 void editact_WriteNibble(cursor_t *cursor, uint8_t nibble);
 bool editact_CreateUndoWriteNibbleAction(editor_t *editor, cursor_t *cursor, uint8_t nibble);
 bool editact_UndoAction(editor_t *editor, cursor_t *cursor);
+uint8_t editact_FindPhraseOccurances(
+	uint8_t *search_start,
+	uint24_t search_range,
+	uint8_t *search_min,
+	uint8_t *search_max,
+	char phrase[],
+	uint8_t phrase_len,
+	uint8_t **occurances
+);
 
 
 #endif

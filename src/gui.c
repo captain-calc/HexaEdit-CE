@@ -33,11 +33,11 @@ static uint24_t get_string_width(char *string)
 	return width;
 }
 
-void gui_PrintFileName(char *name)
+void gui_PrintText(const char *name, uint8_t text_color)
 {
-	char *character = name;
+	const char *character = name;
 	
-	gfx_SetColor(BLACK);
+	gfx_SetColor(text_color);
 
 	while (*character != '\0') {
 		if (*character == 0x5b) {
@@ -49,6 +49,21 @@ void gui_PrintFileName(char *name)
 		character++;
 	};
 
+	return;
+}
+
+void gui_PrintFileName(const char *name, uint8_t text_color)
+{
+	// If the file is hidden, print a tilde for the first character
+	// of the name
+	
+	if (*name < 0x20)
+	{
+		gfx_PrintChar('~');
+		name++;
+	};
+	
+	gui_PrintText(name, text_color);
 	return;
 }
 
@@ -145,30 +160,30 @@ void gui_DrawInputPrompt(const char *prompt, uint24_t input_field_width)
 	return;
 }
 
-void gui_DrawKeymapIndicator(const char indicator, uint24_t x, uint8_t y)
+void gui_DrawKeymapIndicator(const char indicator, uint24_t xPos, uint8_t yPos)
 {
 	gfx_SetColor(color_theme.table_selector_color);
-	gfx_FillRectangle_NoClip(x, y, gfx_GetCharWidth(indicator) + 3, FONT_HEIGHT + 6);
+	gfx_FillRectangle_NoClip(xPos, yPos, gfx_GetCharWidth(indicator) + 3, FONT_HEIGHT + 6);
 	
 	gfx_SetTextBGColor(color_theme.table_selector_color);
 	gfx_SetTextFGColor(color_theme.selected_table_text_color);
 	gfx_SetTextTransparentColor(color_theme.table_selector_color);
-	gfx_SetTextXY(x + 2, y + 3);
+	gfx_SetTextXY(xPos + 2, yPos + 3);
 	gfx_PrintChar(indicator);
 	return;
 }
 
 /* buffer_size excludes the null terminator. */
-int8_t gui_Input(char buffer[], uint8_t buffer_size, uint24_t x, uint8_t y, uint24_t width, const char keymap[])
+int8_t gui_Input(char buffer[], uint8_t buffer_size, uint24_t xPos, uint8_t yPos, uint24_t width, const char keymap[])
 {
 	int8_t key;
 	uint8_t i = 0;
 	uint8_t offset = strlen(buffer);
 	
-	gfx_SetTextXY(x + 2, y + 2);
-	gui_PrintFileName(buffer);
+	gfx_SetTextXY(xPos + 2, yPos + 2);
+	gui_PrintText(buffer, color_theme.table_text_color);
 	
-	gfx_BlitRectangle(1, x, y, width, FONT_HEIGHT + 4);
+	gfx_BlitRectangle(1, xPos, yPos, width, FONT_HEIGHT + 4);
 	
 	do {
 		kb_Scan();
@@ -180,8 +195,8 @@ int8_t gui_Input(char buffer[], uint8_t buffer_size, uint24_t x, uint8_t y, uint
 			gfx_SetColor(color_theme.table_text_color);
 		};
 		
-		gfx_FillRectangle_NoClip(x + get_string_width(buffer) + 2, y + 1, 2, FONT_HEIGHT + 2);
-		gfx_BlitRectangle(1, x + get_string_width(buffer) + 2, y + 1, 2, FONT_HEIGHT + 2);
+		gfx_FillRectangle_NoClip(xPos + get_string_width(buffer) + 2, yPos + 1, 2, FONT_HEIGHT + 2);
+		gfx_BlitRectangle(1, xPos + get_string_width(buffer) + 2, yPos + 1, 2, FONT_HEIGHT + 2);
 		
 		if (i++ > 240)
 			i = 0;
@@ -204,4 +219,22 @@ int8_t gui_Input(char buffer[], uint8_t buffer_size, uint24_t x, uint8_t y, uint
 		memset(buffer, '\0', buffer_size);
 	
 	return key;
+}
+
+void gui_DrawProgressBar(uint24_t xPos, uint8_t yPos, uint24_t width, uint8_t progress, uint8_t range)
+{
+	uint8_t i;
+	uint8_t spacing, block_width;
+	
+	spacing = (uint8_t)(width / 80);
+	block_width = (uint8_t)(width / range - spacing);
+	
+	gfx_SetColor(color_theme.bar_text_color);
+	gfx_Rectangle_NoClip(xPos, yPos, width, 8);
+	
+	for (i = 0; i < progress; i++)
+	{
+		gfx_FillRectangle_NoClip(xPos + 2 + i * (block_width + spacing), yPos + 2, block_width, 4);
+	};
+	return;
 }

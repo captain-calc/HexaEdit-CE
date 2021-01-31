@@ -1,11 +1,12 @@
 #include "debug.h"
 
+#include "asmutil.h"
 #include "colors.h"
 #include "editor.h"
 #include "editor_actions.h"
 #include "editor_gui.h"
 #include "gui.h"
-#include "asmutil.h"
+#include "settings.h"
 
 #include <fileioc.h>
 #include <graphx.h>
@@ -135,6 +136,20 @@ static uint24_t decimal(const char *hex)
 	//dbg_sprintf(dbgout, "%s -> %d\n", hex, decimal);
 	
 	return decimal;
+}
+
+static bool is_file_accessible(char *name, uint8_t type)
+{
+	ti_var_t slot;
+	
+	ti_CloseAll();
+	if ((slot = ti_OpenVar(name, "r", type)) == 0)
+	{
+		ti_Close(slot);
+		return false;
+	};
+	ti_Close(slot);
+	return true;
 }
 
 static void move_cursor(uint8_t direction, bool accelerated_cursor)
@@ -317,6 +332,10 @@ static void draw_editor_contents(editor_t *editor, cursor_t *cursor, uint8_t edi
 	gfx_SetColor(color_theme.background_color);
 	gfx_FillRectangle_NoClip(0, 20, LCD_WIDTH, LCD_HEIGHT - 40);
 	
+	gfx_SetTextBGColor(color_theme.background_color);
+	gfx_SetTextFGColor(color_theme.table_text_color);
+	gfx_SetTextTransparentColor(color_theme.background_color);
+	
 	if (editor_index_method == OFFSET_INDEXING)
 	{
 		editorgui_DrawFileOffsets(editor, 3, 22);
@@ -367,56 +386,17 @@ static void ascii_to_nibble(const char *in, char *out, uint8_t in_len)
 	return;
 }
 
-static uint8_t *asm_FindPhrase(const char phrase[], uint8_t phrase_len, uint8_t *start, uint8_t *end)
+static bool init_hexaedit_config_appvar(void)
 {
-	uint8_t *curr = start;
+	ti_var_t slot;
+	uint24_t search_range = QUICK_SEARCH;
 	
-	while (curr < end)
-	{
-		if (!memcmp(curr, phrase, phrase_len))
-			return curr;
-		
-		curr++;
-	};
+	if ((slot = ti_Open(HEXAEDIT_CONFIG_APPVAR, "w")) == 0)
+		return false;
 	
-	return NULL;
-}
-
-static uint8_t find_all_phrase_occurances(uint8_t *start, uint8_t *min, uint8_t *max, char phrase[], uint8_t phrase_len, uint8_t **occurances)
-{
-	uint8_t i = 0;
-	uint8_t *curr_occurance;
-	uint8_t max_num_occurances = 255;
-	
-	while (i < max_num_occurances)
-	{
-		curr_occurance = asm_FindPhrase(phrase, phrase_len, start, max);
-		
-		// dbg_sprintf(dbgout, "curr_occurance = 0x%6x\n", curr_occurance);
-		
-		if (curr_occurance == NULL)
-		{
-			// If the top of the file or storage space has been reached
-			// and no match found in the entire storage space, return.
-			
-			if (start == min)
-				return 0;
-			
-			start = min;
-			gui_DrawMessageDialog("Started again from top");
-			gfx_BlitBuffer();
-		} else {
-			*(occurances + i) = curr_occurance;
-			
-			if ((i > 0) && (curr_occurance == *occurances))
-				return i;
-			
-			start = curr_occurance + phrase_len;
-			i++;
-		};
-	};
-	
-	return i;
+	ti_Write(&search_range, sizeof(uint24_t), 1, slot);
+	ti_Close(slot);
+	return true;
 }
 
 static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t editor_index_method)
@@ -441,10 +421,19 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 	const char keymap_indicators[] = {'x', 'A', 'a', '0'};
 	uint8_t keymap_num = 0;
 	
-	uint8_t **occurances = (uint8_t **)malloc(255 * sizeof(uint8_t *));
+	uint8_t **occurances = (uint8_t **)malloc(MAX_NUM_PHRASE_OCCURANCES * sizeof(uint8_t *));
 	uint8_t num_occurances = 0;
 	uint8_t occurance_offset = 0;
+	uint24_t search_range;
 	
+	
+	if (!is_file_accessible(HEXAEDIT_CONFIG_APPVAR, TI_APPVAR_TYPE))
+		init_hexaedit_config_appvar();
+	
+	search_range = settings_GetPhraseSearchRange();
+	
+	dbg_sprintf(dbgout, "search_range = %d\n", search_range);
+	dbg_sprintf(dbgout, "Flush buffer\n");
 	
 	for (;;)
 	{
@@ -480,7 +469,7 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 		
 		key = gui_Input(buffer, 17, input_box_x, 224, input_box_width, keymaps[keymap_num]);
 		
-		delay(200);
+		delay(100);
 		
 		// dbg_sprintf(dbgout, "num_occurances = %d | occurance_offset = %d\n", num_occurances, occurance_offset);
 		
@@ -549,8 +538,9 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 				goto SKIP_FIND_PHRASE;
 			};
 			
-			num_occurances = find_all_phrase_occurances(
+			num_occurances = editact_FindPhraseOccurances(
 				cursor->primary,
+				search_range,
 				editor->min_address,
 				editor->max_address,
 				phrase,
@@ -967,20 +957,6 @@ static bool create_edit_file(char *name, uint8_t type)
 	ERROR:
 	ti_CloseAll();
 	return false;
-}
-
-static bool is_file_accessible(char *name, uint8_t type)
-{
-	ti_var_t slot;
-	
-	ti_CloseAll();
-	if ((slot = ti_OpenVar(name, "r", type)) == 0)
-	{
-		ti_Close(slot);
-		return false;
-	};
-	ti_Close(slot);
-	return true;
 }
 
 static bool file_normal_start(const char *name, uint8_t type)

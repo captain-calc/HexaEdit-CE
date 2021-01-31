@@ -8,7 +8,9 @@
 #include <graphx.h>
 #include <tice.h>
 
+#include <math.h>
 #include <stdint.h>
+#include <string.h>
 
 
 /* Define common error messages as globals. */
@@ -67,7 +69,7 @@ void editact_SpriteViewer(editor_t *editor, cursor_t *cursor)
 
 void editact_Goto(editor_t *editor, cursor_t *cursor, uint8_t *ptr)
 {
-	dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x | offset = 0x%6x\n", editor->min_address, editor->window_address, ptr);
+	//dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x | offset = 0x%6x\n", editor->min_address, editor->window_address, ptr);
 	
 	cursor->primary = ptr;
 	
@@ -518,4 +520,132 @@ bool editact_UndoAction(editor_t *editor, cursor_t *cursor)
 		ti_Close(undo_appvar);
 		return false;
 	};
+}
+
+static uint8_t *find_phrase(
+	const char phrase[],
+	uint8_t phrase_len,
+	uint8_t *orig_search_start,
+	uint8_t *search_start,
+	uint8_t *search_end,
+	uint8_t *search_max,
+	bool restarted_from_top
+)
+{
+	uint8_t *curr = search_start;
+	// uint24_t step;
+	/*
+	if (search_end > orig_search_start)
+	{
+		step = (search_end - orig_search_start) / 20;
+	} else {
+		step = (orig_search_start - search_min) / 20;
+	};*/
+	
+	while ((curr + phrase_len) < search_max && (curr + phrase_len) < search_end)
+	{
+		// If the search restarted from the top, prevent
+		// overhead by stopping the search when the original
+		// search start is reached.
+		
+		if ((curr + phrase_len) > orig_search_start && restarted_from_top)
+			break;
+	
+		if (!memcmp(curr, phrase, phrase_len))
+			break;
+	
+		curr++;
+		
+		/*
+		if (((uint24_t)(curr - search_start) % step) == 0)
+		{
+			gui_DrawProgressBar(
+				LCD_WIDTH / 2 - 80,
+				128,
+				160,
+				((uint24_t)(curr - search_min) / step),
+				20
+			);
+			gfx_BlitRectangle(1, LCD_WIDTH / 2 - 80, 128, 160, 8);
+		};*/
+	};
+	
+	return curr;
+}
+
+// Finds all occurances of PHRASE starting from START in MIN to MAX.
+// Returns number of occurances found (max = 255).
+// Stores pointers to each occurance in OCCURANCES. 
+uint8_t editact_FindPhraseOccurances(
+	uint8_t *search_start,
+	uint24_t search_range,
+	uint8_t *search_min,
+	uint8_t *search_max,
+	char phrase[],
+	uint8_t phrase_len,
+	uint8_t **occurances
+)
+{
+	uint8_t i = 0;
+	uint8_t *orig_search_start = search_start;
+	uint8_t *search_end;
+	uint8_t *curr_occurance;
+	
+	bool restarted_from_top = false;
+	
+	
+	search_end = search_start + search_range;
+	
+	// dbg_sprintf(dbgout, "search_end = 0x%6x\n", search_end);
+	
+	gui_DrawMessageDialog("Searching...");
+	
+	while (i < MAX_NUM_PHRASE_OCCURANCES)
+	{
+		curr_occurance = find_phrase(
+			phrase,
+			phrase_len,
+			orig_search_start,
+			search_start,
+			search_end,
+			search_max,
+			restarted_from_top
+		);
+		
+		// dbg_sprintf(dbgout, "curr_occurance = 0x%6x\n", curr_occurance);
+		// dbg_sprintf(dbgout, "\n");
+		
+		if (
+			((curr_occurance + phrase_len) > orig_search_start && restarted_from_top) ||
+			(curr_occurance + phrase_len) > search_end
+		)
+			return i;
+		
+		
+		if (curr_occurance >= search_max)
+		{
+			search_start = search_min;
+			restarted_from_top = true;
+			
+			// If the search_end address exceeds the max_address of the storage space,
+			// wrap it around to the start of the storage space.
+			
+			if (search_end > search_max)
+				search_end = search_end - search_max + search_min;
+			//dbg_sprintf(dbgout, "Restarted from top\n");
+		} else {
+			*(occurances + i) = curr_occurance;
+			
+			// If the occurance found has the same address as the first
+			// occurance, we know the entire storage space has been searched.
+			
+			if ((i > 0) && (curr_occurance == *occurances))
+				return i;
+			
+			search_start = curr_occurance + phrase_len;
+			i++;
+		};
+	};
+	
+	return i;
 }

@@ -6,6 +6,7 @@
 #include "editor.h"
 #include "gui.h"
 #include "menu.h"
+#include "settings.h"
 
 #include <fileioc.h>
 #include <graphx.h>
@@ -55,6 +56,7 @@ static file_data_t *get_appvar_data(const char *name)
 	
 	appvar_data = malloc(sizeof(file_data_t));
 	
+	memset(appvar_data->name, '\0', 10);
 	strcpy(appvar_data->name, name);
 	appvar_data->hexaedit_type = HEXAEDIT_APPVAR_TYPE;
 	appvar_data->is_archived = ti_IsArchived(slot);
@@ -69,7 +71,7 @@ static file_data_t *get_appvar_data(const char *name)
 
 static void free_appvars(file_list_t *file_list)
 {
-	uint24_t i = 0;
+	uint16_t i = 0;
 	
 	while(i < file_list->num_appvars)
 	{
@@ -124,6 +126,7 @@ static file_data_t *get_program_data(const char *name)
 		program_data->hexaedit_type = HEXAEDIT_BASIC_PRGM_TYPE;
 	};
 	
+	memset(program_data->name, '\0', 10);
 	strcpy(program_data->name, name);
 	program_data->is_archived = ti_IsArchived(slot);
 	program_data->vat_ptr = ti_GetVATPtr(slot);
@@ -136,7 +139,7 @@ static file_data_t *get_program_data(const char *name)
 
 static void free_asm_programs(file_list_t *file_list)
 {
-	uint24_t i = 0;
+	uint16_t i = 0;
 	
 	while(i < file_list->num_asm_programs)
 	{
@@ -147,7 +150,7 @@ static void free_asm_programs(file_list_t *file_list)
 
 static void free_basic_programs(file_list_t *file_list)
 {
-	uint24_t i = 0;
+	uint16_t i = 0;
 	
 	while(i < file_list->num_basic_programs)
 	{
@@ -225,115 +228,125 @@ static void free_main_files(file_list_t *file_list)
 	return;
 }
 
-static void add_recent_file(recent_file_list_t *recent_file_list, const char *name, uint8_t hexaedit_type)
+static void add_recent_file(recent_file_list_t *list, file_data_t *file)
 {
-	uint8_t file_num = 0;
-	recent_file_list_t *temp_rf_list = malloc(sizeof(recent_file_list_t));
+	uint16_t file_num;
 	
-	if (temp_rf_list == NULL)
+	// Verify that the file to be added is not in the list already.
+	// If it is, shift all of the other file pointers before it
+	// forward by one pointer space and write the file pointer to
+	// the first list index.
+	
+	for (file_num = 0; file_num < list->num_files; file_num++)
 	{
-		gui_DrawMessageDialog_Blocking("Failed to add recent file");
-		return;
-	};
-	
-	if (hexaedit_type == HEXAEDIT_APPVAR_TYPE)
-	{
-		temp_rf_list->files[0] = get_appvar_data(name);
-	} else {
-		temp_rf_list->files[0] = get_program_data(name);
-	};
-	
-	temp_rf_list->num_files = 1;
-	
-	dbg_sprintf(dbgout, "add_recent_file\n\tname = \"%s\"\n\thexaedit_type = %d\n", name, hexaedit_type);
-	
-	// Copy all of the file data pointers from the recent_file_list into the temporary list.
-	// If a pointer is found with the same file data as the one being added, free it and
-	// overwrite its place in the recent_file_list pointer array.
-	
-	while (file_num < recent_file_list->num_files && temp_rf_list->num_files < MAX_NUM_RECENT_FILES)
-	{
-		if ((strcmp(name, recent_file_list->files[file_num]->name)) || (recent_file_list->files[file_num]->hexaedit_type != hexaedit_type))
+		if (list->files[file_num] == file)
 		{
-			temp_rf_list->files[temp_rf_list->num_files++] = recent_file_list->files[file_num];
-		} else {
-			free(recent_file_list->files[file_num]);
+			while (file_num > 0)
+			{
+				list->files[file_num] = list->files[file_num - 1];
+				file_num--;
+			};
+			
+			list->files[file_num] = file;
+			return;
 		};
-		file_num++;
 	};
 	
-	// dbg_sprintf(dbgout, "\tCopied files from recent_file_list | file_num = %d\n", file_num);
+	// If the file is not already in the list, shift any file pointers in the list forward
+	// by one pointer space. If the list already contains 15 pointers, free the last pointer
+	// and overwrite it. Finally, allocate the memory for the added file and write its pointer
+	// to the start of the file list.
 	
-	file_num = 0;
 	
-	while (file_num < temp_rf_list->num_files)
+	if (file_num == MAX_NUM_RECENT_FILES)
 	{
-		free(recent_file_list->files[file_num]);
-		recent_file_list->files[file_num] = temp_rf_list->files[file_num];
-		file_num++;
+		file_num--;
+		free(list->files[file_num]);
 	};
 	
-	recent_file_list->num_files = temp_rf_list->num_files;
-	free(temp_rf_list);
+	while (file_num > 0)
+	{
+		list->files[file_num] = list->files[file_num - 1];
+		file_num--;
+	};
+	
+	list->files[0] = file;
+	
+	if (list->num_files < MAX_NUM_RECENT_FILES)
+		list->num_files++;
 	
 	return;
 }
 
-static bool load_recent_files(recent_file_list_t *recent_file_list)
+static bool load_recent_files(recent_file_list_t *recent_file_list, file_list_t *main_file_list)
 {
-	ti_var_t recent_files_appvar, test_slot;
-	char file_name[10];
+	ti_var_t recent_files_appvar;
+	file_data_t **file_list;
+	uint16_t list_file_num, num_list_files;
+	uint8_t recent_file_num = 0;
+	char recent_file_name[FILE_NAME_LEN + 1];
 	uint8_t hexaedit_type;
+	
+	// All of the file data pointers in the recent_file_list are copies of main_file_list
+	// pointers. So, when the main_file_list file pointers are freed, the recent_file_list
+	// pointer copies will point to already freed memory, eliminating the need to free any
+	// recent_file_list pointers. The recent_file_list struct itself, however, must be
+	// freed normally.
+	
 	
 	if ((recent_files_appvar = ti_Open(RECENT_FILES_APPVAR, "r")) == 0)
 		return false;
 	
 	while (ti_Tell(recent_files_appvar) < ti_GetSize(recent_files_appvar) - 1)
 	{
-		memset(file_name, '\0', 10);
-		ti_Read(&file_name, 9, 1, recent_files_appvar);
+		memset(recent_file_name, '\0', FILE_NAME_LEN + 1);
+		ti_Read(&recent_file_name, FILE_NAME_LEN, 1, recent_files_appvar);
 		hexaedit_type = (uint8_t)ti_GetC(recent_files_appvar);
 		
-		test_slot = ti_OpenVar(file_name, "r", TI_APPVAR_TYPE);
+		// dbg_sprintf(dbgout, "recent_file_name = %s\n", recent_file_name);
+		// dbg_sprintf(dbgout, "Flush buffer\n");
 		
-		if (test_slot == 0)
-			test_slot = ti_OpenVar(file_name, "r", TI_PPRGM_TYPE);
-		
-		if (test_slot == 0)
-			test_slot = ti_OpenVar(file_name, "r", TI_PRGM_TYPE);
-		
-		// Only load the file into the file_list if it exists.
-		// When the program exits, the recent files appvar will be overwritten
-		// with this updated file_list to remove deleted programs from the Recent
-		// Files list.
-		
-		if (test_slot != 0)
+		if (hexaedit_type == HEXAEDIT_APPVAR_TYPE)
 		{
-			ti_Close(test_slot);
-			add_recent_file(recent_file_list, file_name, hexaedit_type);
+			file_list = main_file_list->appvars;
+			num_list_files = main_file_list->num_appvars;
+		}
+		else if (hexaedit_type == HEXAEDIT_ASM_PRGM_TYPE)
+		{
+			file_list = main_file_list->asm_programs;
+			num_list_files = main_file_list->num_asm_programs;
+		} else {
+			file_list = main_file_list->basic_programs;
+			num_list_files = main_file_list->num_basic_programs;
+		};
+		
+		list_file_num = 0;
+		
+		while (list_file_num < num_list_files)
+		{
+			// dbg_sprintf(dbgout, "file_list = %s\n", file_list[list_file_num]->name);
+			
+			if (!strcmp(recent_file_name, file_list[list_file_num]->name))
+			{
+				recent_file_list->files[recent_file_num] = file_list[list_file_num];
+				recent_file_num++;
+				break;
+			};
+			
+			list_file_num++;
 		};
 	};
+	
+	recent_file_list->num_files = recent_file_num;
 	
 	ti_Close(recent_files_appvar);
 	return true;
 }
 
-static void free_recent_files(recent_file_list_t *recent_file_list)
-{
-	uint24_t i = 0;
-	
-	while(i < recent_file_list->num_files)
-	{
-		free(recent_file_list->files[i++]);
-	};
-	free(recent_file_list);
-	return;
-}
-
 static void save_recent_files(recent_file_list_t *recent_file_list)
 {
 	ti_var_t recent_files_appvar;
-	uint8_t file_num = 0;
+	uint16_t file_num = 0;
 	
 	if ((recent_files_appvar = ti_Open(RECENT_FILES_APPVAR, "w")) == 0)
 	{
@@ -343,7 +356,7 @@ static void save_recent_files(recent_file_list_t *recent_file_list)
 	
 	while (file_num < recent_file_list->num_files)
 	{
-		ti_Write(&recent_file_list->files[file_num]->name, 9, 1, recent_files_appvar);
+		ti_Write(&recent_file_list->files[file_num]->name, FILE_NAME_LEN, 1, recent_files_appvar);
 		ti_PutC((char)(recent_file_list->files[file_num]->hexaedit_type), recent_files_appvar);
 		
 		file_num++;
@@ -407,7 +420,7 @@ static void sprintf_ptr(char *buffer, unsigned int pointer)
 	return;
 }
 
-static void draw_title_bar(void)
+void menu_DrawTitleBar(void)
 {
 	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(0, 0, LCD_WIDTH, 20);
@@ -420,7 +433,7 @@ static void draw_title_bar(void)
 	return;
 }
 
-static void draw_menu_bar(void)
+void draw_menu_bar(void)
 {
 	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(0, 220, LCD_WIDTH, 20);
@@ -432,6 +445,7 @@ static void draw_menu_bar(void)
 	gfx_PrintStringXY("RAM", 5, 226);
 	gfx_PrintStringXY("ROM", 70, 226);
 	gfx_PrintStringXY("Search", 130, 226);
+	gfx_PrintStringXY("Conf", 224, 226);
 	gfx_PrintStringXY("Exit", 286, 226);
 	
 	return;
@@ -483,46 +497,49 @@ static void draw_table_header(uint8_t y)
 	return;
 }
 
-static void print_file_data(file_data_t *file_data, uint8_t y)
+static void print_file_data(file_data_t *file_data, uint8_t text_fg_color, uint8_t yPos)
 {
 	char value[7] = {'\0'};
 	
-	gfx_SetTextXY(COL_1_X + 1, y);
-	gui_PrintFileName(file_data->name);
+	gfx_SetTextXY(COL_1_X + 1, yPos);
+	gui_PrintFileName(file_data->name, text_fg_color);
 	
 	if (file_data->is_archived)
-		gfx_PrintStringXY("*", COL_2_X, y);
+		gfx_PrintStringXY("*", COL_2_X, yPos);
 
 	if (file_data->is_protected)
-		gfx_PrintStringXY("*", COL_3_X, y);
+		gfx_PrintStringXY("*", COL_3_X, yPos);
 
 	sprintf_ptr(value, (unsigned int)file_data->vat_ptr);
-	gfx_PrintStringXY(value, COL_4_X, y);
+	gfx_PrintStringXY(value, COL_4_X, yPos);
 	
 	sprintf_ptr(value, (unsigned int)file_data->data_ptr);
-	gfx_PrintStringXY(value, COL_5_X, y);
+	gfx_PrintStringXY(value, COL_5_X, yPos);
 	
 	sprintf(value, "%d", file_data->size);
-	gfx_PrintStringXY(value, COL_6_X + COLUMN_WIDTHS[5] - gfx_GetStringWidth(value), y);
+	gfx_PrintStringXY(value, COL_6_X + COLUMN_WIDTHS[5] - gfx_GetStringWidth(value), yPos);
 	return;
 }
 
-static void print_table_entry(file_data_t *file_data, bool print_inverted, uint8_t y)
+static void print_table_entry(file_data_t *file_data, bool print_inverted, uint8_t yPos)
 {
+	uint8_t text_fg_color;
+	
 	gfx_SetTextBGColor(color_theme.table_bg_color);
-	gfx_SetTextFGColor(color_theme.table_text_color);
+	text_fg_color = color_theme.table_text_color;
 	gfx_SetTextTransparentColor(color_theme.table_bg_color);
 	
 	if (print_inverted)
 	{
 		gfx_SetTextBGColor(color_theme.table_selector_color);
-		gfx_SetTextFGColor(color_theme.selected_table_text_color);
+		text_fg_color = color_theme.selected_table_text_color;
 		gfx_SetTextTransparentColor(color_theme.table_selector_color);
 		gfx_SetColor(color_theme.table_selector_color);
-		gfx_FillRectangle_NoClip(TABLE_LEFT_MARGIN, y - 1, TABLE_WIDTH, TABLE_ROW_HEIGHT - 2);
+		gfx_FillRectangle_NoClip(TABLE_LEFT_MARGIN, yPos - 1, TABLE_WIDTH, TABLE_ROW_HEIGHT - 2);
 	};
 	
-	print_file_data(file_data, y);
+	gfx_SetTextFGColor(text_fg_color);
+	print_file_data(file_data, text_fg_color, yPos);
 	return;
 }
 
@@ -756,16 +773,10 @@ static void search_main_files(file_list_t *file_list, uint8_t *table_num, uint8_
 static void change_table_num(uint8_t *table_num, uint8_t *selected_file_offset, int8_t key)
 {
 	if (key == sk_Left && *table_num > 0)
-	{
 		(*table_num)--;
-		*selected_file_offset = 0;
-	};
 	
 	if (key == sk_Right && *table_num < NUM_TABLES - 1)
-	{
 		(*table_num)++;
-		*selected_file_offset = 0;
-	};
 	
 	if (key == sk_1)
 		*table_num = 0;
@@ -775,6 +786,14 @@ static void change_table_num(uint8_t *table_num, uint8_t *selected_file_offset, 
 		*table_num = 2;
 	if (key == sk_4)
 		*table_num = 3;
+	
+	if (key == sk_1 || key == sk_2 || key == sk_3 || key == sk_4 ||
+		key == sk_Left || key == sk_Right)
+	{
+		*selected_file_offset = 0;
+	};
+	
+	
 	return;
 };
 
@@ -871,13 +890,14 @@ void main_menu(void)
 	
 	recent_file_list = malloc(sizeof(recent_file_list_t));
 	
-	if (!load_recent_files(recent_file_list))
+	if (!load_recent_files(recent_file_list, main_file_list))
 	{
 		gui_DrawMessageDialog_Blocking("Could not load Recent Files");
 		return;
 	};
 	
-	// dbg_sprintf(dbgout, "recent_file_list = 0x%6x | size = %d\n", recent_file_list, (uint24_t)sizeof(recent_file_list_t));
+	//dbg_sprintf(dbgout, "recent_file_list = 0x%6x | size = %d\n", recent_file_list, (uint24_t)sizeof(recent_file_list_t));
+	
 	NUM_FILES_PER_TYPE[RECENTS_TABLE_NUM] = recent_file_list->num_files;
 	
 	for (;;)
@@ -894,7 +914,7 @@ void main_menu(void)
 		{
 			gfx_SetColor(LT_GRAY);
 			gfx_FillRectangle_NoClip(0, 20, LCD_WIDTH, LCD_HEIGHT - 40);
-			draw_title_bar();
+			menu_DrawTitleBar();
 			draw_menu_bar();
 			draw_table_header(35);
 		};
@@ -916,8 +936,8 @@ void main_menu(void)
 			gui_DrawTime(200);
 		} while ((key = asm_GetCSC()) == -1);
 		
-		change_table_num(&table_num, &selected_file_offset, key);
 		change_selected_file_offset(&table_num, &selected_file_offset);
+		change_table_num(&table_num, &selected_file_offset, key);
 		
 		if ((key == sk_2nd || key == sk_Enter) && selected_file != NULL)
 		{
@@ -935,8 +955,13 @@ void main_menu(void)
 			};
 			
 			update_selected_file_size(selected_file);
-			add_recent_file(recent_file_list, selected_file->name, selected_file->hexaedit_type);
+			add_recent_file(recent_file_list, selected_file);
 			NUM_FILES_PER_TYPE[RECENTS_TABLE_NUM] = recent_file_list->num_files;
+			
+			// If file edited was Recent File, move selected_file_offset to top of list
+			if (table_num == RECENTS_TABLE_NUM)
+				selected_file_offset = 0;
+			
 			redraw_background = true;
 		};
 		
@@ -958,14 +983,18 @@ void main_menu(void)
 			redraw_background = true;
 		};
 		
+		if (key == sk_Trace)
+			settings_Settings();
+		
 		if (key == sk_Graph || key == sk_Clear)
 		{
 			break;
 		};
 	};
 	
+	// The Recent Files must be saved before the main_file_list is freed
 	save_recent_files(recent_file_list);
-	free_recent_files(recent_file_list);
+	free(recent_file_list);
 	free_main_files(main_file_list);
 	return;
 }
