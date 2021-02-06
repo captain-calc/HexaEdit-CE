@@ -1,4 +1,4 @@
-### HexaEdit CE
+# HexaEdit CE
 
 HexaEdit CE is a on-calc hex editor for the TI-84 Plus CE.It can edit any kind of program or appvar as well as the calculator's RAM. It also provides a wide array of features, such as byte insertion and deletion, hexadecimal-to-decimal translation, and much more.
 
@@ -9,11 +9,11 @@ To find out more about HexaEdit CE, please visit its Cemetech forum thread:
 
 https://www.cemetech.net/forum/viewtopic.php?t=16759
 
-#### Branch "improve-core" Information
+## Branch "improve-core" Information
 
 Updates to this branch will focus on improving the abilities and struture of the core editing functions. This is a developmental branch, so code stored here is **not** guaranteed to be stable.
 
-#### Installation
+## Installation
 
 After extracting the HexaEdit_CE.zip file, send the following file to your calculator using a computer-calculator link program, such as TI-Connect CE or TILP:
 
@@ -23,18 +23,18 @@ After extracting the HexaEdit_CE.zip file, send the following file to your calcu
 
 HexaEdit CE uses the C libraries from the LLVM toolchain. If you encounter a version error when you run HexaEdit, please send the libraries included with the Cemetech download to your calculator. Your other programs will still work with these libraries.
 
-#### Easter Egg Controls
+## Easter Egg Controls
 
 To activate the icon viewer, press [stat].
 
 
-#### Technical Info
+## Technical Info
 
 * Platform: TI-84 Plus CE
 * Language: C
 * Latest Version: 2.0.1
 
-#### Change Log
+## Change Log
 
 v2.0.1 - Fixed Headless Start bug. Added phrase search to editor. Modified input functions.
 
