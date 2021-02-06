@@ -9,6 +9,10 @@ To find out more about HexaEdit CE, please visit its Cemetech forum thread:
 
 https://www.cemetech.net/forum/viewtopic.php?t=16759
 
+#### Branch "improve-core" Information
+
+Updates to this branch will focus on improving the abilities and struture of the core editing functions. This is a developmental branch, so code stored here is **not** guaranteed to be stable.
+
 #### Installation
 
 After extracting the HexaEdit_CE.zip file, send the following file to your calculator using a computer-calculator link program, such as TI-Connect CE or TILP:
