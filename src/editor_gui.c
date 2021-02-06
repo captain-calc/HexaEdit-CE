@@ -87,9 +87,10 @@ void editorgui_DrawAltToolBar(cursor_t *cursor)
 	gfx_SetTextFGColor(color_theme.bar_text_color);
 	gfx_SetTextTransparentColor(color_theme.bar_color);
 	
+	gfx_PrintStringXY("DEC:", 5, 226);
+	
 	if ((cursor->primary - cursor->secondary) < 3)
 	{
-		gfx_PrintStringXY("DEC:", 5, 226);
 		gfx_SetTextXY(40, 226);
 		
 		for (i = 0; i < (cursor->primary - cursor->secondary + 1); i++)

@@ -343,7 +343,7 @@ static void draw_editor_contents(editor_t *editor, cursor_t *cursor, uint8_t edi
 		editorgui_DrawMemAddresses(editor, 3, 22);
 	};
 	
-	gfx_SetColor(BLACK);
+	gfx_SetColor(color_theme.table_text_color);
 	gfx_VertLine_NoClip(58, 20, LCD_HEIGHT - 40);
 	gfx_VertLine_NoClip(59, 20, LCD_HEIGHT - 40);
 	gfx_VertLine_NoClip(228, 20, LCD_HEIGHT - 40);
