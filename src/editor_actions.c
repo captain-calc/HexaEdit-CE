@@ -82,25 +82,6 @@ void editact_Goto(editor_t *editor, cursor_t *cursor, uint8_t *ptr)
 		cursor->primary = editor->min_address;
 	};
 	
-	/*
-	if (editor->type == FILE_EDITOR)
-	{
-		offset += (uint24_t)editor->min_address;
-	};
-	
-	if (offset >= (uint24_t)editor->max_address)
-	{
-		cursor->primary = editor->max_address;
-	}
-	else if (offset <= (uint24_t)editor->min_address)
-	{
-		cursor->primary = editor->min_address;
-	}
-	else
-	{
-		cursor->primary = (uint8_t *)offset;
-	};
-	*/
 	cursor->secondary = cursor->primary;
 	
 	while (cursor->primary > editor->window_address + (((ROWS_ONSCREEN - 1) * COLS_ONSCREEN) / 2))
@@ -136,9 +117,9 @@ bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_p
 	ti_var_t edit_file;
 	
 	if (num_bytes == 0)
-	{
 		return false;
-	};
+
+	ti_CloseAll();
 	
 	if ((edit_file = ti_Open(EDIT_FILE, "r")) == 0)
 	{
@@ -212,9 +193,9 @@ bool editact_InsertBytes(editor_t *editor, uint8_t *insertion_point, uint24_t nu
 	uint24_t num_bytes_shift = insertion_point - editor->min_address;
 	
 	if (num_bytes == 0)
-	{
 		return false;
-	};
+
+	ti_CloseAll();
 	
 	if ((edit_file = ti_Open(EDIT_FILE, "r")) == 0)
 	{
@@ -272,9 +253,9 @@ bool editact_CreateUndoInsertBytesAction(editor_t *editor, cursor_t *cursor, uin
 	uint8_t undo_code = UNDO_INSERT_BYTES;
 	
 	if (num_bytes == 0)
-	{
 		return false;
-	};
+
+	ti_CloseAll();
 	
 	if ((undo_appvar = ti_Open(UNDO_APPVAR, "a")) == 0)
 	{
@@ -293,11 +274,11 @@ bool editact_CreateUndoInsertBytesAction(editor_t *editor, cursor_t *cursor, uin
 	ti_Write(&cursor->primary, 3, 1, undo_appvar);
 	ti_Write(&num_bytes, 3, 1, undo_appvar);
 	
-	ti_CloseAll();
+	ti_Close(undo_appvar);
 	return true;
 	
 	ERROR:
-	ti_CloseAll();
+	ti_Close(undo_appvar);
 	return false;
 }
 
@@ -330,9 +311,9 @@ bool editact_CreateDeleteBytesUndoAction(editor_t *editor, cursor_t *cursor, uin
 	uint24_t i;
 	
 	if (num_bytes == 0)
-	{
 		return false;
-	};
+
+	ti_CloseAll();
 	
 	if ((undo_appvar = ti_Open(UNDO_APPVAR, "a")) == 0)
 	{
@@ -357,11 +338,11 @@ bool editact_CreateDeleteBytesUndoAction(editor_t *editor, cursor_t *cursor, uin
 		ti_Write(cursor->secondary + i, 1, 1, undo_appvar);
 	};
 	
-	ti_CloseAll();
+	ti_Close(undo_appvar);
 	return true;
 	
 	ERROR:
-	ti_CloseAll();
+	ti_Close(undo_appvar);
 	return false;
 }
 
@@ -372,6 +353,7 @@ void undo_delete_bytes(editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar)
 	ti_Read(&editor->window_address, 3, 1, undo_appvar);
 	ti_Read(&cursor->secondary, 3, 1, undo_appvar);
 	ti_Read(&num_bytes, 3, 1, undo_appvar);
+	ti_Close(undo_appvar);
 	
 	// dbg_sprintf(dbgout, "num_bytes = %d\n", num_bytes);
 	
@@ -431,6 +413,8 @@ void editact_WriteNibble(cursor_t *cursor, uint8_t nibble)
 
 bool editact_CreateUndoWriteNibbleAction(editor_t *editor, cursor_t *cursor, uint8_t nibble)
 {
+	const uint8_t UNDO_WN_ACTION_SIZE = 9;
+
 	ti_var_t undo_appvar;
 	uint8_t undo_code = UNDO_WRITE_NIBBLE;
 	
@@ -440,7 +424,7 @@ bool editact_CreateUndoWriteNibbleAction(editor_t *editor, cursor_t *cursor, uin
 		goto ERROR;
 	};
 	
-	if (ti_Resize(ti_GetSize(undo_appvar) + 9, undo_appvar) == -1)
+	if (ti_Resize(ti_GetSize(undo_appvar) + UNDO_WN_ACTION_SIZE, undo_appvar) == -1)
 	{
 		gui_DrawMessageDialog_Blocking(UNDO_APPVAR_RESIZE_FAIL);
 		goto ERROR;
@@ -452,11 +436,11 @@ bool editact_CreateUndoWriteNibbleAction(editor_t *editor, cursor_t *cursor, uin
 	ti_Write(&cursor->high_nibble, 1, 1, undo_appvar);
 	ti_Write(&nibble, 1, 1, undo_appvar);
 	
-	ti_CloseAll();
+	ti_Close(undo_appvar);
 	return true;
 	
 	ERROR:
-	ti_CloseAll();
+	ti_Close(undo_appvar);
 	return false;
 }
 
@@ -484,6 +468,7 @@ bool editact_UndoAction(editor_t *editor, cursor_t *cursor)
 {
 	ti_var_t undo_appvar;
 	uint8_t undo_code;
+	bool undid_action = false;
 	
 	if ((undo_appvar = ti_Open(UNDO_APPVAR, "r")) == 0)
 	{
@@ -502,24 +487,26 @@ bool editact_UndoAction(editor_t *editor, cursor_t *cursor)
 	switch(undo_code)
 	{
 		case UNDO_INSERT_BYTES:
-		undo_insert_bytes(editor, cursor, undo_appvar);
-		ti_Close(undo_appvar);
-		return true;
+			undo_insert_bytes(editor, cursor, undo_appvar);
+			undid_action = true;
+			break;
 		
 		case UNDO_DELETE_BYTES:
-		undo_delete_bytes(editor, cursor, undo_appvar);
-		ti_Close(undo_appvar);
-		return true;
+			undo_delete_bytes(editor, cursor, undo_appvar);
+			undid_action = true;
+			break;
 		
 		case UNDO_WRITE_NIBBLE:
-		undo_write_nibble(editor, cursor, undo_appvar);
-		ti_Close(undo_appvar);
-		return true;
+			undo_write_nibble(editor, cursor, undo_appvar);
+			undid_action = true;
+			break;
 		
 		default:
-		ti_Close(undo_appvar);
-		return false;
+			undid_action = false;
 	};
+
+	ti_Close(undo_appvar);
+	return undid_action;
 }
 
 

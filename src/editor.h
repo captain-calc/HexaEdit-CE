@@ -1,5 +1,5 @@
-#ifndef FILE_EDITOR_H
-#define FILE_EDITOR_H
+#ifndef EDITOR_H
+#define EDITOR_H
 
 #include <fileioc.h>
 
@@ -17,57 +17,61 @@ determine how to process data in the undo appvar. */
 #define UNDO_WRITE_NIBBLE	2
 
 /* The three kinds of "editors" */
-#define FILE_EDITOR	0
-#define RAM_EDITOR	1
-#define ROM_VIEWER	2
+#define FILE_EDITOR 0
+#define RAM_EDITOR  1
+#define ROM_VIEWER  2
 
 /* Editor indexing formats */
-#define OFFSET_INDEXING		0
-#define ADDRESS_INDEXING	1
+#define OFFSET_INDEXING  0
+#define ADDRESS_INDEXING 1
 
 /* For editact_FindPhraseOccurances */
-#define MAX_NUM_PHRASE_OCCURANCES	255
-#define QUICK_SEARCH			((uint24_t)500000)
-#define MODERATE_SEARCH			((uint24_t)1000000)
-#define THOROUGH_SEARCH			((uint24_t)5000000)
+#define MAX_NUM_PHRASE_OCCURANCES 255
+#define QUICK_SEARCH              ((uint24_t)500000)
+#define MODERATE_SEARCH           ((uint24_t)1000000)
+#define THOROUGH_SEARCH           ((uint24_t)5000000)
 
-#define ROM_MIN_ADDRESS	((uint8_t *)0x000000)
-#define ROM_MAX_ADDRESS	((uint8_t *)0x3fffff)
-#define RAM_MIN_ADDRESS	((uint8_t *)0xd00000)
-#define RAM_MAX_ADDRESS	((uint8_t *)0xd65800)
+#define ROM_MIN_ADDRESS ((uint8_t *)0x000000)
+#define ROM_MAX_ADDRESS ((uint8_t *)0x3fffff)
+#define RAM_MIN_ADDRESS ((uint8_t *)0xd00000)
+#define RAM_MAX_ADDRESS ((uint8_t *)0xd65800)
 
 /* Constants for the editor UI */
-#define ROWS_ONSCREEN		17
-#define COLS_ONSCREEN		8
-#define ROW_HEIGHT		11
-#define HEX_COL_WIDTH		20
-#define ASCII_COL_WIDTH		10
+#define ROWS_ONSCREEN   17
+#define COLS_ONSCREEN   8
+#define ROW_HEIGHT      11
+#define HEX_COL_WIDTH   20
+#define ASCII_COL_WIDTH 10
 
-#define FONT_HEIGHT	7
-#define CURSOR_COLOR	BLUE
+#define FONT_HEIGHT  7
+#define CURSOR_COLOR BLUE
 
-/* The write_nibble keymap (hex characters are stored as nibbles) */
-#define EDITOR_HEX	"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x03\x06\x09\0\0\0\0\0" \
-			"\x02\x05\x08\0\x0F\x0C\0\x00\x01\x04\x07\0\x0E\x0B\0\0\0\0" \
-			"\0\0\x0D\x0A\0\0\0\0\0\0\0\0"
+/* These two keymaps are only used in editor.c
+   The first one maps hex values to the corresponding keys on the calculator keypad.
+   The second one maps ASCII representations of hex characters to the corresponding keys
+   on the calculator keypad.
+*/
 
-/* The goto function keymap (hex characters are stored as ASCII characters) */
-#define GOTO_HEX	"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x33\x36\x39\0\0\0\0\0" \
-			"\x32\x35\x38\0fc\0\x30\x31\x34\x37\0eb\0\0\0\0" \
-			"\0\0da\0\0\0\0\0\0\0\0"
+#define HEX_VAL_KEYMAP "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x03\x06\x09\0\0\0\0\0" \
+                       "\x02\x05\x08\0\x0F\x0C\0\x00\x01\x04\x07\0\x0E\x0B\0\0\0\0" \
+                       "\0\0\x0D\x0A\0\0\0\0\0\0\0\0"
+
+#define ASCII_HEX_KEYMAP "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x33\x36\x39\0\0\0\0\0" \
+                         "\x32\x35\x38\0fc\0\x30\x31\x34\x37\0eb\0\0\0\0" \
+                         "\0\0da\0\0\0\0\0\0\0\0"
 
 /* Key codes for move_cursor */
-#define CURSOR_DOWN	0
-#define CURSOR_LEFT	1
-#define CURSOR_RIGHT	2
-#define CURSOR_UP	3
+#define CURSOR_DOWN  0
+#define CURSOR_LEFT  1
+#define CURSOR_RIGHT 2
+#define CURSOR_UP    3
 
 /* The maximum length for the editor name (the name that appears in the top bar) */
-#define EDITOR_NAME_LEN	15
+#define EDITOR_NAME_LEN 15
 
 typedef struct
 {
-	char name[15];
+	char name[EDITOR_NAME_LEN];
 	uint8_t type;
 	uint8_t *min_address;
 	uint8_t *max_address;

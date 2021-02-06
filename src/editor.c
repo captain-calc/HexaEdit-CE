@@ -244,7 +244,7 @@ static void goto_prompt(editor_t *editor, cursor_t *cursor, uint8_t editor_index
 		keymap_indicator = '0';
 		buffer_size = 7;
 	} else {
-		keymap = GOTO_HEX;
+		keymap = ASCII_HEX_KEYMAP;
 		keymap_indicator = 'x';
 		buffer_size = 6;
 	};
@@ -412,7 +412,7 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 	int8_t key;
 	
 	const char *keymaps[] = {
-		GOTO_HEX,
+		ASCII_HEX_KEYMAP,
 		UPPERCASE_LETTERS,
 		LOWERCASE_LETTERS,
 		NUMBERS
@@ -731,13 +731,13 @@ static void run_editor(void)
 		//dbg_sprintf(dbgout, "key = %d\n", key);
 		
 		// Since pressing '0' writes a NULL nibble, it is a special case.
-		if ((EDITOR_HEX[key] != '\0' || key == sk_0) && !cursor->multibyte_selection && (editor->type == FILE_EDITOR || editor->type == RAM_EDITOR))
+		if ((HEX_VAL_KEYMAP[key] != '\0' || key == sk_0) && !cursor->multibyte_selection && (editor->type == FILE_EDITOR || editor->type == RAM_EDITOR))
 		{
-			if (editact_GetNibble(cursor, cursor->primary) != EDITOR_HEX[key])
+			if (editact_GetNibble(cursor, cursor->primary) != HEX_VAL_KEYMAP[key])
 			{
 				if (editact_CreateUndoWriteNibbleAction(editor, cursor, editact_GetNibble(cursor, cursor->primary)))
 				{
-					editact_WriteNibble(cursor, EDITOR_HEX[key]);
+					editact_WriteNibble(cursor, HEX_VAL_KEYMAP[key]);
 					redraw_top_bar = true;
 					redraw_tool_bar = true;
 					editor->num_changes++;
