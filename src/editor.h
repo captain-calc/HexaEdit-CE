@@ -5,21 +5,21 @@
 
 #include <stdint.h>
 
-#define EDIT_FILE		"HEXATMP"
-#define UNDO_APPVAR		"HEXAUNDO"
-#define HS_CONFIG_APPVAR	"HEXAHSCA"
-#define HEXAEDIT_CONFIG_APPVAR	"HEXACONF"
+#define EDIT_FILE             "HEXATMP"
+#define UNDO_APPVAR           "HEXAUNDO"
+#define HS_CONFIG_APPVAR      "HEXAHSCA"
+#define HEXA_SETTINGS_APPVAR  "HEXACONF"
 
 /* The maximum length of any file name including hidden files and null terminator. */
-#define FILE_NAME_LEN		10
+#define FILE_NAME_LEN 10
 
 /*
  * The editor undo function uses these codes to determine how to process data in
  * the undo appvar.
 */
-#define UNDO_INSERT_BYTES	0
-#define UNDO_DELETE_BYTES	1
-#define UNDO_WRITE_NIBBLE	2
+#define UNDO_INSERT_BYTES 0
+#define UNDO_DELETE_BYTES 1
+#define UNDO_WRITE_NIBBLE 2
 
 /* The three kinds of "editors" */
 #define FILE_EDITOR 0

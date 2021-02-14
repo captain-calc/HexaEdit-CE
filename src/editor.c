@@ -121,31 +121,13 @@ static uint24_t decimal(const char *hex)
 		for (j = 0; j < 16; j++)
 		{
 			if (*(hex + i) == hex_chars[j])
-			{
 				decimal += place * j;
-			};
 		};
 		
 		place *= 16;
 	};
 	
 	return decimal;
-}
-
-
-static bool is_file_accessible(char *name, uint8_t type)
-{
-	ti_var_t slot;
-	
-	
-	ti_CloseAll();
-	if ((slot = ti_OpenVar(name, "r", type)) == 0)
-	{
-		ti_Close(slot);
-		return false;
-	};
-	ti_Close(slot);
-	return true;
 }
 
 
@@ -156,14 +138,10 @@ static void move_cursor(editor_t *editor, cursor_t *cursor, uint8_t direction, b
 	
 	
 	if (direction == CURSOR_LEFT && cursor->primary > editor->min_address)
-	{
 		cursor->primary--;
-	};
 	
 	if (direction == CURSOR_RIGHT && cursor->primary < editor->max_address)
-	{
 		cursor->primary++;
-	};
 	
 	if (direction == CURSOR_DOWN)
 	{
@@ -174,10 +152,9 @@ static void move_cursor(editor_t *editor, cursor_t *cursor, uint8_t direction, b
 		if (accelerated_cursor)
 		{
 			i = (ROWS_ONSCREEN - 1) * COLS_ONSCREEN;
+			
 			while (cursor->primary < editor->max_address && i-- > 0)
-			{
 				cursor->primary++;
-			};
 		};
 	};
 	
@@ -187,12 +164,12 @@ static void move_cursor(editor_t *editor, cursor_t *cursor, uint8_t direction, b
 		while (cursor->primary > old_cursor_address - COLS_ONSCREEN && cursor->primary > editor->min_address)
 			cursor->primary--;
 		
-		if (accelerated_cursor) {
+		if (accelerated_cursor)
+		{
 			i = (ROWS_ONSCREEN - 1) * COLS_ONSCREEN;
+			
 			while (cursor->primary > editor->min_address && i-- > 0)
-			{
 				cursor->primary--;
-			};
 		};
 	};
 	
@@ -270,8 +247,6 @@ static void goto_prompt(editor_t *editor, cursor_t *cursor, uint8_t editor_index
 	
 	if (editor_index_method == OFFSET_INDEXING)
 	{
-		dbg_sprintf(dbgout, "sizeof(int) = %d\n", sizeof(int));
-		
 		offset = atoi(buffer);
 		if ((uint24_t)(editor->max_address - editor->min_address) > offset)
 			editact_Goto(editor, cursor, editor->min_address + offset);
@@ -314,7 +289,7 @@ static bool insert_bytes_prompt(editor_t *editor, cursor_t *cursor)
 	
 	num_bytes_insert = (uint24_t)atoi(buffer);
 	
-	// dbg_sprintf(dbgout, "num_bytes_insert = %d\n", num_bytes_insert);
+// dbg_sprintf(dbgout, "num_bytes_insert = %d\n", num_bytes_insert);
 	
 	if (editact_CreateUndoInsertBytesAction(editor, cursor, num_bytes_insert))
 	{
@@ -344,7 +319,7 @@ static void ascii_to_nibble(const char *in, char *out, uint8_t in_len)
 		byte *= 16;
 		byte += (uint8_t)(strchr(hex_chars, (int)(*(in + read_offset++))) - hex_chars);
 		
-		// dbg_sprintf(dbgout, "byte = %x\n", byte);
+// dbg_sprintf(dbgout, "byte = %x\n", byte);
 		
 		*(out + write_offset++) = (unsigned char)byte;
 	};
@@ -352,12 +327,12 @@ static void ascii_to_nibble(const char *in, char *out, uint8_t in_len)
 	return;
 }
 
-static bool init_hexaedit_config_appvar(void)
+static bool init_hexaedit_settings_appvar(void)
 {
 	ti_var_t slot;
 	uint24_t search_range = QUICK_SEARCH;
 	
-	if ((slot = ti_Open(HEXAEDIT_CONFIG_APPVAR, "w")) == 0)
+	if ((slot = ti_Open(HEXA_SETTINGS_APPVAR, "w")) == 0)
 		return false;
 	
 	ti_Write(&search_range, sizeof(uint24_t), 1, slot);
@@ -392,12 +367,12 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 	uint24_t search_range;
 	
 	
-	if (!ti_OpenVar(HEXAEDIT_CONFIG_APPVAR, "r", TI_APPVAR_TYPE))
-		init_hexaedit_config_appvar();
+	if (!ti_OpenVar(HEXA_SETTINGS_APPVAR, "r", TI_APPVAR_TYPE))
+		init_hexaedit_settings_appvar();
 	
 	search_range = settings_GetPhraseSearchRange();
 	
-	// dbg_sprintf(dbgout, "search_range = %d\n", search_range);
+// dbg_sprintf(dbgout, "search_range = %d\n", search_range);
 	
 	for (;;)
 	{
@@ -433,36 +408,33 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 		
 		delay(100);
 		
-		// dbg_sprintf(dbgout, "num_occurances = %d | occurance_offset = %d\n", num_occurances, occurance_offset);
+// dbg_sprintf(dbgout, "num_occurances = %d | occurance_offset = %d\n", num_occurances, occurance_offset);
 		
 		if (key == sk_Down)
 		{
 			if (occurance_offset + 1 < num_occurances)
-			{
 				occurance_offset++;
-			} else {
+			else
 				occurance_offset = 0;
-			};
 		}
 		else if (key == sk_Up)
 		{
 			if (occurance_offset > 0)
 			{
 				occurance_offset--;
-			} else if (num_occurances > 0) {
+			}
+			else if (num_occurances > 0)
+			{
 				occurance_offset = num_occurances - 1;
 			};
 		}
 		else if (key == sk_Alpha && *buffer == '\0')
 		{
 			// Only allow keymap switching when there is no data in the buffer
-			
 			if (keymap_num < 3)
-			{
 				keymap_num++;
-			} else {
+			else
 				keymap_num = 0;
-			};
 		}
 		else if (key == sk_Clear)
 		{
@@ -634,8 +606,10 @@ static bool save_file(char *name, uint8_t type)
 	};
 
 	if (is_archived)
+	{
 		if (!ti_SetArchiveStatus(1, new_file))
 			goto ERROR_MEM;
+	};
 
 	ti_CloseAll();
 
@@ -662,8 +636,7 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 	bool redraw_tool_bar = true;
 	uint8_t save_code;
 	
-	dbg_sprintf(dbgout, "window_address = 0x%6x | min_address = 0x%6x | max_address = 0x%6x\n",
-	editor->window_address, editor->min_address, editor->max_address);
+//dbg_sprintf(dbgout, "window_address = 0x%6x | min_address = 0x%6x | max_address = 0x%6x\n", editor->window_address, editor->min_address, editor->max_address);
 	
 	if (editor->type == FILE_EDITOR)
 		editor_index_method = OFFSET_INDEXING;
@@ -694,7 +667,6 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 		do {
 			kb_Scan();
 		} while ((key = asm_GetCSC()) == -1);
-		//dbg_sprintf(dbgout, "key = %d\n", key);
 		
 		// Since pressing '0' writes a NULL nibble, it is a special case.
 		if ((HEX_VAL_KEYMAP[key] != '\0' || key == sk_0) && !cursor->multibyte_selection && (editor->type == FILE_EDITOR || editor->type == RAM_EDITOR))
@@ -710,11 +682,9 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 				};
 			};
 			if (cursor->high_nibble)
-			{
 				cursor->high_nibble = false;
-			} else {
+			else
 				move_cursor(editor, cursor, CURSOR_RIGHT, false);
-			};
 		};
 		
 		if (key == sk_2nd || key == sk_Enter)
@@ -793,9 +763,7 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 			editor->num_changes--;
 			redraw_top_bar = true;
 			if (editor->num_changes == 0)
-			{
 				redraw_tool_bar = true;
-			};
 		};
 		
 		// If arrow key pressed, move cursor. If two keys are pressed simultaneously,
@@ -814,9 +782,7 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 			else if (kb_Data[7] & kb_Left)
 			{
 				if (!cursor->high_nibble)
-				{
 					cursor->high_nibble = true;
-				};
 				move_cursor(editor, cursor, CURSOR_LEFT, false);
 			}
 			else
@@ -825,17 +791,13 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 			};
 			
 			if (!cursor->multibyte_selection)
-			{
 				redraw_tool_bar = true;
-			};
 		};
 		
 		if (key == sk_Clear || key == sk_Graph)
 		{
 			if (editor->num_changes == 0)
-			{
 				return;
-			};
 			
 			save_code = save_prompt();
 			if (save_code == 1)
@@ -855,9 +817,7 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 			};
 			
 			if (save_code > 0)
-			{
 				return;
-			};
 			
 			redraw_tool_bar = true;
 		};
@@ -1156,12 +1116,12 @@ static void run_editor_from_config(void)
 	
 	ti_Read(&config_byte, sizeof(config_byte), 1, config_data_slot);
 	
-dbg_sprintf(dbgout, "offset = %d\n", ti_Tell(config_data_slot));
-dbg_sprintf(dbgout, "config_byte = %2x\n", config_byte);
+//dbg_sprintf(dbgout, "offset = %d\n", ti_Tell(config_data_slot));
+//dbg_sprintf(dbgout, "config_byte = %2x\n", config_byte);
 	
 	if (config_byte & (1 << 7))
 	{
-dbg_sprintf(dbgout, "About to load color config\n");
+//dbg_sprintf(dbgout, "About to load color config\n");
 		
 		if ((color_theme_config = malloc(sizeof(color_theme_config_t))) == NULL)
 			return;
@@ -1171,7 +1131,7 @@ dbg_sprintf(dbgout, "About to load color config\n");
 		config_byte ^= COLOR_OVERRIDE_FLAG;
 	};
 	
-dbg_sprintf(dbgout, "offset = %d\n", ti_Tell(config_data_slot));
+//dbg_sprintf(dbgout, "offset = %d\n", ti_Tell(config_data_slot));
 	
 	if (config_byte == FILE_EDITOR_FLAG)
 	{

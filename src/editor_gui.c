@@ -13,19 +13,15 @@ static void draw_editing_size(editor_t *editor)
 	uint8_t magnitude = 6;
 	
 	if (editor->type == ROM_VIEWER)
-	{
 		magnitude = 7;
-	};
 	
 	gfx_SetTextXY(100, 6);
+	
 	if (editor->type == FILE_EDITOR && editor->is_file_empty)
-	{
 		gfx_PrintUInt(0, 6);
-	}
 	else
-	{
 		gfx_PrintUInt(editor->max_address - editor->min_address + 1, magnitude);
-	};
+	
 	gfx_PrintString(" B");
 	return;
 }
@@ -43,9 +39,8 @@ void editorgui_DrawTopBar(editor_t *editor)
 	gfx_SetTextXY(5, 6);
 	
 	if (editor->num_changes > 0)
-	{
 		gfx_PrintString("* ");
-	};
+	
 	gui_PrintFileName(editor->name, color_theme.bar_text_color);
 	
 	gui_DrawBatteryStatus();
@@ -65,13 +60,11 @@ void editorgui_DrawToolBar(editor_t *editor)
 	gfx_PrintStringXY("Goto", 138, 226);
 	
 	if (editor->type == FILE_EDITOR)
-	{
 		gfx_PrintStringXY("Ins", 70, 226);
-	};
+	
 	if (editor->num_changes > 0)
-	{
 		gfx_PrintStringXY("Undo", 224, 226);
-	};
+	
 	gfx_PrintStringXY("Exit", 286, 226);
 	return;
 }
@@ -112,18 +105,15 @@ void editorgui_DrawMemAddresses(editor_t *editor, uint24_t x, uint8_t y)
 	for (;;)
 	{
 		if (row > ROWS_ONSCREEN || (editor->window_address + (row * COLS_ONSCREEN)) > editor->max_address)
-		{
 			return;
-		};
 		
 		gfx_SetTextXY(x, y);
 		sprintf(hex, "%6x", (unsigned int)(editor->window_address + (row * COLS_ONSCREEN)));
 		byte = 0;
 		
 		while (*(hex + byte) == ' ')
-		{
 			*(hex + byte++) = '0';
-		};
+		
 		gfx_PrintString(hex);
 		
 		row++;
@@ -140,9 +130,8 @@ void editorgui_DrawFileOffsets(editor_t *editor, uint24_t x, uint8_t y)
 	for (;;)
 	{
 		if (row > ROWS_ONSCREEN || (editor->window_address + (row * COLS_ONSCREEN)) > editor->max_address)
-		{
 			return;
-		};
+		
 		gfx_SetTextXY(x, y);
 		gfx_PrintUInt((editor->window_address - editor->min_address) + (row * COLS_ONSCREEN), 6);
 		row++;
@@ -157,9 +146,7 @@ static void print_hex_value(uint24_t x, uint8_t y, uint8_t value)
 	gfx_SetTextXY(x, y);
 	sprintf(hex, "%2x", value);
 	if (*hex == ' ')
-	{
 		*hex = '0';
-	}
 	gfx_PrintString(hex);
 	return;
 }
@@ -179,19 +166,16 @@ static void print_hex_line(editor_t *editor, cursor_t *cursor, uint24_t x, uint8
 	uint8_t byte_num = 0;
 	uint24_t num_bytes_selected;
 	
+	// If the primary and secondary addresses are the same, num_bytes_selected
+	// will initially be zero.
 	num_bytes_selected = cursor->primary - cursor->secondary;
-	/*
-	If the primary and secondary addresses are the same, num_bytes_selected
-	will initially be zero.
-	*/
 	num_bytes_selected++;
 	
 	for (;;)
 	{
 		if (byte_num == COLS_ONSCREEN || (line + byte_num) > editor->max_address)
-		{
 			return;
-		};
+		
 		if (is_current_byte_selected(cursor, line, byte_num, num_bytes_selected))
 		{
 			gfx_SetTextBGColor(color_theme.cursor_color);
@@ -224,9 +208,8 @@ void editorgui_DrawHexTable(editor_t *editor, cursor_t *cursor, uint24_t x, uint
 	for (;;)
 	{
 		if (line > ROWS_ONSCREEN)
-		{
 			return;
-		};
+		
 		print_hex_line(editor, cursor, x, y + (line * ROW_HEIGHT), editor->window_address + (line * COLS_ONSCREEN));
 		line++;
 	};
@@ -236,11 +219,9 @@ static void print_ascii_value(uint24_t x, uint8_t y, uint8_t c)
 {
 	gfx_SetTextXY(x, y);
 	if (c < 20 || c > 127)
-	{
 		gfx_PrintChar('.');
-	} else {
+	else
 		gfx_PrintChar(c);
-	};
 	return;
 }
 
@@ -249,19 +230,16 @@ static void print_ascii_line(editor_t *editor, cursor_t *cursor, uint24_t x, uin
 	uint8_t byte_num = 0;
 	uint24_t num_bytes_selected;
 	
+	// If the primary and secondary addresses are the same, num_bytes_selected
+	// will initially be zero.
 	num_bytes_selected = cursor->primary - cursor->secondary;
-	/*
-	If the primary and secondary addresses are the same, num_bytes_selected
-	will initially be zero.
-	*/
 	num_bytes_selected++;
 	
 	for (;;)
 	{
 		if (byte_num == COLS_ONSCREEN || (line + byte_num) > editor->max_address)
-		{
 			return;
-		};
+		
 		if (is_current_byte_selected(cursor, line, byte_num, num_bytes_selected))
 		{
 			gfx_SetTextBGColor(color_theme.cursor_color);
@@ -289,9 +267,8 @@ void editorgui_DrawAsciiTable(editor_t *editor, cursor_t *cursor, uint24_t x, ui
 	for (;;)
 	{
 		if (line > ROWS_ONSCREEN)
-		{
 			return;
-		};
+		
 		print_ascii_line(editor, cursor, x, y + (line * ROW_HEIGHT), editor->window_address + (line * COLS_ONSCREEN));
 		line++;
 	};
@@ -319,11 +296,9 @@ void editorgui_DrawEditorContents(editor_t *editor, cursor_t *cursor, uint8_t ed
 	gfx_SetTextTransparentColor(color_theme.background_color);
 	
 	if (editor_index_method == OFFSET_INDEXING)
-	{
 		editorgui_DrawFileOffsets(editor, 3, 22);
-	} else {
+	else
 		editorgui_DrawMemAddresses(editor, 3, 22);
-	};
 	
 	gfx_SetColor(color_theme.table_text_color);
 	gfx_VertLine_NoClip(58, 20, LCD_HEIGHT - 40);

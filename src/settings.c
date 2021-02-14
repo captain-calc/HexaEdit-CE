@@ -99,7 +99,7 @@ uint24_t settings_GetPhraseSearchRange(void)
 	ti_var_t slot;
 	uint24_t search_range;
 	
-	if ((slot = ti_Open(HEXAEDIT_CONFIG_APPVAR, "r")) != 0)
+	if ((slot = ti_Open(HEXA_SETTINGS_APPVAR, "r")) != 0)
 	{
 		ti_Read(&search_range, sizeof(uint24_t), 1, slot);
 		ti_Close(slot);
@@ -150,7 +150,7 @@ void settings_Settings(void)
 		delay(100);
 	};
 	
-	if ((slot = ti_Open(HEXAEDIT_CONFIG_APPVAR, "w")) == 0)
+	if ((slot = ti_Open(HEXA_SETTINGS_APPVAR, "w")) == 0)
 	{
 		gui_DrawMessageDialog_Blocking("Failed to write new search range");
 		return;
