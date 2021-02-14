@@ -35,21 +35,11 @@ To activate the icon viewer, press [stat].
 * Latest Version: 2.0.1
 
 ## Change Log
-
-v2.0.1 - Fixed Headless Start bug. Added phrase search to editor. Modified input functions.
-
-v2.0.0 - Complete rewrite; Added Headless Start. "Undo" action now works for more than one change.
-         Reworked GUI. Increased file search range to all file types.
-
-v1.2.1 - Added [Enter] key support for selection and submitting actions; Upgraded the sprite
-         viewer to handle any sprite size
-
-v1.2.0 - Fixed "Goto" and decimal translation bugs; Added alpha-scrolling to main menu and
-         editor; When the selected nibble is the second part of the byte, pressing the left
-         arrow now relocates the selected nibble instead of moving the cursor; Fixed perpetual
-         AM clock; Added lowercase letters to file search routine
-
-v1.1.0 - Fixed main menu scrolling, key fall-throughs, and battery status indicator;
-         Added file search, selective cursor delay, and recent files deletion
-
-v1.0.0 - First release
+| Release Number        | Git Branch   | Description
+| --------------------- |:------------:| -----------
+| v2.0.1 *(unreleased)* | improve-core | Fixed Headless Start bug. Added phrase search to editor. Modified input functions.
+| v2.0.0                | master       | Complete rewrite; Added Headless Start. "Undo" action now works for more than one change. Reworked GUI. Increased file search range to all file types.
+| v1.2.1                | master       | Added [Enter] key support for selection and submitting actions; Upgraded the sprite viewer to handle any sprite size
+| v1.2.0                | master       | Fixed "Goto" and decimal translation bugs; Added alpha-scrolling to main menu and editor; When the selected nibble is the second part of the byte, pressing the left arrow now relocates the selected nibble instead of moving the cursor; Fixed perpetual AM clock; Added lowercase letters to file search routine
+| v1.1.0                | master       | Fixed main menu scrolling, key fall-throughs, and battery status indicator; Added file search, selective cursor delay, and recent files deletion
+| v1.0.0                | master       | First release
