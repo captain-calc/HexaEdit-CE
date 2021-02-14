@@ -69,7 +69,7 @@ void editact_SpriteViewer(editor_t *editor, cursor_t *cursor)
 
 void editact_Goto(editor_t *editor, cursor_t *cursor, uint8_t *ptr)
 {
-	//dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x | offset = 0x%6x\n", editor->min_address, editor->window_address, ptr);
+	dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x | offset = 0x%6x\n", editor->min_address, editor->window_address, ptr);
 	
 	cursor->primary = ptr;
 	
@@ -128,9 +128,7 @@ bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_p
 	};
 	
 	if (num_bytes_shift > 0)
-	{
 		asm_CopyData(deletion_point - 1, deletion_point + num_bytes - 1, num_bytes_shift, 0);
-	};
 	
 	// dbg_sprintf(dbgout, "Before re-assignment\neditor->min_address = 0x%6x\n", editor->min_address);
 	// dbg_sprintf(dbgout, "primary = 0x%6x | secondary = 0x%6x\n", cursor->primary, cursor->secondary);
@@ -282,26 +280,40 @@ bool editact_CreateUndoInsertBytesAction(editor_t *editor, cursor_t *cursor, uin
 	return false;
 }
 
-void undo_insert_bytes(editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar)
+/**
+* Deletes the last bytes inserted in the file being edited.
+*
+* Arguments:
+*   Besides the regular arguments, the UNDO_APPVAR's offset is set to the byte after the
+*   end of the undo action code.
+* Returns:
+*   undo_action_size = On success, the size (in bytes) of the undo action.
+*                      On failure, 0.
+*   Leaves the UNDO_APPVAR slot open.
+*/
+uint24_t undo_insert_bytes(editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar)
 {
 	uint24_t num_bytes;
+	uint24_t undo_action_size;
+	bool deleted_bytes = false;
 	
 	ti_Read(&editor->window_address, 3, 1, undo_appvar);
 	ti_Read(&cursor->primary, 3, 1, undo_appvar);
 	ti_Read(&num_bytes, 3, 1, undo_appvar);
-	
-	//dbg_sprintf(dbgout, "num_bytes = %d\n", num_bytes);
-	
-	editact_DeleteBytes(editor, cursor, cursor->primary, num_bytes);
-	
-	if (ti_Resize(ti_GetSize(undo_appvar) - ti_Tell(undo_appvar), undo_appvar) == -1)
-	{
-		gui_DrawMessageDialog_Blocking("Could not delete undo action");
-		return;
-	};
-	
+	undo_action_size = ti_Tell(undo_appvar);
+	ti_Close(undo_appvar);
+
+	// This function closes all open slots
+	deleted_bytes = editact_DeleteBytes(editor, cursor, cursor->primary, num_bytes);
+
+	if (!deleted_bytes)
+		return 0;
+
+	if ((undo_appvar = ti_Open(UNDO_APPVAR, "r")) == 0)
+			return 0;
+
 	cursor->secondary = cursor->primary;
-	return;
+	return undo_action_size;
 }
 
 bool editact_CreateDeleteBytesUndoAction(editor_t *editor, cursor_t *cursor, uint24_t num_bytes)
@@ -346,36 +358,47 @@ bool editact_CreateDeleteBytesUndoAction(editor_t *editor, cursor_t *cursor, uin
 	return false;
 }
 
-void undo_delete_bytes(editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar)
+/**
+* Restores the last bytes deleted from the file being edited.
+*
+* Arguments:
+*   Besides the regular arguments, the UNDO_APPVAR's offset is set to the byte after the
+*   end of the undo action code.
+* Returns:
+*   undo_action_size = On success, the size (in bytes) of the undo action.
+*                      On failure, 0.
+*   Leaves the UNDO_APPVAR slot open.
+*/
+uint24_t undo_delete_bytes(editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar)
 {
-	uint24_t num_bytes, i;
+	uint24_t num_bytes;
+	uint24_t byte_data_offset;
+	bool inserted_bytes = false;
 	
 	ti_Read(&editor->window_address, 3, 1, undo_appvar);
 	ti_Read(&cursor->secondary, 3, 1, undo_appvar);
 	ti_Read(&num_bytes, 3, 1, undo_appvar);
+	byte_data_offset = ti_Tell(undo_appvar);
 	ti_Close(undo_appvar);
-	
-	// dbg_sprintf(dbgout, "num_bytes = %d\n", num_bytes);
-	
-	editact_InsertBytes(editor, cursor->secondary, num_bytes);
-	
-	// dbg_sprintf(dbgout, "Inserted bytes for undo-ing.\n");
-	
-	for (i = 0; i < num_bytes; i++)
-	{
+
+	// This function closes all open slots.
+	inserted_bytes = editact_InsertBytes(editor, cursor->secondary, num_bytes);
+
+	if ((undo_appvar = ti_Open(UNDO_APPVAR, "r")) == 0)
+			return 0;
+
+	ti_Seek(byte_data_offset, SEEK_SET, undo_appvar);
+
+	if (!inserted_bytes)
+		return 0;
+
+	for (uint24_t i = 0; i < num_bytes; i++)
 		ti_Read(cursor->secondary + i, 1, 1, undo_appvar);
-	};
-	
-	if (ti_Resize(ti_GetSize(undo_appvar) - ti_Tell(undo_appvar), undo_appvar) == -1)
-	{
-		gui_DrawMessageDialog_Blocking("Could not delete undo action");
-		return;
-	};
-	
+
 	editor->is_file_empty = false;
 	cursor->primary = cursor->secondary + num_bytes - 1;
 	cursor->multibyte_selection = true;
-	return;
+	return ti_Tell(undo_appvar);
 }
 
 uint8_t editact_GetNibble(cursor_t *cursor, uint8_t *ptr)
@@ -385,9 +408,7 @@ uint8_t editact_GetNibble(cursor_t *cursor, uint8_t *ptr)
 	if (cursor->high_nibble)
 	{
 		nibble = asm_HighToLowNibble(nibble);
-	}
-	else
-	{
+	} else {
 		nibble = asm_LowToHighNibble(nibble);
 		nibble = asm_HighToLowNibble(nibble);
 	};
@@ -444,7 +465,17 @@ bool editact_CreateUndoWriteNibbleAction(editor_t *editor, cursor_t *cursor, uin
 	return false;
 }
 
-void undo_write_nibble(editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar)
+/**
+* Rewrites the last overwritten nibble.
+*
+* Arguments:
+*   Besides the regular arguments, the UNDO_APPVAR's offset is set to the byte after the
+*   end of the undo action code.
+* Returns:
+*   undo_action_size = The size (in bytes) of the undo action.
+*   Leaves the UNDO_APPVAR slot open.
+*/
+uint24_t undo_write_nibble(editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar)
 {
 	uint8_t nibble;
 	
@@ -453,22 +484,18 @@ void undo_write_nibble(editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar)
 	ti_Read(&cursor->high_nibble, 1, 1, undo_appvar);
 	ti_Read(&nibble, 1, 1, undo_appvar);
 	
-	if (ti_Resize(ti_GetSize(undo_appvar) - ti_Tell(undo_appvar), undo_appvar) == -1)
-	{
-		gui_DrawMessageDialog_Blocking("Could not delete undo action");
-		return;
-	};
-	
 	editact_WriteNibble(cursor, nibble);
 	cursor->secondary = cursor->primary;
-	return;
+	return ti_Tell(undo_appvar);
 }
 
 bool editact_UndoAction(editor_t *editor, cursor_t *cursor)
 {
 	ti_var_t undo_appvar;
 	uint8_t undo_code;
-	bool undid_action = false;
+	uint24_t undo_action_size;
+
+	ti_CloseAll();
 	
 	if ((undo_appvar = ti_Open(UNDO_APPVAR, "r")) == 0)
 	{
@@ -487,28 +514,33 @@ bool editact_UndoAction(editor_t *editor, cursor_t *cursor)
 	switch(undo_code)
 	{
 		case UNDO_INSERT_BYTES:
-			undo_insert_bytes(editor, cursor, undo_appvar);
-			undid_action = true;
+			undo_action_size = undo_insert_bytes(editor, cursor, undo_appvar);
 			break;
 		
 		case UNDO_DELETE_BYTES:
-			undo_delete_bytes(editor, cursor, undo_appvar);
-			undid_action = true;
+			undo_action_size = undo_delete_bytes(editor, cursor, undo_appvar);
 			break;
 		
 		case UNDO_WRITE_NIBBLE:
-			undo_write_nibble(editor, cursor, undo_appvar);
-			undid_action = true;
+			undo_action_size = undo_write_nibble(editor, cursor, undo_appvar);
 			break;
 		
 		default:
-			undid_action = false;
+			undo_action_size = 0;
 	};
 
-	ti_Close(undo_appvar);
-	return undid_action;
-}
+	if (undo_action_size == 0)
+	{
+		gui_DrawMessageDialog_Blocking("Could not execute undo");
+		ti_Close(undo_appvar);
+		return false;
+	};
 
+	if (ti_Resize(ti_GetSize(undo_appvar) - undo_action_size, undo_appvar) <= 0)
+		gui_DrawMessageDialog_Blocking("Could not execute undo");
+	ti_Close(undo_appvar);
+	return true;
+}
 
 // Finds all occurances of PHRASE starting from START in MIN to MAX.
 // Returns number of occurances found (max = 255).

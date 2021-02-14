@@ -19,9 +19,6 @@
 #include <string.h>
 
 
-editor_t *editor;
-cursor_t *cursor;
-
 /*-----------------------------
 IMPORTANT:
 
@@ -56,19 +53,17 @@ set or after the pointers are no longer needed.
  * ===============================
  *
  *
- * RAM Editor/ROM Viewer (9 bytes)
+ * RAM Editor/ROM Viewer
  * ===============================
- * Editor Window Address	3
  * Cursor Primary Address	3
  * Cursor Secondary Address	3
  * ===============================
  *
  *
- * File Editor (20 bytes)
+ * File Editor
  * ===============================
  * File Name			10
  * File Type			1
- * Editor Window Offset		3
  * Cursor Primary Offset	3
  * Cursor Secondary Offset	3
  * ===============================
@@ -116,6 +111,7 @@ static uint24_t decimal(const char *hex)
 	uint24_t place = 1;
 	uint24_t decimal = 0;
 	
+	
 	i = strlen(hex);
 	
 	while (i > 0)
@@ -133,14 +129,14 @@ static uint24_t decimal(const char *hex)
 		place *= 16;
 	};
 	
-	//dbg_sprintf(dbgout, "%s -> %d\n", hex, decimal);
-	
 	return decimal;
 }
+
 
 static bool is_file_accessible(char *name, uint8_t type)
 {
 	ti_var_t slot;
+	
 	
 	ti_CloseAll();
 	if ((slot = ti_OpenVar(name, "r", type)) == 0)
@@ -152,12 +148,12 @@ static bool is_file_accessible(char *name, uint8_t type)
 	return true;
 }
 
-static void move_cursor(uint8_t direction, bool accelerated_cursor)
+
+static void move_cursor(editor_t *editor, cursor_t *cursor, uint8_t direction, bool accelerated_cursor)
 {
 	uint8_t i;
 	uint8_t *old_cursor_address;
 	
-	// dbg_sprintf(dbgout, "direction = %d\n", direction);
 	
 	if (direction == CURSOR_LEFT && cursor->primary > editor->min_address)
 	{
@@ -228,15 +224,17 @@ static void move_cursor(uint8_t direction, bool accelerated_cursor)
 	return;
 }
 
+
 static void goto_prompt(editor_t *editor, cursor_t *cursor, uint8_t editor_index_method)
 {
 	char buffer[8] = {'\0'};
 	uint8_t buffer_size;
 	int8_t key;
 	
-	uint24_t goto_input_decimal;
+	uint24_t offset;
 	char *keymap;
 	char keymap_indicator;
+	
 	
 	if (editor_index_method == OFFSET_INDEXING)
 	{
@@ -272,12 +270,16 @@ static void goto_prompt(editor_t *editor, cursor_t *cursor, uint8_t editor_index
 	
 	if (editor_index_method == OFFSET_INDEXING)
 	{
-		goto_input_decimal = atoi(buffer);
-		goto_input_decimal += (uint24_t)editor->min_address;
+		dbg_sprintf(dbgout, "sizeof(int) = %d\n", sizeof(int));
+		
+		offset = atoi(buffer);
+		if ((uint24_t)(editor->max_address - editor->min_address) > offset)
+			editact_Goto(editor, cursor, editor->min_address + offset);
+		else
+			editact_Goto(editor, cursor, editor->max_address);
 	} else {
-		goto_input_decimal = decimal(buffer);
+		editact_Goto(editor, cursor, (uint8_t *)decimal(buffer));
 	};
-	editact_Goto(editor, cursor, (uint8_t *)goto_input_decimal);
 	return;
 }
 
@@ -327,43 +329,7 @@ static bool insert_bytes_prompt(editor_t *editor, cursor_t *cursor)
 	return false;
 }
 
-static void draw_editor_contents(editor_t *editor, cursor_t *cursor, uint8_t editor_index_method)
-{
-	gfx_SetColor(color_theme.background_color);
-	gfx_FillRectangle_NoClip(0, 20, LCD_WIDTH, LCD_HEIGHT - 40);
-	
-	gfx_SetTextBGColor(color_theme.background_color);
-	gfx_SetTextFGColor(color_theme.table_text_color);
-	gfx_SetTextTransparentColor(color_theme.background_color);
-	
-	if (editor_index_method == OFFSET_INDEXING)
-	{
-		editorgui_DrawFileOffsets(editor, 3, 22);
-	} else {
-		editorgui_DrawMemAddresses(editor, 3, 22);
-	};
-	
-	gfx_SetColor(color_theme.table_text_color);
-	gfx_VertLine_NoClip(58, 20, LCD_HEIGHT - 40);
-	gfx_VertLine_NoClip(59, 20, LCD_HEIGHT - 40);
-	gfx_VertLine_NoClip(228, 20, LCD_HEIGHT - 40);
-	gfx_VertLine_NoClip(229, 20, LCD_HEIGHT - 40);
-	gfx_SetColor(color_theme.table_bg_color);
-	gfx_FillRectangle_NoClip(60, 20, 168, LCD_HEIGHT - 40);
-	
-	if (editor->type == FILE_EDITOR && editor->is_file_empty)
-	{
-		editorgui_DrawEmptyFileMessage(60, LCD_HEIGHT / 2 - 4);
-	}
-	else
-	{
-		editorgui_DrawHexTable(editor, cursor, 65, 22);
-		editorgui_DrawAsciiTable(editor, cursor, 235, 22);
-	};
-	
-	return;
-}
-
+// Converts an ASCII hexadecimal character (0 - 9, a - f) into a nibble.
 static void ascii_to_nibble(const char *in, char *out, uint8_t in_len)
 {
 	const char *hex_chars = "0123456789abcdef";
@@ -426,7 +392,7 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 	uint24_t search_range;
 	
 	
-	if (!is_file_accessible(HEXAEDIT_CONFIG_APPVAR, TI_APPVAR_TYPE))
+	if (!ti_OpenVar(HEXAEDIT_CONFIG_APPVAR, "r", TI_APPVAR_TYPE))
 		init_hexaedit_config_appvar();
 	
 	search_range = settings_GetPhraseSearchRange();
@@ -558,8 +524,7 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 			cursor->multibyte_selection = true;
 		};
 		
-		// Redraw the editor contents
-		draw_editor_contents(editor, cursor, editor_index_method);
+		editorgui_DrawEditorContents(editor, cursor, editor_index_method);
 	};
 	
 	return;
@@ -689,7 +654,7 @@ static bool save_file(char *name, uint8_t type)
 	return false;
 }
 
-static void run_editor(void)
+static void run_editor(editor_t *editor, cursor_t *cursor)
 {
 	int8_t key;
 	uint8_t editor_index_method = ADDRESS_INDEXING;
@@ -697,14 +662,15 @@ static void run_editor(void)
 	bool redraw_tool_bar = true;
 	uint8_t save_code;
 	
-	// dbg_sprintf(dbgout, "window_address = 0x%6x | max_address = 0x%6x\n", editor->window_address, editor->max_address);
+	dbg_sprintf(dbgout, "window_address = 0x%6x | min_address = 0x%6x | max_address = 0x%6x\n",
+	editor->window_address, editor->min_address, editor->max_address);
 	
 	if (editor->type == FILE_EDITOR)
 		editor_index_method = OFFSET_INDEXING;
 	
 	for (;;)
 	{
-		draw_editor_contents(editor, cursor, editor_index_method);
+		editorgui_DrawEditorContents(editor, cursor, editor_index_method);
 		
 		if (redraw_top_bar)
 		{
@@ -747,7 +713,7 @@ static void run_editor(void)
 			{
 				cursor->high_nibble = false;
 			} else {
-				move_cursor(CURSOR_RIGHT, false);
+				move_cursor(editor, cursor, CURSOR_RIGHT, false);
 			};
 		};
 		
@@ -839,11 +805,11 @@ static void run_editor(void)
 		{
 			if (kb_Data[7] & kb_Up)
 			{
-				move_cursor(CURSOR_UP, kb_Data[2] & kb_Alpha);
+				move_cursor(editor, cursor, CURSOR_UP, kb_Data[2] & kb_Alpha);
 			}
 			else if (kb_Data[7] & kb_Down)
 			{
-				move_cursor(CURSOR_DOWN, kb_Data[2] & kb_Alpha);
+				move_cursor(editor, cursor, CURSOR_DOWN, kb_Data[2] & kb_Alpha);
 			}
 			else if (kb_Data[7] & kb_Left)
 			{
@@ -851,11 +817,11 @@ static void run_editor(void)
 				{
 					cursor->high_nibble = true;
 				};
-				move_cursor(CURSOR_LEFT, false);
+				move_cursor(editor, cursor, CURSOR_LEFT, false);
 			}
 			else
 			{
-				move_cursor(CURSOR_RIGHT, false);
+				move_cursor(editor, cursor, CURSOR_RIGHT, false);
 			};
 			
 			if (!cursor->multibyte_selection)
@@ -915,15 +881,15 @@ static bool create_undo_appvar(void)
 	return true;
 }
 
-static bool create_edit_file(char *name, uint8_t type)
+static bool create_edit_file(const char *orig_file_name, uint8_t orig_file_type)
 {
 	ti_var_t file, edit_file;
 	uint24_t file_size;
 	
-	if ((file = ti_OpenVar(name, "r", type)) == 0)
+	if ((file = ti_OpenVar(orig_file_name, "r", orig_file_type)) == 0)
 	{
 		gui_DrawMessageDialog_Blocking("Failed to open file");
-		goto ERROR;
+		return false;
 	};
 	
 	file_size = ti_GetSize(file);
@@ -957,24 +923,58 @@ static bool create_edit_file(char *name, uint8_t type)
 	return false;
 }
 
-static bool file_normal_start(const char *name, uint8_t type)
+
+static bool bounds_check_offsets(editor_t *editor, uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset)
 {
-	ti_var_t slot;
+	uint24_t storage_size;
 	
-	memset(editor->name, '\0', EDITOR_NAME_LEN);
-	if (strlen(name) <= EDITOR_NAME_LEN)
-	{
-		strcpy(editor->name, name);
-	} else {
+	
+	storage_size = editor->max_address - editor->min_address;
+	
+	if (primary_cursor_offset > storage_size || secondary_cursor_offset > storage_size)
 		return false;
-	};
+	else
+		return true;
+}
+
+
+bool editor_FileEditor(const char *name, uint8_t type, uint24_t primary_cursor_offset,
+uint24_t secondary_cursor_offset)
+{
+	bool return_val = false;
+	ti_var_t slot;
+	editor_t *editor;
+	cursor_t *cursor;
+
+//dbg_sprintf(dbgout, "name = %s | type = %d\n", name, type);
+
+	if (primary_cursor_offset < secondary_cursor_offset)
+		return false;
 	
 	ti_CloseAll();
-	slot = ti_Open(EDIT_FILE, "r");
+	if (!create_edit_file(name, type))
+			return false;
+
+	editor = malloc(sizeof(editor_t));
+	cursor = malloc(sizeof(cursor_t));
+
+	if (!create_undo_appvar())
+		goto RETURN;
+	
+	if ((slot = ti_Open(EDIT_FILE, "r")) == 0)
+		goto RETURN;
+
+//dbg_sprintf(dbgout, "editor = 0x%6x\n", editor);
+
+	memset(editor->name, '\0', EDITOR_NAME_LEN);
+	
+	if (strlen(name) < EDITOR_NAME_LEN)
+		strcpy(editor->name, name);
+	else
+		goto RETURN;
 	
 	editor->min_address = ti_GetDataPtr(slot);
 	
-	//dbg_sprintf(dbgout, "min_address = 0x%6x\n", editor->min_address);
 	if (ti_GetSize(slot) == 0)
 	{
 		editor->is_file_empty = true;
@@ -983,62 +983,59 @@ static bool file_normal_start(const char *name, uint8_t type)
 		editor->is_file_empty = false;
 		editor->max_address = editor->min_address + ti_GetSize(slot) - 1;
 	};
+
+	ti_Close(slot);
 	editor->type = FILE_EDITOR;
 	editor->window_address = editor->min_address;
 	editor->num_changes = 0;
 	editor->file_type = type;
-	ti_Close(slot);
-	
-	cursor->primary = editor->min_address;
-	cursor->secondary = editor->min_address;
 	cursor->high_nibble = true;
 	cursor->multibyte_selection = false;
-	
-	return true;
+
+//dbg_sprintf(dbgout, "min_address = 0x%6x | size = %d\n", editor->min_address, ti_GetSize(slot));
+
+	if (!bounds_check_offsets(editor, primary_cursor_offset, secondary_cursor_offset))
+		goto RETURN;
+
+	// The editor goto sets cursor->secondary to cursor->primary, so in order to goto
+	// and have multi-byte selection, we must goto before setting cursor->secondary.
+	cursor->primary = editor->min_address + primary_cursor_offset;
+	editact_Goto(editor, cursor, cursor->primary);
+	cursor->secondary = editor->min_address + secondary_cursor_offset;
+
+	run_editor(editor, cursor);
+	return_val = true;
+
+	RETURN:
+	ti_Delete(EDIT_FILE);
+	ti_Delete(UNDO_APPVAR);
+	free(editor);
+	free(cursor);
+	return return_val;
 }
 
-void editor_FileNormalStart(char *name, uint8_t type)
+
+void editor_RAMEditor(uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset)
 {
-	// dbg_sprintf(dbgout, "FileNormalStart:\n\tname = \"%s\"\n\ttype = %d\n", name, type);
+	editor_t *editor;
+	cursor_t *cursor;
 	
-	if (!is_file_accessible(name, type))
+	
+	if (secondary_cursor_offset > primary_cursor_offset)
+		return;
+	
+	if (!create_undo_appvar())
+		return;
+	
+	if ((editor = malloc(sizeof(editor_t))) == NULL)
+		return;
+	if ((cursor = malloc(sizeof(cursor_t))) == NULL)
 	{
-		gui_DrawMessageDialog_Blocking("Could not open file");
+		free(editor);
+		ti_Delete(UNDO_APPVAR);
 		return;
 	};
 	
-	editor = malloc(sizeof(editor_t));
-	cursor = malloc(sizeof(cursor_t));
-	
-	if (!create_edit_file(name, type))
-	{
-		gui_DrawMessageDialog_Blocking("Could not create edit file");
-		goto RETURN;
-	};
-	
-	if (!file_normal_start(name, type))
-	{
-		gui_DrawMessageDialog_Blocking("File name is too long");
-		goto RETURN;
-	};
-	
-	if (!create_undo_appvar())
-	{
-		goto RETURN;
-	};
-	
-	run_editor();
-	ti_Delete(UNDO_APPVAR);
-	ti_Delete(EDIT_FILE);
-	
-	RETURN:
-	free(editor);
-	free(cursor);
-	return;
-}
-
-static void RAM_normal_start(void)
-{
 	memset(editor->name, '\0', EDITOR_NAME_LEN);
 	strcpy(editor->name, "RAM Editor");
 	
@@ -1047,38 +1044,50 @@ static void RAM_normal_start(void)
 	editor->window_address = editor->min_address;
 	editor->type = RAM_EDITOR;
 	editor->num_changes = 0;
-	cursor->primary = editor->min_address;
-	cursor->secondary = cursor->primary;
 	cursor->high_nibble = true;
 	cursor->multibyte_selection = false;
-	return;
-}
-
-void editor_RAMNormalStart(void)
-{
-	editor = malloc(sizeof(editor_t));
-	cursor = malloc(sizeof(cursor_t));
 	
-	RAM_normal_start();
-	
-	if (!create_undo_appvar())
-	{
+	if (!bounds_check_offsets(editor, primary_cursor_offset, secondary_cursor_offset))
 		goto RETURN;
-	};
 	
-	run_editor();
-	ti_Delete(UNDO_APPVAR);
+	// The editor goto sets cursor->secondary to cursor->primary, so in order to goto
+	// and have multi-byte selection, we must goto before setting cursor->secondary.
+	cursor->primary = editor->min_address + primary_cursor_offset;
+	editact_Goto(editor, cursor, cursor->primary);
+	cursor->secondary = editor->min_address + secondary_cursor_offset;
+	
+	if (cursor->secondary < cursor->primary)
+		cursor->multibyte_selection = true;
+	
+	run_editor(editor, cursor);
 	
 	RETURN:
+	ti_Delete(UNDO_APPVAR);
 	free(editor);
 	free(cursor);
 	return;
 }
 
-void editor_ROMViewer(void)
+
+void editor_ROMViewer(uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset)
 {
+	editor_t *editor;
+	cursor_t *cursor;
+	
+	
+	if (secondary_cursor_offset > primary_cursor_offset)
+		return;
+	
 	editor = malloc(sizeof(editor_t));
 	cursor = malloc(sizeof(cursor_t));
+	
+	if ((editor = malloc(sizeof(editor_t))) == NULL)
+		return;
+	if ((cursor = malloc(sizeof(cursor_t))) == NULL)
+	{
+		free(editor);
+		return;
+	};
 	
 	memset(editor->name, '\0', EDITOR_NAME_LEN);
 	strcpy(editor->name, "ROM Viewer");
@@ -1087,24 +1096,32 @@ void editor_ROMViewer(void)
 	editor->max_address = ROM_MAX_ADDRESS;
 	editor->window_address = editor->min_address;
 	editor->num_changes = 0;
-	cursor->primary = editor->window_address;
-	cursor->secondary = cursor->primary;
 	cursor->high_nibble = true;
 	cursor->multibyte_selection = false;
 	
-	run_editor();
+	if (!bounds_check_offsets(editor, primary_cursor_offset, secondary_cursor_offset))
+		goto RETURN;
 	
+	// The editor goto sets cursor->secondary to cursor->primary, so in order to goto
+	// and have multi-byte selection, we must goto before setting cursor->secondary.
+	cursor->primary = editor->min_address + primary_cursor_offset;
+	editact_Goto(editor, cursor, cursor->primary);
+	cursor->secondary = editor->min_address + secondary_cursor_offset;
+	
+	if (cursor->secondary < cursor->primary)
+		cursor->multibyte_selection = true;
+	
+	run_editor(editor, cursor);
+	
+	RETURN:
 	free(editor);
 	free(cursor);
 	return;
 }
 
-static void set_color_theme_from_config(ti_var_t slot)
+
+static void load_color_override(color_theme_config_t *color_theme_config)
 {
-	color_theme_config_t *color_theme_config = malloc(sizeof(color_theme_config_t));
-	
-	ti_Read(color_theme_config, sizeof(color_theme_config_t), 1, slot);
-	
 	color_theme.background_color = color_theme_config->background_color;
 	color_theme.bar_color = color_theme_config->bar_color;
 	color_theme.bar_text_color = color_theme_config->bar_text_color;
@@ -1113,249 +1130,84 @@ static void set_color_theme_from_config(ti_var_t slot)
 	color_theme.selected_table_text_color = color_theme_config->selected_table_text_color;
 	color_theme.table_selector_color = color_theme_config->table_selector_color;
 	color_theme.cursor_color = color_theme_config->cursor_color;
-	free(color_theme_config);
 	return;
 }
 
-static uint8_t bounds_check_mem_pointers(uintptr_t min_address, uintptr_t max_address, uintptr_t window_address, uintptr_t cursor_primary, uintptr_t cursor_secondary)
-{
-	if ((window_address - min_address) < 0)
-	{
-		return 1;
-	};
-	
-	if ((max_address - window_address) < 0)
-	{
-		return 1;
-	};
-	
-	if (cursor_primary < cursor_secondary)
-	{
-		return 2;
-	};
-	
-	if (cursor_primary < window_address || cursor_secondary < window_address)
-	{
-		return 3;
-	};
-	
-	if (cursor_primary > max_address || cursor_secondary > max_address)
-	{
-		return 4;
-	};
-	
-	if (cursor_primary > (window_address + (COLS_ONSCREEN * ROWS_ONSCREEN)))
-	{
-		return 5;
-	};
-	
-	if (cursor_secondary > (window_address + (COLS_ONSCREEN * ROWS_ONSCREEN)))
-	{
-		return 6;
-	};
-	return 0;
-}
 
-static uint8_t load_mem_editor_data(editor_t *editor, cursor_t *cursor, ti_var_t slot, uint8_t editor_type)
+static void run_editor_from_config(void)
 {
-	mem_editor_config_t *mem_editor = malloc(sizeof(mem_editor_config_t));
-	
-	ti_Read(mem_editor, sizeof(mem_editor_config_t), 1, slot);
-	
-	editor->window_address = mem_editor->window_address;
-	cursor->primary = mem_editor->cursor_primary;
-	cursor->secondary = mem_editor->cursor_secondary;
-	free(mem_editor);
-	
-	editor->type = editor_type;
-	editor->num_changes = 0;
-	cursor->high_nibble = true;
-	cursor->multibyte_selection = false;
-	if (cursor->primary != cursor->secondary)
-		cursor->multibyte_selection = true;
-	
-	if (editor_type == RAM_EDITOR)
-	{
-		strcpy(editor->name, "RAM Editor");
-		editor->min_address = RAM_MIN_ADDRESS;
-		editor->max_address = RAM_MAX_ADDRESS;
-	} else {
-		strcpy(editor->name, "ROM Viewer");
-		editor->min_address = ROM_MIN_ADDRESS;
-		editor->max_address = ROM_MAX_ADDRESS;
-	};
-	
-	// dbg_sprintf(dbgout, "load_mem_editor_data\n\tmin = 0x%6x\n\tmax = 0x%6x\n\twindow = 0x%6x\n", editor->min_address, editor->max_address, editor->window_address);
-	
-	return bounds_check_mem_pointers((uintptr_t)editor->min_address, (uintptr_t)editor->max_address, (uintptr_t)editor->window_address, (uintptr_t)cursor->primary, (uintptr_t)cursor->secondary);
-}
-
-static uint8_t bounds_check_file_offsets(uint24_t window_offset, uint24_t cursor_primary, uint24_t cursor_secondary, uint24_t file_size)
-{
-	if (window_offset > file_size)
-	{
-		return 1;
-	}
-	else if (cursor_primary < cursor_secondary)
-	{
-		return 2;
-	}
-	else if (cursor_primary > file_size || cursor_secondary > file_size)
-	{
-		return 4;
-	}
-	else if (cursor_primary > (window_offset + (COLS_ONSCREEN * ROWS_ONSCREEN)))
-	{
-		return 5;
-	}
-	else if (cursor_secondary > (window_offset + (COLS_ONSCREEN * ROWS_ONSCREEN)))
-	{
-		return 6;
-	};
-	return 0;
-}
-
-static uint8_t load_file_editor_data(editor_t *editor, cursor_t *cursor, ti_var_t config_data_slot)
-{
-	ti_var_t edit_file_slot;
-	uint24_t edit_file_size;
-	uint24_t window_offset, cursor_primary_offset, cursor_secondary_offset;
-	uint8_t bounds_check_code = 0;
-	
-	file_editor_config_t *file_editor = malloc(sizeof(file_editor_config_t));
-	
-	ti_Read(file_editor, sizeof(file_editor_config_t), 1, config_data_slot);
-	
-	strcpy(editor->name, file_editor->file_name);
-	editor->file_type = file_editor->file_type;
-	window_offset = file_editor->window_offset;
-	cursor_primary_offset = file_editor->cursor_primary_offset;
-	cursor_secondary_offset = file_editor->cursor_secondary_offset;
-	free(file_editor);
-	
-	// dbg_sprintf(dbgout, "name = %s | type = %d\n", editor->name, editor->file_type);
-	
-	if (!create_edit_file(editor->name, editor->file_type))
-	{
-		return 255;
-	};
-	
-	if ((edit_file_slot = ti_Open(EDIT_FILE, "r")) == 0)
-	{
-		gui_DrawMessageDialog_Blocking("Could not open edit file");
-		return 255;
-	}
-	
-	edit_file_size = ti_GetSize(edit_file_slot);
-	editor->min_address = ti_GetDataPtr(edit_file_slot);
-	ti_Close(edit_file_slot);
-	
-	bounds_check_code = bounds_check_file_offsets(window_offset, cursor_primary_offset, cursor_secondary_offset, edit_file_size);
-	
-	if (bounds_check_code > 0)
-		return bounds_check_code;
-	
-	if (edit_file_size == 0)
-	{
-		editor->is_file_empty = true;
-		editor->max_address = editor->min_address;
-	} else {
-		editor->is_file_empty = false;
-		editor->max_address = editor->min_address + edit_file_size - 1;
-	};
-	
-	editor->window_address = editor->min_address + window_offset;
-	cursor->primary = editor->min_address + cursor_primary_offset;
-	cursor->secondary = editor->min_address + cursor_secondary_offset;
-	
-	editor->num_changes = 0;
-	cursor->high_nibble = true;
-	cursor->multibyte_selection = false;
-	if (cursor->primary != cursor->secondary)
-		cursor->multibyte_selection = true;
-	
-	return 0;
-}
-
-static bool load_config_data(void)
-{
-	const char *error_message[6] = {
-		"Window address out of range",
-		"Cursor secondary greater than primary",
-		"Cursor pointer less than window addr",
-		"Cursor pointer too large",
-		"Cursor primary not onscreen",
-		"Cursor secondary not onscreen"
-	};
+	const uint8_t FILE_EDITOR_FLAG = FILE_EDITOR;
+	const uint8_t RAM_EDITOR_FLAG = RAM_EDITOR;
+	const uint8_t ROM_VIEWER_FLAG = ROM_VIEWER;
+	const uint8_t COLOR_OVERRIDE_FLAG = (1 << 7);
 	
 	ti_var_t config_data_slot;
-	uint8_t editor_config;
+	color_theme_config_t *color_theme_config;
+	uint8_t config_byte;
+	uint24_t primary_cursor_offset;
+	uint24_t secondary_cursor_offset;
+	char file_name[EDITOR_NAME_LEN] = {'\0'};
+	uint8_t file_type;
 	
-	uint8_t bounds_check_code = 0;
-	uint8_t internally_handled_error = 255;
-	bool config_load_status = false;
-	
-	// dbg_sprintf(dbgout, "About to load config data\n");
 	
 	ti_CloseAll();
 	if ((config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r")) == 0)
-		return false;
+		return;
 	
-	ti_Read(&editor_config, 1, 1, config_data_slot);
+	ti_Read(&config_byte, sizeof(config_byte), 1, config_data_slot);
 	
-	if (editor_config & (1 << 7))
+dbg_sprintf(dbgout, "offset = %d\n", ti_Tell(config_data_slot));
+dbg_sprintf(dbgout, "config_byte = %2x\n", config_byte);
+	
+	if (config_byte & (1 << 7))
 	{
-		// dbg_sprintf(dbgout, "About to load color theme data\n");
+dbg_sprintf(dbgout, "About to load color config\n");
 		
-		if (ti_GetSize(config_data_slot) - 1 < sizeof(color_theme_config_t))
-			goto RETURN;
-		
-		set_color_theme_from_config(config_data_slot);
-		
-		// Reset the color theme bit so editor tests are simpler.
-		editor_config ^= (1 << 7);
+		if ((color_theme_config = malloc(sizeof(color_theme_config_t))) == NULL)
+			return;
+		ti_Read(color_theme_config, sizeof(color_theme_config_t), 1, config_data_slot);
+		load_color_override(color_theme_config);
+		free(color_theme_config);
+		config_byte ^= COLOR_OVERRIDE_FLAG;
 	};
 	
-	// dbg_sprintf(dbgout, "editor_config = %d", editor_config);
+dbg_sprintf(dbgout, "offset = %d\n", ti_Tell(config_data_slot));
 	
-	if (editor_config == ROM_VIEWER || editor_config == RAM_EDITOR)
+	if (config_byte == FILE_EDITOR_FLAG)
 	{
-		bounds_check_code = load_mem_editor_data(editor, cursor, config_data_slot, editor_config);
-		if (bounds_check_code > 0)
-		{
-			gui_DrawMessageDialog_Blocking(error_message[bounds_check_code - 1]);
-			goto RETURN;
-		};
+		ti_Read(&file_name, FILE_NAME_LEN, 1, config_data_slot);
+		ti_Read(&file_type, sizeof(file_type), 1, config_data_slot);
+		ti_Read(&primary_cursor_offset, sizeof(primary_cursor_offset), 1, config_data_slot);
+		ti_Read(&secondary_cursor_offset, sizeof(secondary_cursor_offset), 1, config_data_slot);
+		ti_Close(config_data_slot);
+		editor_FileEditor(file_name, file_type, primary_cursor_offset, secondary_cursor_offset);
 	}
-	else if (editor_config == FILE_EDITOR)
+	else if (config_byte == RAM_EDITOR_FLAG)
 	{
-		// load_file_editor_data creates the temporary edit file.
-		
-		bounds_check_code = load_file_editor_data(editor, cursor, config_data_slot);
-		if (bounds_check_code == internally_handled_error)
-		{
-			goto RETURN;
-		}
-		else if (bounds_check_code > 0)
-		{
-			gui_DrawMessageDialog_Blocking(error_message[bounds_check_code - 1]);
-			goto RETURN;
-		};
+		ti_Read(&primary_cursor_offset, sizeof(primary_cursor_offset), 1, config_data_slot);
+		ti_Read(&secondary_cursor_offset, sizeof(secondary_cursor_offset), 1, config_data_slot);
+		ti_Close(config_data_slot);
+		editor_RAMEditor(primary_cursor_offset, secondary_cursor_offset);
+	}
+	else if (config_byte == ROM_VIEWER_FLAG)
+	{
+		ti_Read(&primary_cursor_offset, sizeof(primary_cursor_offset), 1, config_data_slot);
+		ti_Read(&secondary_cursor_offset, sizeof(secondary_cursor_offset), 1, config_data_slot);
+		ti_Close(config_data_slot);
+		editor_ROMViewer(primary_cursor_offset, secondary_cursor_offset);
 	} else {
 		gui_DrawMessageDialog_Blocking("Unknown editor type");
-		goto RETURN;
+		ti_Close(config_data_slot);
 	};
 	
-	config_load_status = true;
-	
-	RETURN:
-	ti_Close(config_data_slot);
-	return config_load_status;
+	return;
 }
+
 
 void editor_HeadlessStart(void)
 {
-	bool headless_start_succeeded = true;
+	editor_t *editor;
+	cursor_t *cursor;
 	
 	if (!create_undo_appvar())
 		return;
@@ -1363,22 +1215,10 @@ void editor_HeadlessStart(void)
 	editor = malloc(sizeof(editor_t));
 	cursor = malloc(sizeof(cursor_t));
 	
-	if (!load_config_data())
-	{
-		headless_start_succeeded = false;
-		goto RETURN;
-	};
+	run_editor_from_config();
 	
-	run_editor();
-	
-	RETURN:
 	ti_Delete(UNDO_APPVAR);
-	
-	/* Delete the Headless Start configuration appvar so HexaEdit can be run normally
-	the next time it is opened. If the configuration was faulty, however, do not delete
-	it so the programmer can review the configuration. */
-	if (headless_start_succeeded)
-		ti_Delete(HS_CONFIG_APPVAR);
+	ti_Delete(HS_CONFIG_APPVAR);
 	free(editor);
 	free(cursor);
 	return;

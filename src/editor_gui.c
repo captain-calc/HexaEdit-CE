@@ -308,3 +308,40 @@ void editorgui_DrawEmptyFileMessage(uint24_t hex_x, uint8_t y)
 	gfx_PrintString(message);
 	return;
 }
+
+void editorgui_DrawEditorContents(editor_t *editor, cursor_t *cursor, uint8_t editor_index_method)
+{
+	gfx_SetColor(color_theme.background_color);
+	gfx_FillRectangle_NoClip(0, 20, LCD_WIDTH, LCD_HEIGHT - 40);
+	
+	gfx_SetTextBGColor(color_theme.background_color);
+	gfx_SetTextFGColor(color_theme.table_text_color);
+	gfx_SetTextTransparentColor(color_theme.background_color);
+	
+	if (editor_index_method == OFFSET_INDEXING)
+	{
+		editorgui_DrawFileOffsets(editor, 3, 22);
+	} else {
+		editorgui_DrawMemAddresses(editor, 3, 22);
+	};
+	
+	gfx_SetColor(color_theme.table_text_color);
+	gfx_VertLine_NoClip(58, 20, LCD_HEIGHT - 40);
+	gfx_VertLine_NoClip(59, 20, LCD_HEIGHT - 40);
+	gfx_VertLine_NoClip(228, 20, LCD_HEIGHT - 40);
+	gfx_VertLine_NoClip(229, 20, LCD_HEIGHT - 40);
+	gfx_SetColor(color_theme.table_bg_color);
+	gfx_FillRectangle_NoClip(60, 20, 168, LCD_HEIGHT - 40);
+	
+	if (editor->type == FILE_EDITOR && editor->is_file_empty)
+	{
+		editorgui_DrawEmptyFileMessage(60, LCD_HEIGHT / 2 - 4);
+	}
+	else
+	{
+		editorgui_DrawHexTable(editor, cursor, 65, 22);
+		editorgui_DrawAsciiTable(editor, cursor, 235, 22);
+	};
+	
+	return;
+}

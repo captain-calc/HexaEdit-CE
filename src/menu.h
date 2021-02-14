@@ -1,9 +1,12 @@
+/*
+ * This file contains all of the data structures for HexaEdit's main menu.
+ * It also contains the program's name and current version number.
+*/
+
 #ifndef MENU_H
 #define MENU_H
 
-/**
- * This file contains all of the data for HexaEdit's main menu.
-*/
+#include "editor.h"	// For FILE_NAME_LEN
 
 #include <fileioc.h>
 
@@ -13,14 +16,16 @@
 
 /* General program data. */
 #define PROGRAM_NAME		"HexaEdit"
-#define PROGRAM_VERSION		"2.0.1"
+#define PROGRAM_VERSION		"2.0.1.001"
 #define RECENT_FILES_APPVAR	"HEXARCF"
-
 
 /* File table data. */
 #define NUM_FILES_ONSCREEN	15
 
-
+/*
+ * HexaEdit's has its own file types since the TI-OS file types do not
+ * distinguish between assembly programs and BASIC programs.
+*/
 #define HEXAEDIT_RECENTS_TYPE		0
 #define HEXAEDIT_APPVAR_TYPE		1
 #define HEXAEDIT_BASIC_PRGM_TYPE	2
@@ -32,19 +37,23 @@
 #define ASM_PRGM_TABLE_NUM	2
 #define BASIC_PRGM_TABLE_NUM	3
 
-
+/*
+ * 400 of each type should be sufficient for heavy calculator programmers.
+ * This should strike a balance between utility and conservative memory use.
+*/
 #define MAX_NUM_APPVARS		400
 #define MAX_NUM_ASM_PROGRAMS	400
 #define MAX_NUM_BASIC_PROGRAMS	400
 #define MAX_NUM_RECENT_FILES	(15)
 
 #define ASM_PROGRAM_FLAG	31727	// 61307 \xef\x7b
-#define FILE_NAME_LEN		10
 
-/* This structure handles multiple file types.
-Although appvars cannot be "locked" and the unused boolean variable does
-cause some wasted space, the convenience and efficiency of having only one
-file data structure far outweighs this overhead. */
+/*
+ * This structure handles multiple file types.
+ * Although appvars cannot be "locked" and the unused boolean variable does
+ * cause some wasted space, the convenience and efficiency of having only one
+ * file data structure far outweighs this overhead.
+*/
 typedef struct {
 	char name[FILE_NAME_LEN];
 	uint8_t hexaedit_type;
@@ -69,6 +78,7 @@ typedef struct {
 	uint8_t num_files;
 } recent_file_list_t;
 
+/* See settings.c which uses the following function. */
 void menu_DrawTitleBar();
 void main_menu(void);
 

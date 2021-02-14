@@ -10,8 +10,13 @@
 #define HS_CONFIG_APPVAR	"HEXAHSCA"
 #define HEXAEDIT_CONFIG_APPVAR	"HEXACONF"
 
-/* The editor undo function uses these codes to
-determine how to process data in the undo appvar. */
+/* The maximum length of any file name including hidden files and null terminator. */
+#define FILE_NAME_LEN		10
+
+/*
+ * The editor undo function uses these codes to determine how to process data in
+ * the undo appvar.
+*/
 #define UNDO_INSERT_BYTES	0
 #define UNDO_DELETE_BYTES	1
 #define UNDO_WRITE_NIBBLE	2
@@ -47,9 +52,9 @@ determine how to process data in the undo appvar. */
 #define CURSOR_COLOR BLUE
 
 /* These two keymaps are only used in editor.c
-   The first one maps hex values to the corresponding keys on the calculator keypad.
-   The second one maps ASCII representations of hex characters to the corresponding keys
-   on the calculator keypad.
+ * The first one maps hex values to the corresponding keys on the calculator keypad.
+ * The second one maps ASCII representations of hex characters to the corresponding keys
+ * on the calculator keypad.
 */
 
 #define HEX_VAL_KEYMAP "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x03\x06\x09\0\0\0\0\0" \
@@ -86,15 +91,17 @@ typedef struct
 {
 	uint8_t *primary;	// This always points to the current byte selection
 	
-	/* This points to the first byte in a multi-byte selection. Otherwise, it is
-	the same as primary. */
+	/* 
+	 * This points to the first byte in a multi-byte selection. Otherwise, it is
+	 * the same as primary.
+	*/
 	uint8_t *secondary;
 	bool high_nibble;
 	bool multibyte_selection;
 } cursor_t;
 
 /* These structures are for the Headless Start. */
-
+/*
 typedef struct {
 	char headless_start_flag[3];
 	uint8_t editor_config;
@@ -113,10 +120,10 @@ typedef struct {
 	uint24_t cursor_primary_offset;
 	uint24_t cursor_secondary_offset;
 } file_editor_config_t;
-
-void editor_FileNormalStart(char *name, uint8_t type);
-void editor_RAMNormalStart(void);
-void editor_ROMViewer(void);
+*/
+bool editor_FileEditor(const char *name, uint8_t type, uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset);
+void editor_RAMEditor(uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset);
+void editor_ROMViewer(uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset);
 void editor_HeadlessStart(void);
 
 #endif

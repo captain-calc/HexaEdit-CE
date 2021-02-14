@@ -945,13 +945,15 @@ void main_menu(void)
 			
 			if (selected_file->is_protected)
 			{
-				editor_FileNormalStart(selected_file->name, TI_PPRGM_TYPE);
+				// editor_FileNormalStart(selected_file->name, TI_PPRGM_TYPE);
+				editor_FileEditor(selected_file->name, TI_PPRGM_TYPE, 0, 0);
 			}
 			else if (selected_file->hexaedit_type == HEXAEDIT_APPVAR_TYPE)
 			{
-				editor_FileNormalStart(selected_file->name, TI_APPVAR_TYPE);
+				editor_FileEditor(selected_file->name, TI_APPVAR_TYPE, 0, 0);
 			} else {
-				editor_FileNormalStart(selected_file->name, TI_PRGM_TYPE);
+				// editor_FileNormalStart(selected_file->name, TI_PRGM_TYPE);
+				editor_FileEditor(selected_file->name, TI_PRGM_TYPE, 0, 0);
 			};
 			
 			update_selected_file_size(selected_file);
@@ -967,13 +969,13 @@ void main_menu(void)
 		
 		if (key == sk_Yequ)
 		{
-			editor_RAMNormalStart();
+			editor_RAMEditor(0, 0);
 			redraw_background = true;
 		};
 		
 		if (key == sk_Window)
 		{
-			editor_ROMViewer();
+			editor_ROMViewer(0, 0);
 			redraw_background = true;
 		};
 		
