@@ -433,7 +433,7 @@ void menu_DrawTitleBar(void)
 	return;
 }
 
-void draw_menu_bar(void)
+void draw_menu_bar(uint8_t table_num)
 {
 	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(0, 220, LCD_WIDTH, 20);
@@ -444,7 +444,9 @@ void draw_menu_bar(void)
 	gfx_SetTextFGColor(color_theme.bar_text_color);
 	gfx_PrintStringXY("RAM", 5, 226);
 	gfx_PrintStringXY("ROM", 70, 226);
-	gfx_PrintStringXY("Search", 130, 226);
+
+	if (table_num != HEXAEDIT_RECENTS_TYPE)
+		gfx_PrintStringXY("Search", 130, 226);
 	gfx_PrintStringXY("Conf", 224, 226);
 	gfx_PrintStringXY("Exit", 286, 226);
 	
@@ -875,28 +877,36 @@ void main_menu(void)
 	gfx_FillScreen(WHITE);
 	gui_DrawMessageDialog("Loading files...");
 	
-	main_file_list = malloc(sizeof(file_list_t));
+	if ((main_file_list = malloc(sizeof(file_list_t))) == NULL)
+		return;
+	
 	load_main_files(main_file_list);
 	NUM_FILES_PER_TYPE[APPVAR_TABLE_NUM] = main_file_list->num_appvars;
 	NUM_FILES_PER_TYPE[ASM_PRGM_TABLE_NUM] = main_file_list->num_asm_programs;
 	NUM_FILES_PER_TYPE[BASIC_PRGM_TABLE_NUM] = main_file_list->num_basic_programs;
 	
-	// dbg_sprintf(dbgout, "main_file_list = 0x%6x | size = %d\n", main_file_list, (uint24_t)sizeof(file_list_t));
+// dbg_sprintf(dbgout, "main_file_list = 0x%6x | size = %d\n", main_file_list, (uint24_t)sizeof(file_list_t));
 	
 	if (ti_Open(RECENT_FILES_APPVAR, "r") == 0)
 	{
 		create_recent_files_appvar();
 	};
 	
-	recent_file_list = malloc(sizeof(recent_file_list_t));
+	if ((recent_file_list = malloc(sizeof(recent_file_list_t))) == NULL)
+	{
+		free(main_file_list);
+		return;
+	};
 	
 	if (!load_recent_files(recent_file_list, main_file_list))
 	{
 		gui_DrawMessageDialog_Blocking("Could not load Recent Files");
+		free(recent_file_list);
+		free(main_file_list);
 		return;
 	};
 	
-	//dbg_sprintf(dbgout, "recent_file_list = 0x%6x | size = %d\n", recent_file_list, (uint24_t)sizeof(recent_file_list_t));
+//dbg_sprintf(dbgout, "recent_file_list = 0x%6x | size = %d\n", recent_file_list, (uint24_t)sizeof(recent_file_list_t));
 	
 	NUM_FILES_PER_TYPE[RECENTS_TABLE_NUM] = recent_file_list->num_files;
 	
@@ -915,7 +925,7 @@ void main_menu(void)
 			gfx_SetColor(LT_GRAY);
 			gfx_FillRectangle_NoClip(0, 20, LCD_WIDTH, LCD_HEIGHT - 40);
 			menu_DrawTitleBar();
-			draw_menu_bar();
+			draw_menu_bar(table_num);
 			draw_table_header(35);
 		};
 		
@@ -945,14 +955,12 @@ void main_menu(void)
 			
 			if (selected_file->is_protected)
 			{
-				// editor_FileNormalStart(selected_file->name, TI_PPRGM_TYPE);
 				editor_FileEditor(selected_file->name, TI_PPRGM_TYPE, 0, 0);
 			}
 			else if (selected_file->hexaedit_type == HEXAEDIT_APPVAR_TYPE)
 			{
 				editor_FileEditor(selected_file->name, TI_APPVAR_TYPE, 0, 0);
 			} else {
-				// editor_FileNormalStart(selected_file->name, TI_PRGM_TYPE);
 				editor_FileEditor(selected_file->name, TI_PRGM_TYPE, 0, 0);
 			};
 			
@@ -992,8 +1000,7 @@ void main_menu(void)
 		{
 			break;
 		};
-	};
-	
+	};	
 	// The Recent Files must be saved before the main_file_list is freed
 	save_recent_files(recent_file_list);
 	free(recent_file_list);

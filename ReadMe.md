@@ -32,12 +32,13 @@ To activate the icon viewer, press [stat].
 
 * Platform: TI-84 Plus CE
 * Language: C
-* Latest Version: 2.0.1
+* Latest Version: 2.0.2
 
 ## Change Log
 | Release Number        | Git Branch   | Description
 | --------------------- |:------------:| -----------
-| v2.0.1 *(unreleased)* | improve-core | Fixed Headless Start bug. Added phrase search to editor. Modified input functions.
+| v2.0.2                | improve-core | Simplified editor API and Headless Start configuration.
+| v2.0.1 *(unreleased)* | master       | Fixed Headless Start bug. Added phrase search to editor. Modified input functions.
 | v2.0.0                | master       | Complete rewrite; Added Headless Start. "Undo" action now works for more than one change. Reworked GUI. Increased file search range to all file types.
 | v1.2.1                | master       | Added [Enter] key support for selection and submitting actions; Upgraded the sprite viewer to handle any sprite size
 | v1.2.0                | master       | Fixed "Goto" and decimal translation bugs; Added alpha-scrolling to main menu and editor; When the selected nibble is the second part of the byte, pressing the left arrow now relocates the selected nibble instead of moving the cursor; Fixed perpetual AM clock; Added lowercase letters to file search routine
