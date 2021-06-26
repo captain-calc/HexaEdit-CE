@@ -23,20 +23,17 @@ After extracting the HexaEdit_CE.zip file, send the following file to your calcu
 
 HexaEdit CE uses the C libraries from the LLVM toolchain. If you encounter a version error when you run HexaEdit, please send the libraries included with the Cemetech download to your calculator. Your other programs will still work with these libraries.
 
-## Easter Egg Controls
-
-To activate the icon viewer, press [stat].
-
 
 ## Technical Info
 
 * Platform: TI-84 Plus CE
 * Language: C
-* Latest Version: 2.0.2
+* Latest Version: 2.1.0
 
 ## Change Log
 | Release Number        | Git Branch   | Description
 | --------------------- |:------------:| -----------
+| v2.1.0                | improve-core | Replaced phrase search C algorithm with faster assembly algorithm. Removed user-specified phrase search range because the faster algorithm rendered it superfluous. Added [mode] key functionality to the main menu. Fixed main menu protected program bug.
 | v2.0.2                | improve-core | Simplified editor API and Headless Start configuration.
 | v2.0.1 *(unreleased)* | master       | Fixed Headless Start bug. Added phrase search to editor. Modified input functions.
 | v2.0.0                | master       | Complete rewrite; Added Headless Start. "Undo" action now works for more than one change. Reworked GUI. Increased file search range to all file types.

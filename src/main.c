@@ -1,7 +1,7 @@
 
 /*-----------------------------------------
  * Program Name: HexaEdit CE
- * Version:      2.0.1 CE
+ * Version:      See menu.h
  * Author:       Captain Calc   
  * Description:  A hex editor for the TI-84
  *               Plus CE.
@@ -13,6 +13,7 @@
 #include "editor.h"
 #include "gui.h"
 #include "menu.h"
+#include "settings.h"
 
 #include <string.h>
 
@@ -20,9 +21,6 @@
 #include <graphx.h>
 #include <fileioc.h>
 #include <keypadc.h>
-
-// Debugging
-#include "debug.h"
 
 color_theme_config_t color_theme;
 
@@ -39,15 +37,17 @@ static void load_default_color_theme(void)
 	return;
 }
 
-static bool check_for_headless_start(void)
+static bool headless_start(void)
 {
 	ti_var_t config_data_slot;
 	
-	if ((config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r")) != 0)
+	if ((config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r")))
 	{
 		editor_HeadlessStart();
+    ti_Close(config_data_slot);
 		return true;
 	};
+  
 	return false;
 }
 
@@ -57,15 +57,21 @@ int main(void)
 	gfx_SetDrawBuffer();
 	ti_CloseAll();
 	
+  // Load default color theme BEFORE checking for headless start in case the
+  // headless start does not specify a custom color theme.
 	load_default_color_theme();
 	
-	if (check_for_headless_start())
-	{
-		gfx_End();
-		return 0;
-	};
-	
-	main_menu();
+  // Always create the settings appvar with the default phrase search range
+  // in case another program modified it.
+	if (settings_InitSettingsAppvar())
+  {
+    if (!headless_start())
+		  main_menu();
+  }
+  else
+  {
+    gui_DrawMessageDialog_Blocking("Could not create settings appvar. Exiting...");
+  }
 	
 	gfx_End();
 	return 0;

@@ -327,18 +327,6 @@ static void ascii_to_nibble(const char *in, char *out, uint8_t in_len)
 	return;
 }
 
-static bool init_hexaedit_settings_appvar(void)
-{
-	ti_var_t slot;
-	uint24_t search_range = QUICK_SEARCH;
-	
-	if ((slot = ti_Open(HEXA_SETTINGS_APPVAR, "w")) == 0)
-		return false;
-	
-	ti_Write(&search_range, sizeof(uint24_t), 1, slot);
-	ti_Close(slot);
-	return true;
-}
 
 static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t editor_index_method)
 {
@@ -361,14 +349,11 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 	const char keymap_indicators[] = {'x', 'A', 'a', '0'};
 	uint8_t keymap_num = 0;
 	
-	uint8_t **occurances = (uint8_t **)malloc(MAX_NUM_PHRASE_OCCURANCES * sizeof(uint8_t *));
+  uint24_t OCCURANCES_ALLOC_SIZE = MAX_NUM_PHRASE_OCCURANCES * sizeof(uint8_t *);
+	uint8_t **occurances = (uint8_t **)malloc(OCCURANCES_ALLOC_SIZE);
 	uint8_t num_occurances = 0;
 	uint8_t occurance_offset = 0;
 	uint24_t search_range;
-	
-	
-	if (!ti_OpenVar(HEXA_SETTINGS_APPVAR, "r", TI_APPVAR_TYPE))
-		init_hexaedit_settings_appvar();
 	
 	search_range = settings_GetPhraseSearchRange();
 	
@@ -406,7 +391,7 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 		
 		key = gui_Input(buffer, 16, input_box_x, 224, input_box_width, keymaps[keymap_num]);
 		
-		delay(100);
+		delay(50);
 		
 // dbg_sprintf(dbgout, "num_occurances = %d | occurance_offset = %d\n", num_occurances, occurance_offset);
 		
@@ -454,26 +439,25 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 				ascii_to_nibble(buffer, phrase, strlen(buffer));
 				phrase_len = strlen(buffer) / 2;
 			} else {
-				strcpy(phrase, buffer);
+				strncpy(phrase, buffer, strlen(buffer));
 				phrase_len = strlen(buffer);
 			};
 			
+      cursor->primary = cursor->secondary;
+      num_occurances = 0;
+      occurance_offset = 0;
+      memset(occurances, '\0', OCCURANCES_ALLOC_SIZE);
+      
 			if (phrase_len < 2)
-			{
-				num_occurances = 0;
 				goto SKIP_FIND_PHRASE;
-			};
 			
 			// If hexadecimal input is being used, do not call the find
 			// phrase routine, unless the buffer input is divisible by two
 			// (the phrase contains no half-bytes or nibbles at the end).
 			
 			if (keymap_num == 0 && (strlen(buffer) % 2 != 0))
-			{
-				num_occurances = 0;
 				goto SKIP_FIND_PHRASE;
-			};
-			
+      
 			num_occurances = editact_FindPhraseOccurances(
 				cursor->primary,
 				search_range,
@@ -483,8 +467,6 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 				phrase_len,
 				occurances
 			);
-			
-			occurance_offset = 0;
 		};
 		
 		SKIP_FIND_PHRASE:
@@ -499,6 +481,7 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 		editorgui_DrawEditorContents(editor, cursor, editor_index_method);
 	};
 	
+  free(occurances);
 	return;
 }
 

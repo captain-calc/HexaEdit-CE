@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define MAX_NUM_PHRASE_OCCURANCES   ((uint8_t)255)
+
 void editact_SpriteViewer(editor_t *editor, cursor_t *cursor);
 void editact_Goto(editor_t *editor, cursor_t *cursor, uint8_t *ptr);
 bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_point, uint24_t num_bytes);

@@ -30,12 +30,6 @@
 #define OFFSET_INDEXING  0
 #define ADDRESS_INDEXING 1
 
-/* For editact_FindPhraseOccurances */
-#define MAX_NUM_PHRASE_OCCURANCES 255
-#define QUICK_SEARCH              ((uint24_t)500000)
-#define MODERATE_SEARCH           ((uint24_t)1000000)
-#define THOROUGH_SEARCH           ((uint24_t)5000000)
-
 #define ROM_MIN_ADDRESS ((uint8_t *)0x000000)
 #define ROM_MAX_ADDRESS ((uint8_t *)0x3fffff)
 #define RAM_MIN_ADDRESS ((uint8_t *)0xd00000)

@@ -1,9 +1,10 @@
+#include "debug.h"
 #include "asmutil.h"
 #include "colors.h"
-#include "debug.h"
 #include "editor.h"
 #include "editor_actions.h"
 #include "gui.h"
+#include "settings.h"
 
 #include <graphx.h>
 #include <tice.h>
@@ -543,7 +544,7 @@ bool editact_UndoAction(editor_t *editor, cursor_t *cursor)
 
 // Finds all occurances of PHRASE starting from START in MIN to MAX.
 // Returns number of occurances found (max = 255).
-// Stores pointers to each occurance in OCCURANCES. 
+// Stores pointers to each occurance in OCCURANCES.
 uint8_t editact_FindPhraseOccurances(
 	uint8_t *search_start,
 	uint24_t search_range,
@@ -554,53 +555,111 @@ uint8_t editact_FindPhraseOccurances(
 	uint8_t **occurances
 )
 {
-	uint8_t i = 0;
-	uint8_t *curr;
-	
-	
-	if ((search_max - search_min) < (phrase_len - 1))
-		return 0;
-	
-	if (search_range > (uint24_t)(search_max - search_min))
-		search_range = search_max - search_min + 1;
-	
-	gui_DrawMessageDialog("Searching...");
-	
-	curr = search_start;
-	
-	for (;;)
-	{
-		if (i == MAX_NUM_PHRASE_OCCURANCES)
-			return i;
-		
-		if ((curr + phrase_len - 1) > search_max)
-		{
-			// The following calculation will always be positive, so casting
-			// is safe.
-			
-			if ((uint24_t)((curr + phrase_len - 1) - search_max) < search_range)
-			{
-				search_range -= ((curr + phrase_len - 1) - search_max);
-			} else {
-				search_range = 0;
-			};
-			curr = search_min + ((curr + phrase_len - 1) - search_max);
-		};
-		
-		if (search_range == 0)
-			return i;
-		
-		if (!memcmp(curr, phrase, phrase_len))
-		{
-			if ((phrase_len - 1) < search_range)
-			{
-				*(occurances + i) = curr;
-				i++;
-				curr += phrase_len - 1;
-				search_range -= phrase_len - 1;
-			};
-		};
-		curr++;
-		search_range--;
-	};
+  uint8_t num_phrase_occurances;
+  
+  // The default search range is the ROM search range (5000000 bytes). If
+  // we are searching in RAM, this range plus the search_start will cause
+  // an overflow. Thus, if the search range is the default, we can shorten
+  // it LOCALLY to cover all RAM to avoid the overflow (Even RAM_MAX_ADDRESS
+  // + length of RAM will not cause an overflow).
+  
+  // For custom search ranges:
+  //
+  // Case 1: Searching RAM with a search range smaller than the default but
+  //         large enough to cause an overflow.
+  // Solution: In this case the search range is larger than the length of
+  //           RAM. Shorten the search range to cover all RAM.
+  //
+  // Case 2: Searching RAM or ROM with a search range larger than the
+  //         default.
+  // Solution: Shorten the search range to cover either ROM or RAM
+  //           depending on the search_start address.
+  // Case 3: Searching RAM or ROM with a search range that will not cause
+  //         an overflow in either case.
+  // Solution: Do not modify the search range.
+  
+  
+  // Case 2 catch
+  if (search_range > ROM_SEARCH_RANGE)
+  {
+    if (search_start <= ROM_MAX_ADDRESS)
+      search_range = ROM_SEARCH_RANGE;
+    else
+      search_range = RAM_SEARCH_RANGE;
+  }
+  else if (search_range > RAM_SEARCH_RANGE && search_start >= RAM_MIN_ADDRESS)
+  {
+    // Case 1 and default ROM search range catch
+    search_range = RAM_SEARCH_RANGE;
+  }
+
+
+// dbg_sprintf(dbgout, "search range = %d\n", search_range);
+
+  // Case 1: search range is stops before the end of the given memory
+  // Note: These are different cases than the ones mentioned above.
+  if (search_start + search_range < search_max)
+  {
+ //dbg_sprintf(dbgout, "case 1 executing\n");
+    num_phrase_occurances = asm_BFind_All(
+      search_start,
+      search_start + search_range,
+      phrase,
+      phrase_len,
+      occurances,
+      MAX_NUM_PHRASE_OCCURANCES
+    );
+  }
+  else
+  {
+// dbg_sprintf(dbgout, "case 2 executing\n");
+// dbg_sprintf(dbgout, "start = 0x%6x | max = 0x%6x\n", search_start, search_max);
+ 
+    // Case 2: search range is longer than given memory
+    num_phrase_occurances = asm_BFind_All(
+      search_start,
+      search_max,
+      phrase,
+      phrase_len,
+      occurances,
+      MAX_NUM_PHRASE_OCCURANCES
+     );
+
+    // Loop back to the start of the memory and continue searching
+    search_range = search_start + search_range - search_max;
+
+    // Case 2a: search range stops before search start position
+    if (search_start + search_range < search_start)
+    {
+// dbg_sprintf(dbgout, "case 2a executing\n");
+      num_phrase_occurances += asm_BFind_All(
+        search_min,
+        search_min + search_range,
+        phrase,
+        phrase_len,
+        occurances + num_phrase_occurances,
+        MAX_NUM_PHRASE_OCCURANCES - num_phrase_occurances
+      );
+    }
+    else
+    {
+// dbg_sprintf(dbgout, "case 2b executing\n");
+
+      // Case 2b: search range exceeds search start position; stop searching
+      // at search start position.
+      num_phrase_occurances += asm_BFind_All(
+        search_min,
+        search_start,
+        phrase,
+        phrase_len,
+        occurances + num_phrase_occurances,
+        MAX_NUM_PHRASE_OCCURANCES - num_phrase_occurances
+      );
+    }
+  }
+
+// for (uint8_t i = 0; i < num_phrase_occurances; i++) {
+// dbg_sprintf(dbgout, "0x%6x\n", occurances[i]);
+// }
+    return num_phrase_occurances;
 }

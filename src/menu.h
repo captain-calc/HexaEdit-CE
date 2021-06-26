@@ -16,7 +16,7 @@
 
 /* General program data. */
 #define PROGRAM_NAME		"HexaEdit"
-#define PROGRAM_VERSION		"2.0.2"
+#define PROGRAM_VERSION		"2.1.0"
 #define RECENT_FILES_APPVAR	"HEXARCF"
 
 /* File table data. */

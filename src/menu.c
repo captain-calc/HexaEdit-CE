@@ -56,8 +56,8 @@ static file_data_t *get_appvar_data(const char *name)
 	
 	appvar_data = malloc(sizeof(file_data_t));
 	
-	memset(appvar_data->name, '\0', 10);
-	strcpy(appvar_data->name, name);
+	memset(appvar_data->name, '\0', FILE_NAME_LEN);
+	strncpy(appvar_data->name, name, strlen(name));
 	appvar_data->hexaedit_type = HEXAEDIT_APPVAR_TYPE;
 	appvar_data->is_archived = ti_IsArchived(slot);
 	appvar_data->is_protected = false;
@@ -104,13 +104,6 @@ static file_data_t *get_program_data(const char *name)
 	uint16_t asm_program_flag = 0;
 	
 	slot = ti_OpenVar(name, "r", TI_PRGM_TYPE);
-	program_data->is_protected = false;
-	
-	if (slot == 0)
-	{
-		slot = ti_OpenVar(name, "r", TI_PPRGM_TYPE);
-		program_data->is_protected = true;
-	};
 	
 	if (slot == 0)
 	{
@@ -126,13 +119,17 @@ static file_data_t *get_program_data(const char *name)
 		program_data->hexaedit_type = HEXAEDIT_BASIC_PRGM_TYPE;
 	};
 	
-	memset(program_data->name, '\0', 10);
-	strcpy(program_data->name, name);
+	memset(program_data->name, '\0', FILE_NAME_LEN);
+	strncpy(program_data->name, name, strlen(name));
 	program_data->is_archived = ti_IsArchived(slot);
 	program_data->vat_ptr = ti_GetVATPtr(slot);
 	program_data->data_ptr = ti_GetDataPtr(slot);
 	program_data->size = ti_GetSize(slot);
 	
+  program_data->is_protected = false;
+  if (*program_data->vat_ptr == TI_PPRGM_TYPE)
+    program_data->is_protected = true;
+  
 	ti_Close(slot);
 	return program_data;
 }
@@ -986,6 +983,17 @@ void main_menu(void)
 			editor_ROMViewer(0, 0);
 			redraw_background = true;
 		};
+    
+    if (key == sk_Mode)
+    {
+      // Tell the user what is happening since the RAM editor takes awhile to
+      // open.
+      gui_DrawMessageDialog("Opening editor at file VAT pointer");
+      delay(100);
+      
+      editor_RAMEditor(selected_file->vat_ptr - RAM_MIN_ADDRESS, selected_file->vat_ptr - RAM_MIN_ADDRESS);
+      redraw_background = true;
+    }
 		
 		if (key == sk_Zoom && TABLE_ORDER[table_num] != HEXAEDIT_RECENTS_TYPE)
 		{
