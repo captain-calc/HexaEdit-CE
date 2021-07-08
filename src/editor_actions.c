@@ -647,7 +647,7 @@ uint8_t editact_FindPhraseOccurances(
     // Loop back to the start of the memory and continue searching
     // Order of operations is vitally important to avoid variable
     // overflows/underflows.
-    search_range = search_range - (search_max - search_min);
+    search_range = search_range - (search_max - search_start);
 
     // Case 2a: search range stops before search start position
     if (search_min + search_range < search_start)
