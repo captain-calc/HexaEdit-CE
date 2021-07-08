@@ -131,17 +131,141 @@ static uint24_t decimal(const char *hex)
 }
 
 
+static bool is_readonly_ram_address(uint8_t *address)
+{
+  bool is_readonly = false;
+  
+  if (address == RAM_READONLY_ADDRESS_ONE || address == RAM_READONLY_ADDRESS_TWO)
+    is_readonly = true;
+
+  return is_readonly;
+}
+
+
+// Description: Determines if the user can write a nibble at the current cursor
+//              position.
+// Pre:         <nibble_to_write> must be the nibble the user wants to write.
+//              <cursor->primary> must point to a byte.
+//              <editor> must be properly set up (All values initialized and valid).
+// Post:        Returns a value stating if the nibble can be written and whether
+//              to move the cursor.
+static uint8_t can_write_nibble(editor_t *editor, cursor_t *cursor, uint8_t nibble_to_write)
+{
+  uint8_t nibble;
+  
+  if (editor->type == ROM_VIEWER)
+    return NO_WRITE_NIBBLE_NO_MOVE_CURSOR;
+  
+  if (cursor->multibyte_selection)
+    return NO_WRITE_NIBBLE_NO_MOVE_CURSOR;
+  
+  nibble = editact_GetNibble(cursor, cursor->primary);
+  
+  // Do not write the nibble if the nibble already exists
+  if (nibble == nibble_to_write)
+    return NO_WRITE_NIBBLE_MOVE_CURSOR;
+  
+  if (is_readonly_ram_address(cursor->primary) && !editor->su_mode)
+  {
+    gui_DrawMessageDialog_Blocking("Read-Only RAM Address");
+    return NO_WRITE_NIBBLE_NO_MOVE_CURSOR;
+  }
+  
+  // This should go last because if a subsequent if-statement evaluates to
+  // false, the newly-created undo action will be useless.
+  if (!editact_CreateUndoWriteNibbleAction(editor, cursor, nibble))
+    return NO_WRITE_NIBBLE_NO_MOVE_CURSOR;
+  
+  return WRITE_NIBBLE_MOVE_CURSOR;
+}
+
+
+static void sprintf_ptr(char *buffer, uint8_t *pointer)
+{
+	char *c;
+	
+	sprintf(buffer, "%6x", (unsigned int)pointer);
+	c = buffer;
+	
+	while (*c != '\0')
+	{
+		if (*c == ' ')
+			*c = '0';
+		c++;
+	};
+	return;
+}
+
+
+static void superuser_mode_animation(void)
+{
+  char buffer[11] = {'0', 'x', '\0'};
+  
+  gfx_ZeroScreen();
+  gfx_SetTextBGColor(BLACK);
+  gfx_SetTextFGColor(RED);
+  gfx_SetTextTransparentColor(BLACK);
+  gfx_PrintStringXY("SUPERUSER MODE ENGAGED!", 5, 5);
+  gfx_PrintStringXY("You can now write to the following", 5, 30);
+  gfx_PrintStringXY("addresses:", 5, 45);
+  sprintf_ptr(buffer + 2, RAM_READONLY_ADDRESS_ONE);
+  gfx_PrintStringXY(buffer, 15, 70);
+  sprintf_ptr(buffer + 2, RAM_READONLY_ADDRESS_TWO);
+  gfx_PrintStringXY(buffer, 15, 85);
+  gfx_PrintStringXY("CAUTION: It is possible to crash your", 5, 110);
+  gfx_PrintStringXY("calculator by writing to the above", 5, 125);
+  gfx_PrintStringXY("addresses.", 5, 140);
+  gfx_PrintStringXY("Press any key...", 5, 165);
+  gfx_BlitBuffer();
+  
+  // Prevent long keypresses from triggering fall-throughs.
+  delay(500);
+  
+  do {
+    kb_Scan();
+  } while (asm_GetCSC() == -1);
+  return;
+}
+
+
 static void move_cursor(editor_t *editor, cursor_t *cursor, uint8_t direction, bool accelerated_cursor)
 {
-	uint8_t i;
+	uint24_t i;
 	uint8_t *old_cursor_address;
+  uint8_t *address;
 	
 	
 	if (direction == CURSOR_LEFT && cursor->primary > editor->min_address)
-		cursor->primary--;
+  {
+    if (!accelerated_cursor)
+    {
+      cursor->primary--;
+    }
+    else
+    {
+      // This evaluation will always be positive, so casting is safe.
+      if (((uint24_t)(cursor->primary - editor->min_address)) > JUMP_LEN_ACCEL_LEFT_RIGHT)
+        cursor->primary -= JUMP_LEN_ACCEL_LEFT_RIGHT;
+      else
+        cursor->primary = editor->min_address;
+    };
+  };
 	
 	if (direction == CURSOR_RIGHT && cursor->primary < editor->max_address)
-		cursor->primary++;
+  {
+		if (!accelerated_cursor)
+    {
+      cursor->primary++;
+    }
+    else
+    {
+      // This evaluation will always be positive, so casting is safe.
+      if (((uint24_t)(editor->max_address - cursor->primary)) > JUMP_LEN_ACCEL_LEFT_RIGHT)
+        cursor->primary += JUMP_LEN_ACCEL_LEFT_RIGHT;
+      else
+        cursor->primary = editor->max_address;
+    };
+  };
 	
 	if (direction == CURSOR_DOWN)
 	{
@@ -151,7 +275,7 @@ static void move_cursor(editor_t *editor, cursor_t *cursor, uint8_t direction, b
 		
 		if (accelerated_cursor)
 		{
-			i = (ROWS_ONSCREEN - 1) * COLS_ONSCREEN;
+			i = JUMP_LEN_ACCEL_UP_DOWN;
 			
 			while (cursor->primary < editor->max_address && i-- > 0)
 				cursor->primary++;
@@ -166,23 +290,67 @@ static void move_cursor(editor_t *editor, cursor_t *cursor, uint8_t direction, b
 		
 		if (accelerated_cursor)
 		{
-			i = (ROWS_ONSCREEN - 1) * COLS_ONSCREEN;
+			i = JUMP_LEN_ACCEL_UP_DOWN;
 			
 			while (cursor->primary > editor->min_address && i-- > 0)
 				cursor->primary--;
 		};
 	};
 	
-	/* Move the window offset if necessary */
-	while (cursor->primary < editor->window_address && editor->window_address > editor->min_address)
-	{
-		editor->window_address -= COLS_ONSCREEN;
-	};
+  // Case: If the cursor goes above the top of the window.
+  if (cursor->primary < editor->window_address)
+  {
+    address = cursor->primary;
+    
+    // Set the window address to the start of the line that the cursor->primary is on.
+    while ((address - editor->min_address) % COLS_ONSCREEN)
+      address--;
+    editor->window_address = address;
+  };
+  
+  // Case: If the cursor goes beyond the bottom of the window.
+  if (cursor->primary - editor->window_address > (ROWS_ONSCREEN * COLS_ONSCREEN))
+  {
+    address = cursor->primary;
+    
+    // Set the window address to the start of the line that the cursor->primary is on.
+    while ((address - editor->min_address) % COLS_ONSCREEN)
+      address--;
+    
+    // Scroll the window up as far as it can go without making the cursor go off-screen.
+    while (((cursor->primary - address) < (ROWS_ONSCREEN * COLS_ONSCREEN)) && address > editor->min_address)
+      address -= COLS_ONSCREEN;
+    
+    editor->window_address = address;
+  };
+  
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// OLD WINDOW ADDRESS CODE (superceded on July 7, 2021)
+//
+//     When the cursor moved or the user jumped to an address via the find
+// phrase function or "goto" function, the window address would be incremented
+// by COLS_ONSCREEN until it reached the new cursor location. For large jumps
+// in very large memory sectors (e.g. ROM and "Ports"), this code would take a
+// long time. The code above sets the window address to the cursor position
+// immediately and then alters its position to fit the scroll direction (i.e.
+// the cursor appears at the bottom of the window when a jump "downward," or
+// forward in memory occurs, and vice versa).
+
+
+//	/* Move the window offset if necessary */
+//	while (cursor->primary < editor->window_address) && editor->window_address > editor->min_address)
+//	{
+//		editor->window_address -= COLS_ONSCREEN;
+//	};
 	
-	while ((cursor->primary - editor->window_address) >= ((ROWS_ONSCREEN + 1) * COLS_ONSCREEN) && editor->window_address < (editor->max_address + COLS_ONSCREEN))
-	{
-		editor->window_address += COLS_ONSCREEN;
-	};
+//	while ((cursor->primary - editor->window_address) >= ((ROWS_ONSCREEN + 1) * COLS_ONSCREEN)) && editor->window_address < (editor->max_address + COLS_ONSCREEN))
+//	{
+//		editor->window_address += COLS_ONSCREEN;
+//	};
+//
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 	
 	/* Any time the cursor is moved, reset the nibble selector to the high nibble. */
 	cursor->high_nibble = true;
@@ -507,20 +675,9 @@ static uint8_t save_prompt(void)
 	do {
 		kb_Scan();
 		key = asm_GetCSC();
-	} while (key < 49 && key < 51);
+	} while (key < sk_Graph && key < sk_Trace);
 	
-	if (key == sk_Zoom)
-	{
-		return 2;
-	}
-	else if (key == sk_Trace)
-	{
-		return 1;
-	}
-	else
-	{
-		return 0;
-	};
+	return key;
 }
 
 static bool save_file(char *name, uint8_t type)
@@ -613,11 +770,11 @@ static bool save_file(char *name, uint8_t type)
 
 static void run_editor(editor_t *editor, cursor_t *cursor)
 {
+  uint8_t can_write_nibble_ret_code;
 	int8_t key;
 	uint8_t editor_index_method = ADDRESS_INDEXING;
 	bool redraw_top_bar = true;
 	bool redraw_tool_bar = true;
-	uint8_t save_code;
 	
 //dbg_sprintf(dbgout, "window_address = 0x%6x | min_address = 0x%6x | max_address = 0x%6x\n", editor->window_address, editor->min_address, editor->max_address);
 	
@@ -638,7 +795,7 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 		{
 			editorgui_DrawToolBar(editor);
 			redraw_tool_bar = false;
-		}
+		};
 		
 		if (cursor->multibyte_selection)
 		{
@@ -649,26 +806,29 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 		
 		do {
 			kb_Scan();
-		} while ((key = asm_GetCSC()) == -1);
+		} while ((key = asm_GetCSC()) == -1);		
 		
-		// Since pressing '0' writes a NULL nibble, it is a special case.
-		if ((HEX_VAL_KEYMAP[key] != '\0' || key == sk_0) && !cursor->multibyte_selection && (editor->type == FILE_EDITOR || editor->type == RAM_EDITOR))
-		{
-			if (editact_GetNibble(cursor, cursor->primary) != HEX_VAL_KEYMAP[key])
-			{
-				if (editact_CreateUndoWriteNibbleAction(editor, cursor, editact_GetNibble(cursor, cursor->primary)))
-				{
-					editact_WriteNibble(cursor, HEX_VAL_KEYMAP[key]);
-					redraw_top_bar = true;
-					redraw_tool_bar = true;
-					editor->num_changes++;
-				};
-			};
-			if (cursor->high_nibble)
-				cursor->high_nibble = false;
-			else
-				move_cursor(editor, cursor, CURSOR_RIGHT, false);
-		};
+    // Since pressing '0' writes a NULL nibble, it is a special case.
+    if (((HEX_VAL_KEYMAP[key] != '\0') || key == sk_0))
+    {
+      can_write_nibble_ret_code = can_write_nibble(editor, cursor, HEX_VAL_KEYMAP[key]);
+      
+      if (can_write_nibble_ret_code == WRITE_NIBBLE_MOVE_CURSOR)
+      {
+        editact_WriteNibble(cursor, HEX_VAL_KEYMAP[key]);
+        redraw_top_bar = true;
+        redraw_tool_bar = true;
+        editor->num_changes++;
+      };
+      
+      if (can_write_nibble_ret_code == WRITE_NIBBLE_MOVE_CURSOR || can_write_nibble_ret_code == NO_WRITE_NIBBLE_MOVE_CURSOR)
+      {
+        if (cursor->high_nibble)
+          cursor->high_nibble = false;
+        else
+          move_cursor(editor, cursor, CURSOR_RIGHT, false);
+      }
+    };
 		
 		if (key == sk_2nd || key == sk_Enter)
 		{
@@ -766,45 +926,64 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 			{
 				if (!cursor->high_nibble)
 					cursor->high_nibble = true;
-				move_cursor(editor, cursor, CURSOR_LEFT, false);
+				move_cursor(editor, cursor, CURSOR_LEFT, kb_Data[2] & kb_Alpha);
 			}
 			else
 			{
-				move_cursor(editor, cursor, CURSOR_RIGHT, false);
+				move_cursor(editor, cursor, CURSOR_RIGHT, kb_Data[2] & kb_Alpha);
 			};
 			
 			if (!cursor->multibyte_selection)
 				redraw_tool_bar = true;
 		};
 		
+    if (key == sk_Power)
+    {
+      if (editor->su_mode)
+      {
+        gui_DrawMessageDialog_Blocking("Superuser mode deactivated.");
+        editor->su_mode =  false;
+      }
+      else
+      {
+        superuser_mode_animation();
+        redraw_top_bar = true;
+        redraw_tool_bar = true;
+        editor->su_mode = true;
+      }
+    }
+    
 		if (key == sk_Clear || key == sk_Graph)
 		{
 			if (editor->num_changes == 0)
 				return;
 			
-			save_code = save_prompt();
-			if (save_code == 1)
+			key = save_prompt();
+      
+			if (key == sk_Trace && editor->type == FILE_EDITOR)
 			{
 				save_file(editor->name, editor->file_type);
-				return;
 			}
-			else if (save_code == 2)
+			else if (key == sk_Zoom)
 			{
 				if (editor->type == RAM_EDITOR)
 				{
 					// Execute all of the undo actions.
-					gui_DrawMessageDialog("Undoing changes to RAM...");
+					gui_DrawMessageDialog("Undoing changes to memory...");
 					while (editact_UndoAction(editor, cursor));
-					return;
 				};
+        
+        // If the editor is a file editor and "No" is selected, HexaEdit will
+        // simply discard the editing appvar.
 			};
 			
-			if (save_code > 0)
+			if (key != sk_Graph)
 				return;
 			
 			redraw_tool_bar = true;
 		};
 		
+    // For small files introduce a delay so the cursor does jump around uncontrollably.
 		if (editor->max_address - editor->window_address < COLS_ONSCREEN * ROWS_ONSCREEN)
 			delay(100);
 	};
@@ -932,6 +1111,7 @@ uint24_t secondary_cursor_offset)
 	editor->window_address = editor->min_address;
 	editor->num_changes = 0;
 	editor->file_type = type;
+  editor->su_mode = false;
 	cursor->high_nibble = true;
 	cursor->multibyte_selection = false;
 
@@ -960,6 +1140,25 @@ uint24_t secondary_cursor_offset)
 
 void editor_RAMEditor(uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset)
 {
+  editor_MemEditor("RAM Editor", RAM_MIN_ADDRESS, RAM_MAX_ADDRESS, primary_cursor_offset, secondary_cursor_offset);
+  return;
+}
+
+void editor_PortsEditor(uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset)
+{
+  editor_MemEditor("Ports Editor", PORTS_MIN_ADDRESS, PORTS_MAX_ADDRESS, primary_cursor_offset, secondary_cursor_offset);
+  return;
+}
+
+
+void editor_MemEditor(
+  const char *name,
+  uint8_t *min_address,
+  uint8_t *max_address,
+  uint24_t primary_cursor_offset,
+  uint24_t secondary_cursor_offset
+)
+{
 	editor_t *editor;
 	cursor_t *cursor;
 	
@@ -980,13 +1179,14 @@ void editor_RAMEditor(uint24_t primary_cursor_offset, uint24_t secondary_cursor_
 	};
 	
 	memset(editor->name, '\0', EDITOR_NAME_LEN);
-	strcpy(editor->name, "RAM Editor");
+	strcpy(editor->name, name);
 	
-	editor->min_address = RAM_MIN_ADDRESS;
-	editor->max_address = RAM_MAX_ADDRESS;
-	editor->window_address = editor->min_address;
+	editor->min_address = min_address;
+	editor->max_address = max_address;
+	editor->window_address = min_address;
 	editor->type = RAM_EDITOR;
 	editor->num_changes = 0;
+  editor->su_mode = false;
 	cursor->high_nibble = true;
 	cursor->multibyte_selection = false;
 	
@@ -995,9 +1195,9 @@ void editor_RAMEditor(uint24_t primary_cursor_offset, uint24_t secondary_cursor_
 	
 	// The editor goto sets cursor->secondary to cursor->primary, so in order to goto
 	// and have multi-byte selection, we must goto before setting cursor->secondary.
-	cursor->primary = editor->min_address + primary_cursor_offset;
+	cursor->primary = min_address + primary_cursor_offset;
 	editact_Goto(editor, cursor, cursor->primary);
-	cursor->secondary = editor->min_address + secondary_cursor_offset;
+	cursor->secondary = min_address + secondary_cursor_offset;
 	
 	if (cursor->secondary < cursor->primary)
 		cursor->multibyte_selection = true;
@@ -1039,6 +1239,7 @@ void editor_ROMViewer(uint24_t primary_cursor_offset, uint24_t secondary_cursor_
 	editor->max_address = ROM_MAX_ADDRESS;
 	editor->window_address = editor->min_address;
 	editor->num_changes = 0;
+  editor->su_mode = false;
 	cursor->high_nibble = true;
 	cursor->multibyte_selection = false;
 	

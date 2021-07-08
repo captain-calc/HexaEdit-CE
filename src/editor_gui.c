@@ -15,7 +15,7 @@ static void draw_editing_size(editor_t *editor)
 	if (editor->type == ROM_VIEWER)
 		magnitude = 7;
 	
-	gfx_SetTextXY(100, 6);
+	gfx_SetTextXY(120, 6);
 	
 	if (editor->type == FILE_EDITOR && editor->is_file_empty)
 		gfx_PrintUInt(0, 6);
@@ -43,7 +43,7 @@ void editorgui_DrawTopBar(editor_t *editor)
 	
 	gui_PrintFileName(editor->name, color_theme.bar_text_color);
 	
-	gui_DrawBatteryStatus();
+	// gui_DrawBatteryStatus();
 	return;
 }
 
@@ -104,7 +104,11 @@ void editorgui_DrawMemAddresses(editor_t *editor, uint24_t x, uint8_t y)
 	
 	for (;;)
 	{
-		if (row > ROWS_ONSCREEN || (editor->window_address + (row * COLS_ONSCREEN)) > editor->max_address)
+// Potential overflow if editor->window_address == 0xfffff0
+//		if (row > ROWS_ONSCREEN || (editor->window_address + (row * COLS_ONSCREEN)) > editor->max_address)
+//			return;
+
+    if (row > ROWS_ONSCREEN || (editor->window_address > editor->max_address - (row * COLS_ONSCREEN)))
 			return;
 		
 		gfx_SetTextXY(x, y);
@@ -129,7 +133,11 @@ void editorgui_DrawFileOffsets(editor_t *editor, uint24_t x, uint8_t y)
 	
 	for (;;)
 	{
-		if (row > ROWS_ONSCREEN || (editor->window_address + (row * COLS_ONSCREEN)) > editor->max_address)
+// Potential overflow if editor->window_address == 0xfffff0
+//		if (row > ROWS_ONSCREEN || (editor->window_address + (row * COLS_ONSCREEN)) > editor->max_address)
+//			return;
+
+    if (row > ROWS_ONSCREEN || (editor->window_address > editor->max_address - (row * COLS_ONSCREEN)))
 			return;
 		
 		gfx_SetTextXY(x, y);
@@ -170,10 +178,13 @@ static void print_hex_line(editor_t *editor, cursor_t *cursor, uint24_t x, uint8
 	// will initially be zero.
 	num_bytes_selected = cursor->primary - cursor->secondary;
 	num_bytes_selected++;
-	
+  
 	for (;;)
 	{
-		if (byte_num == COLS_ONSCREEN || (line + byte_num) > editor->max_address)
+// Potential overflow if line == 0xffffff
+//		if (byte_num == COLS_ONSCREEN || (line + byte_num) > editor->max_address)
+//			return;
+		if (byte_num == COLS_ONSCREEN || line > (editor->max_address - byte_num))
 			return;
 		
 		if (is_current_byte_selected(cursor, line, byte_num, num_bytes_selected))
@@ -187,14 +198,16 @@ static void print_hex_line(editor_t *editor, cursor_t *cursor, uint24_t x, uint8
 			{
 				gfx_SetColor(color_theme.table_text_color);
 				gfx_HorizLine_NoClip(x - 1 + (9 * !cursor->high_nibble), y + FONT_HEIGHT + 1, 9);
-			}
-		} else {
+			};
+		}
+    else
+    {
 			gfx_SetTextBGColor(color_theme.table_bg_color);
 			gfx_SetTextFGColor(color_theme.table_text_color);
 			gfx_SetTextTransparentColor(color_theme.table_bg_color);
 		};
-		
-		print_hex_value(x, y, *(line + byte_num));
+    
+    print_hex_value(x, y, *(line + byte_num));
 		
 		x += HEX_COL_WIDTH;
 		byte_num++;
@@ -207,7 +220,7 @@ void editorgui_DrawHexTable(editor_t *editor, cursor_t *cursor, uint24_t x, uint
 	
 	for (;;)
 	{
-		if (line > ROWS_ONSCREEN)
+		if (line > ROWS_ONSCREEN || (editor->max_address - (line * COLS_ONSCREEN) < editor->window_address))
 			return;
 		
 		print_hex_line(editor, cursor, x, y + (line * ROW_HEIGHT), editor->window_address + (line * COLS_ONSCREEN));
@@ -237,7 +250,11 @@ static void print_ascii_line(editor_t *editor, cursor_t *cursor, uint24_t x, uin
 	
 	for (;;)
 	{
-		if (byte_num == COLS_ONSCREEN || (line + byte_num) > editor->max_address)
+// Potential overflow if line == 0xffffff
+//		if (byte_num == COLS_ONSCREEN || (line + byte_num) > editor->max_address)
+//			return;
+    
+    if (byte_num == COLS_ONSCREEN || line > (editor->max_address - byte_num))
 			return;
 		
 		if (is_current_byte_selected(cursor, line, byte_num, num_bytes_selected))
@@ -247,7 +264,9 @@ static void print_ascii_line(editor_t *editor, cursor_t *cursor, uint24_t x, uin
 			gfx_SetTextTransparentColor(color_theme.cursor_color);
 			gfx_SetColor(color_theme.cursor_color);
 			gfx_FillRectangle_NoClip(x - 1, y - 1, ASCII_COL_WIDTH, ROW_HEIGHT);
-		} else {
+		}
+    else
+    {
 			gfx_SetTextBGColor(color_theme.background_color);
 			gfx_SetTextFGColor(color_theme.table_text_color);
 			gfx_SetTextTransparentColor(color_theme.background_color);
@@ -266,7 +285,7 @@ void editorgui_DrawAsciiTable(editor_t *editor, cursor_t *cursor, uint24_t x, ui
 	
 	for (;;)
 	{
-		if (line > ROWS_ONSCREEN)
+		if (line > ROWS_ONSCREEN || (editor->max_address - (line * COLS_ONSCREEN) < editor->window_address))
 			return;
 		
 		print_ascii_line(editor, cursor, x, y + (line * ROW_HEIGHT), editor->window_address + (line * COLS_ONSCREEN));

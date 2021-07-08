@@ -426,11 +426,11 @@ void menu_DrawTitleBar(void)
 	gfx_SetTextTransparentColor(color_theme.bar_color);
 	gfx_PrintStringXY(PROGRAM_NAME, 5, 6);
 	gfx_PrintStringXY(PROGRAM_VERSION, 9 + gfx_GetStringWidth(PROGRAM_NAME), 6);
-	gui_DrawBatteryStatus();
+	//gui_DrawBatteryStatus();
 	return;
 }
 
-void draw_menu_bar(uint8_t table_num)
+static void draw_menu_bar(uint8_t table_num)
 {
 	gfx_SetColor(color_theme.bar_color);
 	gfx_FillRectangle_NoClip(0, 220, LCD_WIDTH, 20);
@@ -771,27 +771,29 @@ static void search_main_files(file_list_t *file_list, uint8_t *table_num, uint8_
 
 static void change_table_num(uint8_t *table_num, uint8_t *selected_file_offset, int8_t key)
 {
+  uint8_t local_table_num = *table_num;
+  
 	if (key == sk_Left && *table_num > 0)
-		(*table_num)--;
+		local_table_num--;
 	
 	if (key == sk_Right && *table_num < NUM_TABLES - 1)
-		(*table_num)++;
+		local_table_num++;
 	
 	if (key == sk_1)
-		*table_num = 0;
+		local_table_num = 0;
 	if (key == sk_2)
-		*table_num = 1;
+		local_table_num = 1;
 	if (key == sk_3)
-		*table_num = 2;
+		local_table_num = 2;
 	if (key == sk_4)
-		*table_num = 3;
+		local_table_num = 3;
 	
-	if (key == sk_1 || key == sk_2 || key == sk_3 || key == sk_4 ||
-		key == sk_Left || key == sk_Right)
+	if (local_table_num != *table_num)
 	{
 		*selected_file_offset = 0;
 	};
 	
+  *table_num = local_table_num;
 	
 	return;
 };
@@ -924,9 +926,10 @@ void main_menu(void)
 			menu_DrawTitleBar();
 			draw_menu_bar(table_num);
 			draw_table_header(35);
+      draw_file_list_header(21, table_num);
 		};
 		
-		draw_file_list_header(21, table_num);
+		// draw_file_list_header(21, table_num);
 		erase_table();
 		
 		if (table_num == RECENTS_TABLE_NUM)
@@ -934,13 +937,25 @@ void main_menu(void)
 			print_recent_files_table(recent_file_list, selected_file_offset);
 		} else {
 			print_main_files_table(main_file_list, table_num, list_offset, selected_file_offset);
+      
+      // If only a few file entries are drawn, the editor will respond very
+      // quickly to keypresses, making it hard to manage. Introduce some
+      // delay after short file list rendering.
+      // NOTE: This is inefficient and bloats the main function. Strongly
+      // advise rewriting main_menu() for efficiency improvements.
+      if ((table_num == APPVAR_TABLE_NUM) && (main_file_list->num_appvars < NUM_FILES_ONSCREEN))
+        delay(100);
+      else if ((table_num == ASM_PRGM_TABLE_NUM) && (main_file_list->num_asm_programs < NUM_FILES_ONSCREEN))
+        delay(100);
+      if ((table_num == BASIC_PRGM_TABLE_NUM) && (main_file_list->num_basic_programs < NUM_FILES_ONSCREEN))
+        delay(100);
 		};
 		
 		gfx_BlitBuffer();
 		
 		do {
 			kb_Scan();
-			gui_DrawTime(200);
+			//gui_DrawTime(200);
 		} while ((key = asm_GetCSC()) == -1);
 		
 		change_selected_file_offset(&table_num, &selected_file_offset);
@@ -993,7 +1008,14 @@ void main_menu(void)
       
       editor_RAMEditor(selected_file->vat_ptr - RAM_MIN_ADDRESS, selected_file->vat_ptr - RAM_MIN_ADDRESS);
       redraw_background = true;
-    }
+    };
+    
+    // Temporary arrangement for testing purposes
+    if (key == sk_GraphVar)
+    {
+      editor_PortsEditor(0, 0);
+      redraw_background = true;
+    };
 		
 		if (key == sk_Zoom && TABLE_ORDER[table_num] != HEXAEDIT_RECENTS_TYPE)
 		{

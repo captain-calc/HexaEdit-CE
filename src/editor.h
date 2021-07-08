@@ -30,10 +30,21 @@
 #define OFFSET_INDEXING  0
 #define ADDRESS_INDEXING 1
 
-#define ROM_MIN_ADDRESS ((uint8_t *)0x000000)
-#define ROM_MAX_ADDRESS ((uint8_t *)0x3fffff)
-#define RAM_MIN_ADDRESS ((uint8_t *)0xd00000)
-#define RAM_MAX_ADDRESS ((uint8_t *)0xd65800)
+/* Return values of can_write_nibble() (see editor.c) */
+#define WRITE_NIBBLE_MOVE_CURSOR       0
+#define NO_WRITE_NIBBLE_MOVE_CURSOR    1
+#define NO_WRITE_NIBBLE_NO_MOVE_CURSOR 2
+
+#define ROM_MIN_ADDRESS   ((uint8_t *)0x000000)
+#define ROM_MAX_ADDRESS   ((uint8_t *)0x3fffff)
+#define RAM_MIN_ADDRESS   ((uint8_t *)0xd00000)
+#define RAM_MAX_ADDRESS   ((uint8_t *)0xd65800)
+#define PORTS_MIN_ADDRESS ((uint8_t *)0xe00000)
+#define PORTS_MAX_ADDRESS ((uint8_t *)0xffffff)
+
+/* Restricted write RAM addresses */
+#define RAM_READONLY_ADDRESS_ONE ((uint8_t *) 0xd1887c)
+#define RAM_READONLY_ADDRESS_TWO ((uint8_t *) 0xd19881)
 
 /* Constants for the editor UI */
 #define ROWS_ONSCREEN   17
@@ -65,7 +76,13 @@
 #define CURSOR_RIGHT 2
 #define CURSOR_UP    3
 
-/* The maximum length for the editor name (the name that appears in the top bar) */
+#define JUMP_LEN_ACCEL_LEFT_RIGHT ((uint24_t)0x010000)
+#define JUMP_LEN_ACCEL_UP_DOWN    ((uint24_t)((ROWS_ONSCREEN - 1) * COLS_ONSCREEN))
+
+/* The maximum length for the editor name (the name that appears in the top bar)
+ * This should be length of the file name or editor name + 2 for the "* " that
+ * appears before the name when the user makes a modification to the memory.
+*/
 #define EDITOR_NAME_LEN 15
 
 typedef struct
@@ -79,6 +96,7 @@ typedef struct
 	
 	uint8_t file_type;	// Only used for files
 	bool is_file_empty;
+  bool su_mode;       // Superuser mode; allows user to write to RAM_READONLY_ADDRESSes
 } editor_t;
 
 typedef struct
@@ -94,29 +112,16 @@ typedef struct
 	bool multibyte_selection;
 } cursor_t;
 
-/* These structures are for the Headless Start. */
-/*
-typedef struct {
-	char headless_start_flag[3];
-	uint8_t editor_config;
-} header_config_t;
-
-typedef struct {
-	uint8_t *window_address;
-	uint8_t *cursor_primary;
-	uint8_t *cursor_secondary;
-} mem_editor_config_t;
-
-typedef struct {
-	char file_name[10];
-	uint8_t file_type;
-	uint24_t window_offset;
-	uint24_t cursor_primary_offset;
-	uint24_t cursor_secondary_offset;
-} file_editor_config_t;
-*/
 bool editor_FileEditor(const char *name, uint8_t type, uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset);
 void editor_RAMEditor(uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset);
+void editor_PortsEditor(uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset);
+void editor_MemEditor(
+  const char *name,
+  uint8_t *min_address,
+  uint8_t *max_address,
+  uint24_t primary_cursor_offset,
+  uint24_t secondary_cursor_offset
+);
 void editor_ROMViewer(uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset);
 void editor_HeadlessStart(void);
 

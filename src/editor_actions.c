@@ -70,7 +70,7 @@ void editact_SpriteViewer(editor_t *editor, cursor_t *cursor)
 
 void editact_Goto(editor_t *editor, cursor_t *cursor, uint8_t *ptr)
 {
-// dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x | offset = 0x%6x\n", editor->min_address, editor->window_address, ptr);
+// dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x | ptr = 0x%6x\n", editor->min_address, editor->window_address, ptr);
 	
 	cursor->primary = ptr;
 	
@@ -85,12 +85,18 @@ void editact_Goto(editor_t *editor, cursor_t *cursor, uint8_t *ptr)
 	
 	cursor->secondary = cursor->primary;
 	
-	while (cursor->primary > editor->window_address + (((ROWS_ONSCREEN - 1) * COLS_ONSCREEN) / 2))
-	{
-		editor->window_address += COLS_ONSCREEN;
-	};
+  // The right-hand side of this expression is a potential overflow point if cursor->primary == 0xffffff.
+//	while (cursor->primary > editor->window_address + (((ROWS_ONSCREEN - 1) * COLS_ONSCREEN) / 2))
+//	{
+//		editor->window_address += COLS_ONSCREEN;
+//	};
+  
+  if (cursor->primary > editor->window_address)
+  {
+    editor->window_address = editor->min_address + (((cursor->primary - editor->min_address) / COLS_ONSCREEN) * COLS_ONSCREEN);
+  };
 		
-//dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x\n", editor->min_address, editor->window_address);
+// dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x\n", editor->min_address, editor->window_address);
 
 	if (cursor->primary < editor->window_address)
 	{
@@ -578,7 +584,7 @@ uint8_t editact_FindPhraseOccurances(
   //         an overflow in either case.
   // Solution: Do not modify the search range.
   
-  
+  /*
   // Case 2 catch
   if (search_range > ROM_SEARCH_RANGE)
   {
@@ -592,13 +598,26 @@ uint8_t editact_FindPhraseOccurances(
     // Case 1 and default ROM search range catch
     search_range = RAM_SEARCH_RANGE;
   }
+  */
 
+  // The default search range should be larger than any of the search ranges.
+  // If the default search range is smaller than the x_SEARCH_RANGE, if the
+  // user tries to search "x," the find function will stop searching before
+  // it has searched all of the memory in "x".
+  if (search_start <= ROM_MAX_ADDRESS && search_range > ROM_SEARCH_RANGE)
+    search_range = ROM_SEARCH_RANGE;
+  else if (search_start >= RAM_MIN_ADDRESS && search_start <= RAM_MAX_ADDRESS && search_range > RAM_SEARCH_RANGE)
+    search_range = RAM_SEARCH_RANGE;
+  else if (search_start >= PORTS_MIN_ADDRESS && search_range > PORTS_SEARCH_RANGE)
+    search_range = PORTS_SEARCH_RANGE;
 
 // dbg_sprintf(dbgout, "search range = %d\n", search_range);
 
   // Case 1: search range is stops before the end of the given memory
   // Note: These are different cases than the ones mentioned above.
-  if (search_start + search_range < search_max)
+  // search_range MUST be less than or equal to the size of the given memory in
+  // order to avoid variable overflows/underflows.
+  if (search_start < search_max - search_range)
   {
  //dbg_sprintf(dbgout, "case 1 executing\n");
     num_phrase_occurances = asm_BFind_All(
@@ -626,10 +645,12 @@ uint8_t editact_FindPhraseOccurances(
      );
 
     // Loop back to the start of the memory and continue searching
-    search_range = search_start + search_range - search_max;
+    // Order of operations is vitally important to avoid variable
+    // overflows/underflows.
+    search_range = search_range - (search_max - search_min);
 
     // Case 2a: search range stops before search start position
-    if (search_start + search_range < search_start)
+    if (search_min + search_range < search_start)
     {
 // dbg_sprintf(dbgout, "case 2a executing\n");
       num_phrase_occurances += asm_BFind_All(
