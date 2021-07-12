@@ -1357,16 +1357,27 @@ void editor_HeadlessStart(void)
 	cursor_t *cursor;
 	
 	if (!create_undo_appvar())
-		return;
+		goto EDITOR_ALLOC_EXIT;
 	
 	editor = malloc(sizeof(editor_t));
-	cursor = malloc(sizeof(cursor_t));
+  
+  if (editor == NULL)
+    goto EDITOR_ALLOC_EXIT;
+  
+  cursor = malloc(sizeof(cursor_t));
 	
-	run_editor_from_config();
+  if (cursor == NULL)
+    goto CURSOR_ALLOC_EXIT;
+    
+  run_editor_from_config();
 	
-	ti_Delete(UNDO_APPVAR);
-	ti_Delete(HS_CONFIG_APPVAR);
-	free(editor);
 	free(cursor);
+  
+  CURSOR_ALLOC_EXIT:
+  free(editor);
+  
+  EDITOR_ALLOC_EXIT:
+  ti_Delete(UNDO_APPVAR);
+	ti_Delete(HS_CONFIG_APPVAR);
 	return;
 }
