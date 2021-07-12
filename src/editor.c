@@ -1295,8 +1295,11 @@ static void run_editor_from_config(void)
 	
 	
 	ti_CloseAll();
-	if ((config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r")) == 0)
-		return;
+//	if ((config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r")) == 0)
+//		return;
+
+  if (!(config_data_slot = ti_OpenVar(ti_Ans, "r", TI_STRING_TYPE)))
+    return;
 	
 	ti_Read(&config_byte, sizeof(config_byte), 1, config_data_slot);
 	

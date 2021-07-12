@@ -29,30 +29,40 @@ bool settings_InitSettingsAppvar(void)
 {
 	ti_var_t slot;
 	uint24_t search_range = ROM_SEARCH_RANGE;
+  bool initialized_appvar = false;
 	
-	if (!(slot = ti_Open(HEXA_SETTINGS_APPVAR, "w")))
-		return false;
-	
-	ti_Write(&search_range, sizeof(uint24_t), 1, slot);
-	ti_Close(slot);
-	return true;
+  ti_CloseAll();
+  
+  if ((slot = ti_Open(HEXA_SETTINGS_APPVAR, "r")))
+  {
+    initialized_appvar = true;
+  }
+  else if ((slot = ti_Open(HEXA_SETTINGS_APPVAR, "w")))
+  {
+    ti_Write(&search_range, sizeof(uint24_t), 1, slot);
+  };
+  
+  ti_CloseAll();
+	return initialized_appvar;
 }
 
 
 uint24_t settings_GetPhraseSearchRange(void)
 {
 	ti_var_t slot;
-	uint24_t search_range;
+	uint24_t search_range = 0;
 	
 	if ((slot = ti_Open(HEXA_SETTINGS_APPVAR, "r")))
 	{
 		ti_Read(&search_range, sizeof(uint24_t), 1, slot);
 		ti_Close(slot);
-		return search_range;
-	} else {
-		gui_DrawMessageDialog_Blocking("Failed to retrieve search range");
-		return 0;
 	}
+  else
+  {
+		gui_DrawMessageDialog_Blocking("Failed to retrieve search range");
+	};
+  
+  return search_range;
 }
 
 

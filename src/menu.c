@@ -985,18 +985,27 @@ void main_menu(void)
 				selected_file_offset = 0;
 			
 			redraw_background = true;
+      
+      // Prevent keypress fall-throughs.
+      delay(100);
 		};
 		
 		if (key == sk_Yequ)
 		{
 			editor_RAMEditor(0, 0);
 			redraw_background = true;
+      
+      // Prevent keypress fall-throughs.
+      delay(100);
 		};
 		
 		if (key == sk_Window)
 		{
 			editor_ROMViewer(0, 0);
 			redraw_background = true;
+      
+      // Prevent keypress fall-throughs.
+      delay(100);
 		};
     
     if (key == sk_Mode)
@@ -1008,13 +1017,19 @@ void main_menu(void)
       
       editor_RAMEditor(selected_file->vat_ptr - RAM_MIN_ADDRESS, selected_file->vat_ptr - RAM_MIN_ADDRESS);
       redraw_background = true;
+      
+      // Prevent keypress fall-throughs.
+      delay(100);
     };
     
-    // Temporary arrangement for testing purposes
+    // Temporary arrangement for testing purposes.
     if (key == sk_GraphVar)
     {
       editor_PortsEditor(0, 0);
       redraw_background = true;
+      
+      // Prevent keypress fall-throughs.
+      delay(100);
     };
 		
 		if (key == sk_Zoom && TABLE_ORDER[table_num] != HEXAEDIT_RECENTS_TYPE)
@@ -1030,8 +1045,9 @@ void main_menu(void)
 		{
 			break;
 		};
-	};	
-	// The Recent Files must be saved before the main_file_list is freed
+	};
+  
+	// The Recent Files must be saved before the main_file_list is freed.
 	save_recent_files(recent_file_list);
 	free(recent_file_list);
 	free_main_files(main_file_list);

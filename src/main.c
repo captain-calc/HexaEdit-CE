@@ -37,11 +37,27 @@ static void load_default_color_theme(void)
 	return;
 }
 
+/*
 static bool headless_start(void)
 {
 	ti_var_t config_data_slot;
 	
 	if ((config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r")))
+	{
+		editor_HeadlessStart();
+    ti_Close(config_data_slot);
+		return true;
+	};
+  
+	return false;
+}
+*/
+
+static bool headless_start(void)
+{
+	ti_var_t config_data_slot;
+	
+	if ((config_data_slot = ti_OpenVar(ti_Ans, "r", TI_STRING_TYPE)))
 	{
 		editor_HeadlessStart();
     ti_Close(config_data_slot);
@@ -65,7 +81,7 @@ int main(void)
   // in case another program modified it.
 	if (settings_InitSettingsAppvar())
   {
-    if (!headless_start())
+    //if (!headless_start())
 		  main_menu();
   }
   else
