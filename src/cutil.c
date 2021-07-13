@@ -6,7 +6,8 @@
 
 #include "cutil.h"
 
-#include <stdio.h>  // For sprintf()
+#include <stdio.h>   // For sprintf()
+#include <string.h>  // For strlen()
 
 
 void cutil_PtrSprintf(char *buffer, uint8_t *ptr)
@@ -23,4 +24,31 @@ void cutil_PtrSprintf(char *buffer, uint8_t *ptr)
 		c++;
 	};
 	return;
+}
+
+
+uint24_t cutil_ToDecimal(const char *hex)
+{
+	const char *hex_chars = {"0123456789abcdef"};
+	uint8_t i, j;
+	uint24_t place = 1;
+	uint24_t decimal = 0;
+	
+	
+	i = strlen(hex);
+	
+	while (i > 0)
+	{
+		i--;
+		
+		for (j = 0; j < 16; j++)
+		{
+			if (*(hex + i) == hex_chars[j])
+				decimal += place * j;
+		};
+		
+		place *= 16;
+	};
+	
+	return decimal;
 }

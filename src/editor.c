@@ -1,6 +1,15 @@
+// Name:    Captain Calc
+// Date:    July 12, 2021
+// File:    editor.c
+// Purpose: Provides the definitions for the functions declared in editor.h.
+//          Also declares several private ("static") functions related to the
+//          editor not to be used outside of this file. Contains the functions
+//          that control the editor's user interface and main event loop.
+
 
 #include "asmutil.h"
 #include "colors.h"
+#include "cutil.h"
 #include "editor.h"
 #include "editor_actions.h"
 #include "editor_gui.h"
@@ -20,45 +29,24 @@
 #include <debug.h>
 
 
-/*-----------------------------
-IMPORTANT:
-
-If any files are created after the editor and cursor pointers have been set inside the edit file,
-the contents of RAM will be shifted by an indeterminate amount, rendering all of the editor and
-cursor pointers invalid.
-
-Any files that the editor needs must be created either before the editor and cursor pointers are
-set or after the pointers are no longer needed.
-*/
-
-
-static uint24_t decimal(const char *hex)
-{
-	const char *hex_chars = {"0123456789abcdef"};
-	uint8_t i, j;
-	uint24_t place = 1;
-	uint24_t decimal = 0;
-	
-	
-	i = strlen(hex);
-	
-	while (i > 0)
-	{
-		i--;
-		
-		for (j = 0; j < 16; j++)
-		{
-			if (*(hex + i) == hex_chars[j])
-				decimal += place * j;
-		};
-		
-		place *= 16;
-	};
-	
-	return decimal;
-}
+// IMPORTANT NOTE ABOUT FILE CREATION WHILE EDITING!!!
+//
+//     If any files are created after the editor and cursor pointers have been
+// set inside the edit file, the contents of RAM will be shifted by an
+// indeterminate amount, rendering all of the editor and cursor pointers
+// invalid.
+//
+// Any files that the editor needs must be created either before the editor and
+// cursor pointers are set or after the pointers are no longer needed.
 
 
+
+
+// Description: is_readonly_ram_address() determines if the given <address> is
+//              a read-only RAM address in non-superuser mode.
+// Pre:         <address> should be a valid system RAM address.
+// Post:        True returned if <address> is read-only address in non-superuser
+//              mode; false otherwise.
 static bool is_readonly_ram_address(uint8_t *address)
 {
   bool is_readonly = false;
@@ -70,8 +58,8 @@ static bool is_readonly_ram_address(uint8_t *address)
 }
 
 
-// Description: Determines if the user can write a nibble at the current cursor
-//              position.
+// Description: can_write_nibble() determines if the user can write a nibble at
+//              the current cursor position.
 // Pre:         <nibble_to_write> must be the nibble the user wants to write.
 //              <cursor->primary> must point to a byte.
 //              <editor> must be properly set up (All values initialized and valid).
@@ -301,10 +289,11 @@ static void goto_prompt(editor_t *editor, cursor_t *cursor, uint8_t editor_index
 		else
 			editact_Goto(editor, cursor, editor->max_address);
 	} else {
-		editact_Goto(editor, cursor, (uint8_t *)decimal(buffer));
+		editact_Goto(editor, cursor, (uint8_t *)cutil_ToDecimal(buffer));
 	};
 	return;
 }
+
 
 static bool insert_bytes_prompt(editor_t *editor, cursor_t *cursor)
 {
@@ -352,7 +341,8 @@ static bool insert_bytes_prompt(editor_t *editor, cursor_t *cursor)
 	return false;
 }
 
-// Converts an ASCII hexadecimal character (0 - 9, a - f) into a nibble.
+// Description: Converts an ASCII hexadecimal character (0 - 9, a - f) into a
+//              nibble.
 static void ascii_to_nibble(const char *in, char *out, uint8_t in_len)
 {
 	const char *hex_chars = "0123456789abcdef";
@@ -533,6 +523,7 @@ static void phrase_search_prompt(editor_t *editor, cursor_t *cursor, uint8_t edi
 	return;
 }
 
+
 static uint8_t save_prompt(void)
 {
 	int8_t key;
@@ -559,6 +550,7 @@ static uint8_t save_prompt(void)
 	
 	return key;
 }
+
 
 static bool save_file(char *name, uint8_t type)
 {
@@ -647,6 +639,7 @@ static bool save_file(char *name, uint8_t type)
 	gui_DrawMessageDialog_Blocking("Insufficient ROM to save file");
 	return false;
 }
+
 
 static void run_editor(editor_t *editor, cursor_t *cursor)
 {
@@ -870,6 +863,7 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 	};
 }
 
+
 static bool create_undo_appvar(void)
 {
 	ti_var_t slot;
@@ -883,6 +877,7 @@ static bool create_undo_appvar(void)
 	ti_Close(slot);
 	return true;
 }
+
 
 static bool create_edit_file(const char *orig_file_name, uint8_t orig_file_type)
 {

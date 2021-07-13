@@ -21,4 +21,12 @@
 void cutil_PtrSprintf(char *buffer, uint8_t *ptr);
 
 
+// Description: cutil_ToDecimal() converts a hexadecimal string to an uint24_t.
+// Pre:         <hex> must only contain valid hexadecimal characters. Its
+//              decimal representation must be less than the maximum value of
+//              an uint24_t.
+// Post:        Decimal equivalent of <hex> returned.
+uint24_t cutil_ToDecimal(const char *hex);
+
+
 #endif
