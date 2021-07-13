@@ -1,3 +1,9 @@
+// Name:    Captain Calc
+// Date:    July 13, 2021,
+// File:    editor_actions.c
+// Purpose: Provides the definitions of the functions declared in
+//          editor_actions.h.
+
 
 #include "asmutil.h"
 #include "colors.h"
@@ -68,9 +74,19 @@ void editact_SpriteViewer(editor_t *editor, cursor_t *cursor)
 	return;
 }
 
+
 void editact_Goto(editor_t *editor, cursor_t *cursor, uint8_t *ptr)
 {
-// dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x | ptr = 0x%6x\n", editor->min_address, editor->window_address, ptr);
+  
+/*
+dbg_sprintf(
+  dbgout,
+  "min_address = 0x%6x | window_address = 0x%6x | ptr = 0x%6x\n",
+  editor->min_address,
+  editor->window_address,
+  ptr
+);
+*/
 	
 	cursor->primary = ptr;
 	
@@ -85,41 +101,69 @@ void editact_Goto(editor_t *editor, cursor_t *cursor, uint8_t *ptr)
 	
 	cursor->secondary = cursor->primary;
 	
-  // The right-hand side of this expression is a potential overflow point if cursor->primary == 0xffffff.
-//	while (cursor->primary > editor->window_address + (((ROWS_ONSCREEN - 1) * COLS_ONSCREEN) / 2))
-//	{
+// The right-hand side of this expression is a potential overflow point if
+// cursor->primary == 0xffffff.
+//	while (
+//    cursor->primary > (editor->window_address +
+//    (((ROWS_ONSCREEN - 1) * COLS_ONSCREEN) / 2))
+//  )
+//  {
 //		editor->window_address += COLS_ONSCREEN;
 //	};
   
   if (cursor->primary > editor->window_address)
   {
-    editor->window_address = editor->min_address + (((cursor->primary - editor->min_address) / COLS_ONSCREEN) * COLS_ONSCREEN);
+    editor->window_address = editor->min_address
+      + (((cursor->primary - editor->min_address) / COLS_ONSCREEN)
+      * COLS_ONSCREEN);
   };
-		
-// dbg_sprintf(dbgout, "min_address = 0x%6x | window_address = 0x%6x\n", editor->min_address, editor->window_address);
+
+/*		
+dbg_sprintf(
+  dbgout,
+  "min_address = 0x%6x | window_address = 0x%6x\n",
+  editor->min_address,
+  editor->window_address
+);
+*/
 
 	if (cursor->primary < editor->window_address)
 	{
-		editor->window_address = editor->min_address + (((cursor->primary - editor->min_address) / COLS_ONSCREEN) * COLS_ONSCREEN);
+		editor->window_address = editor->min_address
+      + (((cursor->primary - editor->min_address) / COLS_ONSCREEN)
+      * COLS_ONSCREEN);
 	};
+  
 	return;
 }
 
-bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_point, uint24_t num_bytes)
+
+bool editact_DeleteBytes(
+  editor_t *editor,
+  cursor_t *cursor,
+  uint8_t *deletion_point,
+  uint24_t num_bytes
+)
 {
 	// When the TI-OS resizes a file, any pointers to data within it
 	// become inaccurate. It also does not add or remove bytes
 	// from the end of the file, but from the start of the file.
 	
-	// The above means that the editor->min_address and editor->max_address will be inaccurate.
+	// The above means that the editor->min_address and editor->max_address will
+  // be inaccurate.
 	
-	// If cursor->primary is at the end of the file and the number of bytes requested to be deleted
-	// includes the byte the cursor is on, move the cursor->primary to the last byte of the file.
+	// If cursor->primary is at the end of the file and the number of bytes
+  // requested to be deleted includes the byte the cursor is on, move the
+  // cursor->primary to the last byte of the file.
 	
 	uint24_t num_bytes_shift = deletion_point - editor->min_address;
-	
-// dbg_sprintf(dbgout, "num_bytes_shift = %d | num_bytes = %d\n", num_bytes_shift, num_bytes);
-// dbg_sprintf(dbgout, "deletion_point = 0x%6x\n", deletion_point);
+
+/*	
+dbg_sprintf(
+  dbgout, "num_bytes_shift = %d | num_bytes = %d\n", num_bytes_shift, num_bytes
+);
+dbg_sprintf(dbgout, "deletion_point = 0x%6x\n", deletion_point);
+*/
 	
 	ti_var_t edit_file;
 	
@@ -135,16 +179,33 @@ bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_p
 	};
 	
 	if (num_bytes_shift > 0)
-		asm_CopyData(deletion_point - 1, deletion_point + num_bytes - 1, num_bytes_shift, 0);
-	
-// dbg_sprintf(dbgout, "Before re-assignment\neditor->min_address = 0x%6x\n", editor->min_address);
-// dbg_sprintf(dbgout, "primary = 0x%6x | secondary = 0x%6x\n", cursor->primary, cursor->secondary);
-	
+  {
+		asm_CopyData(
+      deletion_point - 1, deletion_point + num_bytes - 1, num_bytes_shift, 0
+    );
+  };
+
+/*	
+dbg_sprintf(
+  dbgout,
+  "Before re-assignment\neditor->min_address = 0x%6x\n",
+  editor->min_address
+);
+
+dbg_sprintf(
+  dbgout,
+  "primary = 0x%6x | secondary = 0x%6x\n",
+  cursor->primary,
+  cursor->secondary
+);
+*/
+  
 	if (ti_Resize(ti_GetSize(edit_file) - num_bytes, edit_file) != -1)
 	{
 		editor->min_address = ti_GetDataPtr(edit_file);
 		
-		/* The minus one is very important. If the file size is 0, max_address == min_address - 1.*/
+		//The minus one is very important. If the file size is 0,
+    // max_address == min_address - 1.
 		if (ti_GetSize(edit_file) == 0)
 		{
 			editor->max_address = editor->min_address + ti_GetSize(edit_file);
@@ -170,7 +231,9 @@ bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_p
 		if (cursor->primary < editor->window_address)
 		{
 //dbg_sprintf(dbgout, "Re-assigned window_address\n");
-			editor->window_address = editor->min_address + ((cursor->primary - editor->min_address) / COLS_ONSCREEN) * COLS_ONSCREEN;
+			editor->window_address = editor->min_address
+        + (((cursor->primary - editor->min_address) / COLS_ONSCREEN)
+        * COLS_ONSCREEN);
 		};
 	}
 	else
@@ -180,18 +243,25 @@ bool editact_DeleteBytes(editor_t *editor, cursor_t *cursor, uint8_t *deletion_p
 		return false;
 	};
 	
-	if (ti_GetSize(edit_file) == 0)
-	{
+	if (!ti_GetSize(edit_file))
 		editor->is_file_empty = true;
-	};
-	
-// dbg_sprintf(dbgout, "After re-assignment\neditor->min_address = 0x%6x\n", editor->min_address);
+
+/*	
+dbg_sprintf(
+  dbgout,
+  "After re-assignment\neditor->min_address = 0x%6x\n",
+  editor->min_address
+);
+*/
 	
 	ti_Close(edit_file);
 	return true;
 }
 
-bool editact_InsertBytes(editor_t *editor, uint8_t *insertion_point, uint24_t num_bytes)
+
+bool editact_InsertBytes(
+  editor_t *editor, uint8_t *insertion_point, uint24_t num_bytes
+)
 {
 	ti_var_t edit_file;
 	uint24_t i;
@@ -213,22 +283,45 @@ bool editact_InsertBytes(editor_t *editor, uint8_t *insertion_point, uint24_t nu
 		gui_DrawMessageDialog_Blocking(EDIT_FILE_RESIZE_FAIL);
 		goto ERROR;
 	};
-	
-// dbg_sprintf(dbgout, "file_data_ptr = 0x%6x | editor->min_address = 0x%6x\n", ti_GetDataPtr(edit_file), editor->min_address);
-	
+
+/*	
+dbg_sprintf(
+  dbgout,
+  "file_data_ptr = 0x%6x | editor->min_address = 0x%6x\n",
+  ti_GetDataPtr(edit_file),
+  editor->min_address
+);
+*/
+
 	if (ti_Rewind(edit_file) == EOF)
 	{
 		gui_DrawMessageDialog_Blocking("Could not rewind edit file");
 		goto ERROR;
 	};
-	
-//dbg_sprintf(dbgout, "num_bytes_shift = %d\n", num_bytes_shift);
-//dbg_sprintf(dbgout, "editor->min_address = 0x%6x | editor->max_address = 0x%6x\n", editor->min_address, editor->max_address);
-//dbg_sprintf(dbgout, "primary = 0x%6x | secondary = 0x%6x\n", cursor->primary, cursor->secondary);
-	
+
+/*	
+dbg_sprintf(dbgout, "num_bytes_shift = %d\n", num_bytes_shift);
+
+dbg_sprintf(
+  dbgout,
+  "editor->min_address = 0x%6x | editor->max_address = 0x%6x\n",
+  editor->min_address,
+  editor->max_address
+);
+
+dbg_sprintf(
+  dbgout,
+  "primary = 0x%6x | secondary = 0x%6x\n",
+  cursor->primary,
+  cursor->secondary
+);
+*/
+
 	if (num_bytes_shift > 0)
 	{
-		asm_CopyData(editor->min_address + num_bytes, editor->min_address, num_bytes_shift, 1);
+		asm_CopyData(
+      editor->min_address + num_bytes, editor->min_address, num_bytes_shift, 1
+    );
 	};
 	
 	for (i = 0; i < num_bytes; i++)
@@ -252,7 +345,10 @@ bool editact_InsertBytes(editor_t *editor, uint8_t *insertion_point, uint24_t nu
 	return false;
 }
 
-bool editact_CreateUndoInsertBytesAction(editor_t *editor, cursor_t *cursor, uint24_t num_bytes)
+
+bool editact_CreateUndoInsertBytesAction(
+  editor_t *editor, cursor_t *cursor, uint24_t num_bytes
+)
 {
 	ti_var_t undo_appvar;
 	uint8_t undo_code = UNDO_INSERT_BYTES;
@@ -287,6 +383,7 @@ bool editact_CreateUndoInsertBytesAction(editor_t *editor, cursor_t *cursor, uin
 	return false;
 }
 
+
 /**
 * Deletes the last bytes inserted in the file being edited.
 *
@@ -298,7 +395,9 @@ bool editact_CreateUndoInsertBytesAction(editor_t *editor, cursor_t *cursor, uin
 *                      On failure, 0.
 *   Leaves the UNDO_APPVAR slot open.
 */
-uint24_t undo_insert_bytes(editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar)
+uint24_t undo_insert_bytes(
+  editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar
+)
 {
 	uint24_t num_bytes;
 	uint24_t undo_action_size;
@@ -311,7 +410,9 @@ uint24_t undo_insert_bytes(editor_t *editor, cursor_t *cursor, ti_var_t undo_app
 	ti_Close(undo_appvar);
 
 	// This function closes all open slots
-	deleted_bytes = editact_DeleteBytes(editor, cursor, cursor->primary, num_bytes);
+	deleted_bytes = editact_DeleteBytes(
+    editor, cursor, cursor->primary, num_bytes
+  );
 
 	if (!deleted_bytes)
 		return 0;
@@ -323,7 +424,10 @@ uint24_t undo_insert_bytes(editor_t *editor, cursor_t *cursor, ti_var_t undo_app
 	return undo_action_size;
 }
 
-bool editact_CreateDeleteBytesUndoAction(editor_t *editor, cursor_t *cursor, uint24_t num_bytes)
+
+bool editact_CreateDeleteBytesUndoAction(
+  editor_t *editor, cursor_t *cursor, uint24_t num_bytes
+)
 {
 	ti_var_t undo_appvar;
 	uint8_t undo_code = UNDO_DELETE_BYTES;
@@ -340,6 +444,7 @@ bool editact_CreateDeleteBytesUndoAction(editor_t *editor, cursor_t *cursor, uin
 		goto ERROR;
 	};
 	
+  // TODO: Is the "10" a magic number?
 	if (ti_Resize(ti_GetSize(undo_appvar) + 10 + num_bytes, undo_appvar) == -1)
 	{
 		gui_DrawMessageDialog_Blocking(UNDO_APPVAR_RESIZE_FAIL);
@@ -365,6 +470,7 @@ bool editact_CreateDeleteBytesUndoAction(editor_t *editor, cursor_t *cursor, uin
 	return false;
 }
 
+
 /**
 * Restores the last bytes deleted from the file being edited.
 *
@@ -376,7 +482,9 @@ bool editact_CreateDeleteBytesUndoAction(editor_t *editor, cursor_t *cursor, uin
 *                      On failure, 0.
 *   Leaves the UNDO_APPVAR slot open.
 */
-uint24_t undo_delete_bytes(editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar)
+uint24_t undo_delete_bytes(
+  editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar
+)
 {
 	uint24_t num_bytes;
 	uint24_t byte_data_offset;
@@ -408,6 +516,7 @@ uint24_t undo_delete_bytes(editor_t *editor, cursor_t *cursor, ti_var_t undo_app
 	return ti_Tell(undo_appvar);
 }
 
+
 uint8_t editact_GetNibble(cursor_t *cursor, uint8_t *ptr)
 {
 	uint8_t nibble = *ptr;
@@ -423,6 +532,7 @@ uint8_t editact_GetNibble(cursor_t *cursor, uint8_t *ptr)
 	return nibble;
 }
 
+
 void editact_WriteNibble(cursor_t *cursor, uint8_t nibble)
 {
 	uint8_t i;
@@ -434,11 +544,15 @@ void editact_WriteNibble(cursor_t *cursor, uint8_t nibble)
 	{
 		*cursor->primary &= ~(1 << (i + (4 * cursor->high_nibble)));
 	};
+  
 	*cursor->primary |= nibble;
 	return;
 }
 
-bool editact_CreateUndoWriteNibbleAction(editor_t *editor, cursor_t *cursor, uint8_t nibble)
+
+bool editact_CreateUndoWriteNibbleAction(
+  editor_t *editor, cursor_t *cursor, uint8_t nibble
+)
 {
 	const uint8_t UNDO_WN_ACTION_SIZE = 9;
 
@@ -451,7 +565,9 @@ bool editact_CreateUndoWriteNibbleAction(editor_t *editor, cursor_t *cursor, uin
 		goto ERROR;
 	};
 	
-	if (ti_Resize(ti_GetSize(undo_appvar) + UNDO_WN_ACTION_SIZE, undo_appvar) == -1)
+	if (
+    ti_Resize(ti_GetSize(undo_appvar) + UNDO_WN_ACTION_SIZE, undo_appvar) == -1
+  )
 	{
 		gui_DrawMessageDialog_Blocking(UNDO_APPVAR_RESIZE_FAIL);
 		goto ERROR;
@@ -471,17 +587,20 @@ bool editact_CreateUndoWriteNibbleAction(editor_t *editor, cursor_t *cursor, uin
 	return false;
 }
 
+
 /**
 * Rewrites the last overwritten nibble.
 *
 * Arguments:
-*   Besides the regular arguments, the UNDO_APPVAR's offset is set to the byte after the
-*   end of the undo action code.
+*   Besides the regular arguments, the UNDO_APPVAR's offset is set to the byte
+*   after the end of the undo action code.
 * Returns:
 *   undo_action_size = The size (in bytes) of the undo action.
 *   Leaves the UNDO_APPVAR slot open.
 */
-uint24_t undo_write_nibble(editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar)
+uint24_t undo_write_nibble(
+  editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar
+)
 {
 	uint8_t nibble;
 	
@@ -494,6 +613,7 @@ uint24_t undo_write_nibble(editor_t *editor, cursor_t *cursor, ti_var_t undo_app
 	cursor->secondary = cursor->primary;
 	return ti_Tell(undo_appvar);
 }
+
 
 bool editact_UndoAction(editor_t *editor, cursor_t *cursor)
 {
@@ -547,6 +667,7 @@ bool editact_UndoAction(editor_t *editor, cursor_t *cursor)
 	ti_Close(undo_appvar);
 	return true;
 }
+
 
 // Finds all occurances of PHRASE starting from START in MIN to MAX.
 // Returns number of occurances found (max = 255).
@@ -605,11 +726,24 @@ uint8_t editact_FindPhraseOccurances(
   // user tries to search "x," the find function will stop searching before
   // it has searched all of the memory in "x".
   if (search_start <= ROM_MAX_ADDRESS && search_range > ROM_SEARCH_RANGE)
+  {
     search_range = ROM_SEARCH_RANGE;
-  else if (search_start >= RAM_MIN_ADDRESS && search_start <= RAM_MAX_ADDRESS && search_range > RAM_SEARCH_RANGE)
+  }
+  else if (
+    search_start >= RAM_MIN_ADDRESS
+    && search_start <= RAM_MAX_ADDRESS
+    && search_range > RAM_SEARCH_RANGE
+  )
+  {
     search_range = RAM_SEARCH_RANGE;
-  else if (search_start >= PORTS_MIN_ADDRESS && search_range > PORTS_SEARCH_RANGE)
+  }
+  else if (
+    search_start >= PORTS_MIN_ADDRESS
+    && search_range > PORTS_SEARCH_RANGE
+  )
+  {
     search_range = PORTS_SEARCH_RANGE;
+  };
 
 // dbg_sprintf(dbgout, "search range = %d\n", search_range);
 
@@ -631,8 +765,10 @@ uint8_t editact_FindPhraseOccurances(
   }
   else
   {
-// dbg_sprintf(dbgout, "case 2 executing\n");
-// dbg_sprintf(dbgout, "start = 0x%6x | max = 0x%6x\n", search_start, search_max);
+/*
+dbg_sprintf(dbgout, "case 2 executing\n");
+dbg_sprintf(dbgout, "start = 0x%6x | max = 0x%6x\n", search_start, search_max);
+*/
  
     // Case 2: search range is longer than given memory
     num_phrase_occurances = asm_BFind_All(
@@ -676,11 +812,15 @@ uint8_t editact_FindPhraseOccurances(
         occurances + num_phrase_occurances,
         MAX_NUM_PHRASE_OCCURANCES - num_phrase_occurances
       );
-    }
-  }
+    };
+  };
 
-// for (uint8_t i = 0; i < num_phrase_occurances; i++) {
-// dbg_sprintf(dbgout, "0x%6x\n", occurances[i]);
-// }
+/*
+for (uint8_t i = 0; i < num_phrase_occurances; i++)
+{
+  dbg_sprintf(dbgout, "0x%6x\n", occurances[i]);
+};
+*/
+
     return num_phrase_occurances;
 }
