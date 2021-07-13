@@ -1,5 +1,6 @@
 #include "asmutil.h"
 #include "colors.h"
+#include "cutil.h"
 #include "editor.h"
 #include "editor_gui.h"
 #include "gui.h"
@@ -103,23 +104,6 @@ void editorgui_DrawAltToolBar(cursor_t *cursor)
 }
 
 
-static void sprintf_ptr(char *buffer, uint8_t *pointer)
-{
-	char *c;
-	
-	sprintf(buffer, "%6x", (unsigned int)pointer);
-	c = buffer;
-	
-	while (*c != '\0')
-	{
-		if (*c == ' ')
-			*c = '0';
-		c++;
-	};
-	return;
-}
-
-
 void editorgui_SuperuserEngagedScreen(void)
 {
   char buffer[11] = {'0', 'x', '\0'};
@@ -131,9 +115,9 @@ void editorgui_SuperuserEngagedScreen(void)
   gfx_PrintStringXY("SUPERUSER MODE ENGAGED!", 5, 5);
   gfx_PrintStringXY("You can now write to the following", 5, 30);
   gfx_PrintStringXY("addresses:", 5, 45);
-  sprintf_ptr(buffer + 2, RAM_READONLY_ADDRESS_ONE);
+  cutil_PtrSprintf(buffer + 2, RAM_READONLY_ADDRESS_ONE);
   gfx_PrintStringXY(buffer, 15, 70);
-  sprintf_ptr(buffer + 2, RAM_READONLY_ADDRESS_TWO);
+  cutil_PtrSprintf(buffer + 2, RAM_READONLY_ADDRESS_TWO);
   gfx_PrintStringXY(buffer, 15, 85);
   gfx_PrintStringXY("CAUTION: It is possible to crash your", 5, 110);
   gfx_PrintStringXY("calculator by writing to the above", 5, 125);

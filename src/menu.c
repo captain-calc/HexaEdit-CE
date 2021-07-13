@@ -3,6 +3,7 @@
 
 #include "asmutil.h"
 #include "colors.h"
+#include "cutil.h"
 #include "editor.h"
 #include "gui.h"
 #include "menu.h"
@@ -16,6 +17,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+
 
 uint8_t NUM_FILES_PER_TYPE[NUM_TABLES];
 uint8_t TABLE_ORDER[4] = {
@@ -401,22 +403,6 @@ static file_data_t *set_selected_file(file_list_t *file_list, recent_file_list_t
 	return selected_file;
 }
 
-static void sprintf_ptr(char *buffer, unsigned int pointer)
-{
-	char *c;
-	
-	sprintf(buffer, "%6x", pointer);
-	c = buffer;
-	
-	while (*c != '\0')
-	{
-		if (*c == ' ')
-			*c = '0';
-		c++;
-	};
-	return;
-}
-
 void menu_DrawTitleBar(void)
 {
 	gfx_SetColor(color_theme.bar_color);
@@ -509,10 +495,10 @@ static void print_file_data(file_data_t *file_data, uint8_t text_fg_color, uint8
 	if (file_data->is_protected)
 		gfx_PrintStringXY("*", COL_3_X, yPos);
 
-	sprintf_ptr(value, (unsigned int)file_data->vat_ptr);
+	cutil_PtrSprintf(value, file_data->vat_ptr);
 	gfx_PrintStringXY(value, COL_4_X, yPos);
 	
-	sprintf_ptr(value, (unsigned int)file_data->data_ptr);
+	cutil_PtrSprintf(value, file_data->data_ptr);
 	gfx_PrintStringXY(value, COL_5_X, yPos);
 	
 	sprintf(value, "%d", file_data->size);
