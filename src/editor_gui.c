@@ -1,12 +1,15 @@
+#include "asmutil.h"
 #include "colors.h"
 #include "editor.h"
 #include "editor_gui.h"
 #include "gui.h"
 
 #include <graphx.h>
+#include <keypadc.h>
 
 #include <math.h>
 #include <stdint.h>
+
 
 static void draw_editing_size(editor_t *editor)
 {
@@ -25,6 +28,7 @@ static void draw_editing_size(editor_t *editor)
 	gfx_PrintString(" B");
 	return;
 }
+
 
 void editorgui_DrawTopBar(editor_t *editor)
 {
@@ -47,6 +51,7 @@ void editorgui_DrawTopBar(editor_t *editor)
 	return;
 }
 
+
 void editorgui_DrawToolBar(editor_t *editor)
 {
 	gfx_SetColor(color_theme.bar_color);
@@ -68,6 +73,7 @@ void editorgui_DrawToolBar(editor_t *editor)
 	gfx_PrintStringXY("Exit", 286, 226);
 	return;
 }
+
 
 void editorgui_DrawAltToolBar(cursor_t *cursor)
 {
@@ -95,6 +101,56 @@ void editorgui_DrawAltToolBar(cursor_t *cursor)
 	};
 	return;
 }
+
+
+static void sprintf_ptr(char *buffer, uint8_t *pointer)
+{
+	char *c;
+	
+	sprintf(buffer, "%6x", (unsigned int)pointer);
+	c = buffer;
+	
+	while (*c != '\0')
+	{
+		if (*c == ' ')
+			*c = '0';
+		c++;
+	};
+	return;
+}
+
+
+void editorgui_SuperuserEngagedScreen(void)
+{
+  char buffer[11] = {'0', 'x', '\0'};
+  
+  gfx_ZeroScreen();
+  gfx_SetTextBGColor(BLACK);
+  gfx_SetTextFGColor(RED);
+  gfx_SetTextTransparentColor(BLACK);
+  gfx_PrintStringXY("SUPERUSER MODE ENGAGED!", 5, 5);
+  gfx_PrintStringXY("You can now write to the following", 5, 30);
+  gfx_PrintStringXY("addresses:", 5, 45);
+  sprintf_ptr(buffer + 2, RAM_READONLY_ADDRESS_ONE);
+  gfx_PrintStringXY(buffer, 15, 70);
+  sprintf_ptr(buffer + 2, RAM_READONLY_ADDRESS_TWO);
+  gfx_PrintStringXY(buffer, 15, 85);
+  gfx_PrintStringXY("CAUTION: It is possible to crash your", 5, 110);
+  gfx_PrintStringXY("calculator by writing to the above", 5, 125);
+  gfx_PrintStringXY("addresses.", 5, 140);
+  gfx_PrintStringXY("Press any key...", 5, 165);
+  gfx_BlitBuffer();
+  
+  // Prevent long keypresses from triggering fall-throughs.
+  delay(500);
+  
+  do {
+    kb_Scan();
+  } while (asm_GetCSC() == -1);
+  
+  return;
+}
+
 
 void editorgui_DrawMemAddresses(editor_t *editor, uint24_t x, uint8_t y)
 {
@@ -127,6 +183,7 @@ void editorgui_DrawMemAddresses(editor_t *editor, uint24_t x, uint8_t y)
 	return;
 }
 
+
 void editorgui_DrawFileOffsets(editor_t *editor, uint24_t x, uint8_t y)
 {
 	uint8_t row = 0;
@@ -147,6 +204,7 @@ void editorgui_DrawFileOffsets(editor_t *editor, uint24_t x, uint8_t y)
 	};
 }
 
+
 static void print_hex_value(uint24_t x, uint8_t y, uint8_t value)
 {
 	char hex[3] = {'\0'};
@@ -159,6 +217,7 @@ static void print_hex_value(uint24_t x, uint8_t y, uint8_t value)
 	return;
 }
 
+
 static bool is_current_byte_selected(cursor_t *cursor, uint8_t *line_ptr, uint8_t byte_num, uint24_t num_bytes_selected)
 {
 	if (((line_ptr + byte_num) - cursor->secondary) < (int)num_bytes_selected)
@@ -168,6 +227,7 @@ static bool is_current_byte_selected(cursor_t *cursor, uint8_t *line_ptr, uint8_
 	};
 	return false;
 }
+
 
 static void print_hex_line(editor_t *editor, cursor_t *cursor, uint24_t x, uint8_t y, uint8_t *line)
 {
@@ -214,6 +274,7 @@ static void print_hex_line(editor_t *editor, cursor_t *cursor, uint24_t x, uint8
 	};
 }
 
+
 void editorgui_DrawHexTable(editor_t *editor, cursor_t *cursor, uint24_t x, uint8_t y)
 {
 	uint8_t line = 0;
@@ -228,6 +289,7 @@ void editorgui_DrawHexTable(editor_t *editor, cursor_t *cursor, uint24_t x, uint
 	};
 }
 
+
 static void print_ascii_value(uint24_t x, uint8_t y, uint8_t c)
 {
 	gfx_SetTextXY(x, y);
@@ -237,6 +299,7 @@ static void print_ascii_value(uint24_t x, uint8_t y, uint8_t c)
 		gfx_PrintChar(c);
 	return;
 }
+
 
 static void print_ascii_line(editor_t *editor, cursor_t *cursor, uint24_t x, uint8_t y, uint8_t *line)
 {
@@ -279,6 +342,7 @@ static void print_ascii_line(editor_t *editor, cursor_t *cursor, uint24_t x, uin
 	};
 }
 
+
 void editorgui_DrawAsciiTable(editor_t *editor, cursor_t *cursor, uint24_t x, uint8_t y)
 {
 	uint8_t line = 0;
@@ -293,6 +357,7 @@ void editorgui_DrawAsciiTable(editor_t *editor, cursor_t *cursor, uint24_t x, ui
 	};
 }
 
+
 void editorgui_DrawEmptyFileMessage(uint24_t hex_x, uint8_t y)
 {
 	char message[] = "-- Empty --";
@@ -304,6 +369,7 @@ void editorgui_DrawEmptyFileMessage(uint24_t hex_x, uint8_t y)
 	gfx_PrintString(message);
 	return;
 }
+
 
 void editorgui_DrawEditorContents(editor_t *editor, cursor_t *cursor, uint8_t editor_index_method)
 {

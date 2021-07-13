@@ -107,54 +107,6 @@ static uint8_t can_write_nibble(editor_t *editor, cursor_t *cursor, uint8_t nibb
 }
 
 
-static void sprintf_ptr(char *buffer, uint8_t *pointer)
-{
-	char *c;
-	
-	sprintf(buffer, "%6x", (unsigned int)pointer);
-	c = buffer;
-	
-	while (*c != '\0')
-	{
-		if (*c == ' ')
-			*c = '0';
-		c++;
-	};
-	return;
-}
-
-
-static void superuser_mode_animation(void)
-{
-  char buffer[11] = {'0', 'x', '\0'};
-  
-  gfx_ZeroScreen();
-  gfx_SetTextBGColor(BLACK);
-  gfx_SetTextFGColor(RED);
-  gfx_SetTextTransparentColor(BLACK);
-  gfx_PrintStringXY("SUPERUSER MODE ENGAGED!", 5, 5);
-  gfx_PrintStringXY("You can now write to the following", 5, 30);
-  gfx_PrintStringXY("addresses:", 5, 45);
-  sprintf_ptr(buffer + 2, RAM_READONLY_ADDRESS_ONE);
-  gfx_PrintStringXY(buffer, 15, 70);
-  sprintf_ptr(buffer + 2, RAM_READONLY_ADDRESS_TWO);
-  gfx_PrintStringXY(buffer, 15, 85);
-  gfx_PrintStringXY("CAUTION: It is possible to crash your", 5, 110);
-  gfx_PrintStringXY("calculator by writing to the above", 5, 125);
-  gfx_PrintStringXY("addresses.", 5, 140);
-  gfx_PrintStringXY("Press any key...", 5, 165);
-  gfx_BlitBuffer();
-  
-  // Prevent long keypresses from triggering fall-throughs.
-  delay(500);
-  
-  do {
-    kb_Scan();
-  } while (asm_GetCSC() == -1);
-  return;
-}
-
-
 static void move_cursor(editor_t *editor, cursor_t *cursor, uint8_t direction, bool accelerated_cursor)
 {
 	uint24_t i;
@@ -873,7 +825,7 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
       }
       else
       {
-        superuser_mode_animation();
+        editorgui_SuperuserEngagedScreen();
         redraw_top_bar = true;
         redraw_tool_bar = true;
         editor->su_mode = true;
@@ -1087,6 +1039,9 @@ uint24_t secondary_cursor_offset)
 	editact_Goto(editor, cursor, cursor->primary);
 	cursor->secondary = editor->min_address + secondary_cursor_offset;
 
+  if (cursor->secondary < cursor->primary)
+		cursor->multibyte_selection = true;
+
 	run_editor(editor, cursor);
 	return_val = true;
 
@@ -1177,7 +1132,7 @@ void editor_MemEditor(
 	};
 	
 	memset(editor->name, '\0', EDITOR_NAME_LEN);
-	strcpy(editor->name, name);
+  strncpy(editor->name, name, EDITOR_NAME_LEN);
 	
 	editor->min_address = min_address;
 	editor->max_address = max_address;
