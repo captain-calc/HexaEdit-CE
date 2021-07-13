@@ -12,6 +12,10 @@
 #include <stdint.h>  // For uint8_t
 
 
+// PUBLIC FUNCTION DECLARATIONS
+// ============================================================================
+
+
 // Description: asm_GetCSC() returns the sk_key_t code for a single keypress.
 //              It combines the speed of a kb_Data register check with the
 //              convenience of the single sk_key_t code. Note: This routine
@@ -32,7 +36,12 @@ int8_t asm_GetCSC(void);
 //              depending on <copy_direction>.
 // Post:        <amount> bytes copied from <src> to <dest> in given
 //              <copy_direction>.
-void asm_CopyData(void *src, void *dest, uint24_t amount, uint8_t copy_direction);
+void asm_CopyData(
+  void *src,
+  void *dest,
+  uint24_t amount,
+  uint8_t copy_direction
+);
 
 
 // Description: Shifts low nibble of <nibble> into the high nibble of <nibble>,
@@ -61,7 +70,17 @@ uint8_t asm_HighToLowNibble(uint8_t nibble);
 //              <matches> array.
 // Post:        <matches> contains pointers to every occurance of <phrase>
 //              found between <start> and <end>, inclusive.
-uint8_t asm_BFind_All(const uint8_t *start, const uint8_t *end, const char phrase[], const uint8_t len, uint8_t **matches, uint8_t max_matches);
+uint8_t asm_BFind_All(
+  const uint8_t *start,
+  const uint8_t *end,
+  const char phrase[],
+  const uint8_t len,
+  uint8_t **matches,
+  uint8_t max_matches
+);
+
+
+// ============================================================================
 
 
 #endif

@@ -14,6 +14,7 @@ _asm_GetCSC:
 ; Destroys:
 ;   BC and HL
 
+
 	ld	hl,$f50010
 	xor	a,a
 	ld	b,0
@@ -45,6 +46,7 @@ _asm_GetCSC:
 	ld	a,-1
 	ret
 
+; -----------------------------------------------------------------------------
 
 	public	_asm_CopyData
 _asm_CopyData:
@@ -58,6 +60,7 @@ _asm_CopyData:
 ;   None
 ; Destroys:
 ;   A, BC, DE, HL, IY
+
 
 	ld	iy, 0
 	add	iy, sp
@@ -76,6 +79,7 @@ _asm_CopyData:
 	lddr
 	ret
 
+; -----------------------------------------------------------------------------
 
 	public _asm_LowToHighNibble
 _asm_LowToHighNibble:
@@ -86,6 +90,7 @@ _asm_LowToHighNibble:
 ; Destroys:
 ;   A, DE, HL
 
+
 	pop	de
 	pop	hl
 	push	hl
@@ -97,6 +102,7 @@ _asm_LowToHighNibble:
 	sla	a
 	ret
 
+; -----------------------------------------------------------------------------
 
 	public _asm_HighToLowNibble
 _asm_HighToLowNibble:
@@ -107,6 +113,7 @@ _asm_HighToLowNibble:
 ; Destroys:
 ;   A, DE, HL
 
+
 	pop	de
 	pop	hl
 	push	hl
@@ -118,7 +125,9 @@ _asm_HighToLowNibble:
 	srl	a
 	ret
 
+; -----------------------------------------------------------------------------
 
+_bfind:
 ; Arguments:
 ;   arg0 = start address
 ;   arg1 = end address
@@ -130,7 +139,7 @@ _asm_HighToLowNibble:
 ; Destroys:
 ;   A, BC, DE, IY
 
-_bfind:
+
 	ld	iy,0
 	add	iy,sp
 	ld	bc,(iy + 3)
@@ -187,7 +196,10 @@ _bfind:
   pop bc              ; Remove the stack local
   ret
 
+; -----------------------------------------------------------------------------
 
+  public _asm_BFind_All
+_asm_BFind_All:
 ; Arguments:
 ;   arg0 == start address
 ;   arg1 == end address
@@ -200,8 +212,7 @@ _bfind:
 ; Destroys:
 ;   BC, DE, HL
 
-  public _asm_BFind_All
-_asm_BFind_All:
+
   ld  iy,0
   add iy,sp
   ld  hl,(iy + 12)
