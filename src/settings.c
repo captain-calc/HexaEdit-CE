@@ -1,3 +1,9 @@
+// Name:    Captain Calc
+// Date:    July 13, 2021
+// File:    settings.c
+// Purpose: Provides the definitions of the functions declared in settings.h.
+
+
 #include "asmutil.h"
 #include "colors.h"
 #include "gui.h"

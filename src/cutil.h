@@ -12,6 +12,10 @@
 #include <stdint.h>  // For uint8_t
 
 
+// FUNCTION DECLARATIONS
+// ============================================================================
+
+
 // Description: cutil_PtrSprintf() converts an uint8_t pointer into a string.
 //              It replaces the spaces that sprintf() substitutes for NULLs
 //              with zeros. Format: 0xXXXXXX.

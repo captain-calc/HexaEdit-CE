@@ -395,7 +395,7 @@ bool editact_CreateUndoInsertBytesAction(
 *                      On failure, 0.
 *   Leaves the UNDO_APPVAR slot open.
 */
-uint24_t undo_insert_bytes(
+static uint24_t undo_insert_bytes(
   editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar
 )
 {
@@ -482,7 +482,7 @@ bool editact_CreateDeleteBytesUndoAction(
 *                      On failure, 0.
 *   Leaves the UNDO_APPVAR slot open.
 */
-uint24_t undo_delete_bytes(
+static uint24_t undo_delete_bytes(
   editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar
 )
 {
@@ -598,7 +598,7 @@ bool editact_CreateUndoWriteNibbleAction(
 *   undo_action_size = The size (in bytes) of the undo action.
 *   Leaves the UNDO_APPVAR slot open.
 */
-uint24_t undo_write_nibble(
+static uint24_t undo_write_nibble(
   editor_t *editor, cursor_t *cursor, ti_var_t undo_appvar
 )
 {

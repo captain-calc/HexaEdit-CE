@@ -12,7 +12,7 @@
 #include <stdint.h>  // For uint8_t
 
 
-// PUBLIC FUNCTION DECLARATIONS
+// FUNCTION DECLARATIONS
 // ============================================================================
 
 
@@ -78,9 +78,6 @@ uint8_t asm_BFind_All(
   uint8_t **matches,
   uint8_t max_matches
 );
-
-
-// ============================================================================
 
 
 #endif
