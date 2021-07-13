@@ -5,7 +5,7 @@
 NAME ?= HEXAEDIT
 ICON ?= icon.png
 DESCRIPTION ?= "HexaEdit CE"
-COMPRESSED ?= NO
+COMPRESSED ?= YES
 ARCHIVED ?= YES
 
 CFLAGS ?= -Wall -Wextra -Oz

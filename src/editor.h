@@ -5,12 +5,101 @@
 
 #include <stdint.h>
 
+/* HEADLESS START CONFIGURATION
+ *
+ *    The Headless Start feature uses the following data configuration in the
+ * Headless Start appvar (Note: Always include the general configuration data!):
+ *
+ *
+ * General Configuration
+ * ===============================
+ * Color Theme/Editor Type	1 byte
+ *
+ *
+ * Color Theme Override (7 bytes)
+ * ===============================
+ * Background Color		1
+ * Bar Color			1
+ * Bar Text Color		1
+ * Table BG Color		1
+ * Table Text Color		1
+ * Selected Table Text Color	1
+ * Cursor Color			1
+ * ===============================
+ *
+ *
+ * RAM Editor/ROM Viewer
+ * ===============================
+ * Cursor Primary Address	3
+ * Cursor Secondary Address	3
+ * ===============================
+ *
+ *
+ * File Editor
+ * ===============================
+ * File Name			10
+ * File Type			1
+ * Cursor Primary Offset	3
+ * Cursor Secondary Offset	3
+ * ===============================
+ *
+ *
+ *     Only include the data sections you will need. For example, if you wanted
+ * to start a file editor and override the default color scheme, you would
+ * include the following sections:
+ *
+ * ===========================
+ * General Configuration Data
+ * Color Theme Override
+ * File Editor
+ * ===========================
+ *
+ *
+ * Configuration Data Notes
+ * =================================
+ *
+ * The Color Theme/Editor Type byte looks like this:
+ *
+ *    0000 0000
+ *    ^      ^
+ *    |      |
+ *    |      * The two least significant bytes specify the editor type (File = 0,
+ *    |        RAM = 1, ROM = 2)
+ *    |
+ *    * The most significant byte should be set to specify a color override. It
+ *      should be set to 0 if you do not want to change the color scheme.
+ *
+ *     If you want to override the color scheme and open a file editor, for example,
+ * the byte would look like: 1000 0010.
+ *
+ *
+ * You may notice that the values for the window and cursor pointers for the file editor are OFFSETS
+ * instead of memory pointers. This is because HexaEdit does not edit the specified file directly but,
+ * rather, a copy of it. HexaEdit does not create this copy until after it reads out the configuration
+ * data and creates the necessary memory pointers out of the file offsets.
+*/
+
+
+/*
+ * Ans flag: If the variable Ans starts with this byte sequence, then HexaEdit
+ * will consider it as a Headless Start configuration.
+ */
+#define HS_CONFIG_ANS_FLAG      "HEXAEDIT\x00\x0b"
+#define HS_CONFIG_ANS_FLAG_LEN  10
+#define COLOR_OVERRIDE_FLAG     ((uint8_t)(1 << 7))
+
+
+/* Common program files */
 #define EDIT_FILE             "HEXATMP"
 #define UNDO_APPVAR           "HEXAUNDO"
+/* The configuration appvar for the Headless Start */
 #define HS_CONFIG_APPVAR      "HEXAHSCA"
 #define HEXA_SETTINGS_APPVAR  "HEXACONF"
 
-/* The maximum length of any file name including hidden files and null terminator. */
+/*
+ * The maximum length of any file name, including hidden files and null
+ * terminator.
+*/
 #define FILE_NAME_LEN 10
 
 /*

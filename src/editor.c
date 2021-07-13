@@ -31,79 +31,6 @@ set or after the pointers are no longer needed.
 */
 
 
-/**
- * The Headless Start feature uses the following data configuration in the
- * Headless Start appvar (Note: Always include the general configuration data!):
- *
- *
- * General Configuration
- * ===============================
- * Color Theme/Editor Type	1 byte
- *
- *
- * Color Theme Override (7 bytes)
- * ===============================
- * Background Color		1
- * Bar Color			1
- * Bar Text Color		1
- * Table BG Color		1
- * Table Text Color		1
- * Selected Table Text Color	1
- * Cursor Color			1
- * ===============================
- *
- *
- * RAM Editor/ROM Viewer
- * ===============================
- * Cursor Primary Address	3
- * Cursor Secondary Address	3
- * ===============================
- *
- *
- * File Editor
- * ===============================
- * File Name			10
- * File Type			1
- * Cursor Primary Offset	3
- * Cursor Secondary Offset	3
- * ===============================
- *
- *
- * Only include the data sections you will need. For example, if you wanted to
- * start a file editor and override the default color scheme, you would include
- * the following sections:
- *
- * ===========================
- * General Configuration Data
- * Color Theme Override
- * File Editor
- * ===========================
- *
- *
- * Configuration Data Notes
- * =================================
- *
- * The Color Theme/Editor Type byte looks like this:
- *
- * 0000 0000
- * ^      ^
- * |      |
- * |      * The two least significant bytes specify the editor type (File = 0, RAM = 1, ROM = 2)
- * |
- * * The most significant byte should be set to specify a color override. It should be set to 0 if
- *   you do not want to change the color scheme.
- *
- * If you want to override the color scheme and open a file editor, for example, the byte would look
- * like: 1000 0010.
- *
- *
- * You may notice that the values for the window and cursor pointers for the file editor are OFFSETS
- * instead of memory pointers. This is because HexaEdit does not edit the specified file directly but,
- * rather, a copy of it. HexaEdit does not create this copy until after it reads out the configuration
- * data and creates the necessary memory pointers out of the file offsets.
-*/
-
-
 static uint24_t decimal(const char *hex)
 {
 	const char *hex_chars = {"0123456789abcdef"};
@@ -966,6 +893,8 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 			}
 			else if (key == sk_Zoom)
 			{
+        
+        // TODO: Add check for PORTS_EDITOR.
 				if (editor->type == RAM_EDITOR)
 				{
 					// Execute all of the undo actions.
@@ -1070,21 +999,49 @@ uint24_t secondary_cursor_offset)
 
 //dbg_sprintf(dbgout, "name = %s | type = %d\n", name, type);
 
-	if (primary_cursor_offset < secondary_cursor_offset)
-		return false;
+  // This function does several checks before running the editor to ensure a
+  // proper run. If a check fails, it should clean up any resources (files,
+  // memory, etc.) created by previous, successful checks. Different return
+  // "levels" correspond to different numbers of resources that need to be
+  // deleted.
+  
+  // TODO: Define common fatal error messages to conserve space.
+
+  if (secondary_cursor_offset > primary_cursor_offset)
+  {
+    gui_DrawMessageDialog_Blocking("Fatal: 2nd cursor > 1st cursor");
+    goto RETURN_LVL1;
+  };
 	
-	ti_CloseAll();
-	if (!create_edit_file(name, type))
-			return false;
-
-	editor = malloc(sizeof(editor_t));
-	cursor = malloc(sizeof(cursor_t));
-
 	if (!create_undo_appvar())
-		goto RETURN;
+	{
+    gui_DrawMessageDialog_Blocking("Fatal: Create undo appvar failed");
+    goto RETURN_LVL1;
+  };
 	
-	if ((slot = ti_Open(EDIT_FILE, "r")) == 0)
-		goto RETURN;
+	if ((editor = malloc(sizeof(editor_t))) == NULL)
+	{
+    gui_DrawMessageDialog_Blocking("Fatal: editor_t malloc failed");
+    goto RETURN_LVL2;
+  };
+   
+	if ((cursor = malloc(sizeof(cursor_t))) == NULL)
+	{
+		gui_DrawMessageDialog_Blocking("Fatal: cursor_t malloc failed");
+    goto RETURN_LVL3;
+	};
+	
+	if (!create_edit_file(name, type))
+  {
+    gui_DrawMessageDialog_Blocking("Fatal: Create edit file failed");
+    goto RETURN_LVL4;
+  };
+	
+	if (!(slot = ti_Open(EDIT_FILE, "r")))
+	{
+    gui_DrawMessageDialog_Blocking("Fatal: Open edit file failed");
+    goto RETURN_LVL5;
+  };
 
 //dbg_sprintf(dbgout, "editor = 0x%6x\n", editor);
 
@@ -1093,7 +1050,7 @@ uint24_t secondary_cursor_offset)
 	if (strlen(name) < EDITOR_NAME_LEN)
 		strcpy(editor->name, name);
 	else
-		goto RETURN;
+		goto RETURN_LVL5;
 	
 	editor->min_address = ti_GetDataPtr(slot);
 	
@@ -1101,7 +1058,9 @@ uint24_t secondary_cursor_offset)
 	{
 		editor->is_file_empty = true;
 		editor->max_address = editor->min_address;
-	} else {
+	}
+  else
+  {
 		editor->is_file_empty = false;
 		editor->max_address = editor->min_address + ti_GetSize(slot) - 1;
 	};
@@ -1117,8 +1076,11 @@ uint24_t secondary_cursor_offset)
 
 //dbg_sprintf(dbgout, "min_address = 0x%6x | size = %d\n", editor->min_address, ti_GetSize(slot));
 
-	if (!bounds_check_offsets(editor, primary_cursor_offset, secondary_cursor_offset))
-		goto RETURN;
+  if (!bounds_check_offsets(editor, primary_cursor_offset, secondary_cursor_offset))
+  {
+    gui_DrawMessageDialog_Blocking("Fatal: Bounds check failed");
+    goto RETURN_LVL5;
+  };
 
 	// The editor goto sets cursor->secondary to cursor->primary, so in order to goto
 	// and have multi-byte selection, we must goto before setting cursor->secondary.
@@ -1129,11 +1091,19 @@ uint24_t secondary_cursor_offset)
 	run_editor(editor, cursor);
 	return_val = true;
 
-	RETURN:
+RETURN_LVL5:
 	ti_Delete(EDIT_FILE);
-	ti_Delete(UNDO_APPVAR);
-	free(editor);
+	
+RETURN_LVL4:
 	free(cursor);
+  
+RETURN_LVL3:
+  free(editor);
+  
+RETURN_LVL2:
+  ti_Delete(UNDO_APPVAR);
+  
+RETURN_LVL1:
 	return return_val;
 }
 
@@ -1164,18 +1134,30 @@ void editor_MemEditor(
 	
 	
 	if (secondary_cursor_offset > primary_cursor_offset)
-		return;
+  {
+    gui_DrawMessageDialog_Blocking("Fatal: 2nd cursor > 1st cursor");
+    return;
+  };
 	
 	if (!create_undo_appvar())
-		return;
+	{
+    gui_DrawMessageDialog_Blocking("Fatal: Create undo appvar failed");
+    return;
+  };
 	
 	if ((editor = malloc(sizeof(editor_t))) == NULL)
-		return;
+	{
+    gui_DrawMessageDialog_Blocking("Fatal: editor_t malloc failed");
+    ti_Delete(UNDO_APPVAR);
+    return;
+  };
+   
 	if ((cursor = malloc(sizeof(cursor_t))) == NULL)
 	{
-		free(editor);
-		ti_Delete(UNDO_APPVAR);
-		return;
+		gui_DrawMessageDialog_Blocking("Fatal: cursor_t malloc failed");
+    free(editor);
+    ti_Delete(UNDO_APPVAR);
+    return;
 	};
 	
 	memset(editor->name, '\0', EDITOR_NAME_LEN);
@@ -1191,7 +1173,10 @@ void editor_MemEditor(
 	cursor->multibyte_selection = false;
 	
 	if (!bounds_check_offsets(editor, primary_cursor_offset, secondary_cursor_offset))
-		goto RETURN;
+  {
+    gui_DrawMessageDialog_Blocking("Fatal: Bounds check failed");
+    goto RETURN;
+  };
 	
 	// The editor goto sets cursor->secondary to cursor->primary, so in order to goto
 	// and have multi-byte selection, we must goto before setting cursor->secondary.
@@ -1204,10 +1189,10 @@ void editor_MemEditor(
 	
 	run_editor(editor, cursor);
 	
-	RETURN:
-	ti_Delete(UNDO_APPVAR);
-	free(editor);
+  RETURN:
 	free(cursor);
+	free(editor);
+  ti_Delete(UNDO_APPVAR);
 	return;
 }
 
@@ -1217,19 +1202,23 @@ void editor_ROMViewer(uint24_t primary_cursor_offset, uint24_t secondary_cursor_
 	editor_t *editor;
 	cursor_t *cursor;
 	
-	
-	if (secondary_cursor_offset > primary_cursor_offset)
-		return;
-	
-	editor = malloc(sizeof(editor_t));
-	cursor = malloc(sizeof(cursor_t));
+  if (secondary_cursor_offset > primary_cursor_offset)
+  {
+    gui_DrawMessageDialog_Blocking("Fatal: 2nd cursor > 1st cursor");
+    return;
+  };
 	
 	if ((editor = malloc(sizeof(editor_t))) == NULL)
-		return;
+	{
+    gui_DrawMessageDialog_Blocking("Fatal: editor_t malloc failed");
+    return;
+  };
+   
 	if ((cursor = malloc(sizeof(cursor_t))) == NULL)
 	{
-		free(editor);
-		return;
+		gui_DrawMessageDialog_Blocking("Fatal: cursor_t malloc failed");
+    free(editor);
+    return;
 	};
 	
 	memset(editor->name, '\0', EDITOR_NAME_LEN);
@@ -1243,8 +1232,11 @@ void editor_ROMViewer(uint24_t primary_cursor_offset, uint24_t secondary_cursor_
 	cursor->high_nibble = true;
 	cursor->multibyte_selection = false;
 	
-	if (!bounds_check_offsets(editor, primary_cursor_offset, secondary_cursor_offset))
-		goto RETURN;
+  if (!bounds_check_offsets(editor, primary_cursor_offset, secondary_cursor_offset))
+  {
+    gui_DrawMessageDialog_Blocking("Fatal: Bounds check failed");
+    goto RETURN;
+  };
 	
 	// The editor goto sets cursor->secondary to cursor->primary, so in order to goto
 	// and have multi-byte selection, we must goto before setting cursor->secondary.
@@ -1264,29 +1256,40 @@ void editor_ROMViewer(uint24_t primary_cursor_offset, uint24_t secondary_cursor_
 }
 
 
-static void load_color_override(color_theme_config_t *color_theme_config)
+static bool load_color_override(ti_var_t slot)
 {
-	color_theme.background_color = color_theme_config->background_color;
-	color_theme.bar_color = color_theme_config->bar_color;
-	color_theme.bar_text_color = color_theme_config->bar_text_color;
-	color_theme.table_bg_color = color_theme_config->table_bg_color;
-	color_theme.table_text_color = color_theme_config->table_text_color;
-	color_theme.selected_table_text_color = color_theme_config->selected_table_text_color;
-	color_theme.table_selector_color = color_theme_config->table_selector_color;
-	color_theme.cursor_color = color_theme_config->cursor_color;
-	return;
+  color_theme_config_t *config = malloc(sizeof(color_theme_config_t));
+  bool config_loaded = false;
+  
+  if (config)
+  {
+    ti_Read(config, sizeof(color_theme_config_t), 1, slot);
+    
+    color_theme.background_color          = config->background_color;
+    color_theme.bar_color                 = config->bar_color;
+    color_theme.bar_text_color            = config->bar_text_color;
+    color_theme.table_bg_color            = config->table_bg_color;
+    color_theme.table_text_color          = config->table_text_color;
+    color_theme.selected_table_text_color = config->selected_table_text_color;
+    color_theme.table_selector_color      = config->table_selector_color;
+    color_theme.cursor_color              = config->cursor_color;
+    
+    free(config);
+    config_loaded = true;
+  };
+  
+	return config_loaded;
 }
 
 
-static void run_editor_from_config(void)
+void editor_HeadlessStart(void)
 {
 	const uint8_t FILE_EDITOR_FLAG = FILE_EDITOR;
 	const uint8_t RAM_EDITOR_FLAG = RAM_EDITOR;
 	const uint8_t ROM_VIEWER_FLAG = ROM_VIEWER;
-	const uint8_t COLOR_OVERRIDE_FLAG = (1 << 7);
 	
-	ti_var_t config_data_slot;
-	color_theme_config_t *color_theme_config;
+	ti_var_t slot;
+  char hs_config_ans_flag[HS_CONFIG_ANS_FLAG_LEN];
 	uint8_t config_byte;
 	uint24_t primary_cursor_offset;
 	uint24_t secondary_cursor_offset;
@@ -1295,89 +1298,75 @@ static void run_editor_from_config(void)
 	
 	
 	ti_CloseAll();
-//	if ((config_data_slot = ti_Open(HS_CONFIG_APPVAR, "r")) == 0)
-//		return;
-
-  if (!(config_data_slot = ti_OpenVar(ti_Ans, "r", TI_STRING_TYPE)))
+  
+  if (!(slot = ti_OpenVar(ti_Ans, "r", TI_STRING_TYPE)))
+  {
+    gui_DrawMessageDialog_Blocking("Fatal: Opening Ans failed");
     return;
+  };
+
+  // Read out and discard the HS_CONFIG_ANS_FLAG.
+  ti_Read(&hs_config_ans_flag, HS_CONFIG_ANS_FLAG_LEN, 1, slot);
+  
+  // Read out the editor/color theme configuration byte.
+	ti_Read(&config_byte, sizeof(config_byte), 1, slot);
 	
-	ti_Read(&config_byte, sizeof(config_byte), 1, config_data_slot);
+dbg_sprintf(dbgout, "offset = %d\n", ti_Tell(slot));
+dbg_sprintf(dbgout, "config_byte = %2x\n", config_byte);
 	
-//dbg_sprintf(dbgout, "offset = %d\n", ti_Tell(config_data_slot));
-//dbg_sprintf(dbgout, "config_byte = %2x\n", config_byte);
-	
-	if (config_byte & (1 << 7))
+	if (config_byte & COLOR_OVERRIDE_FLAG)
 	{
-//dbg_sprintf(dbgout, "About to load color config\n");
+    
+dbg_sprintf(dbgout, "About to load color config\n");
 		
-		if ((color_theme_config = malloc(sizeof(color_theme_config_t))) == NULL)
-			return;
-		ti_Read(color_theme_config, sizeof(color_theme_config_t), 1, config_data_slot);
-		load_color_override(color_theme_config);
-		free(color_theme_config);
+		if (!load_color_override(slot))
+    {
+      gui_DrawMessageDialog_Blocking("Fatal: Color theme load failed");
+      return;
+    };
+
+    // Reset the COLOR_OVERRIDE_FLAG so that the config_byte only holds
+    // the editor type.
 		config_byte ^= COLOR_OVERRIDE_FLAG;
 	};
 	
-//dbg_sprintf(dbgout, "offset = %d\n", ti_Tell(config_data_slot));
+dbg_sprintf(dbgout, "offset = %d\n", ti_Tell(slot));
 	
+  // IMPORTANT NOTE: If a config byte does not match the rest of the
+  // configuration, undefined behavior will result.
+  //   Best case: Editor catches the mistake through checks in the
+  //              editor setup.
+  //   Worst case: Editor checks do not catch the mistake and either
+  //               a messed-up editor opens or the calc crashes.
+  
 	if (config_byte == FILE_EDITOR_FLAG)
 	{
-		ti_Read(&file_name, FILE_NAME_LEN, 1, config_data_slot);
-		ti_Read(&file_type, sizeof(file_type), 1, config_data_slot);
-		ti_Read(&primary_cursor_offset, sizeof(primary_cursor_offset), 1, config_data_slot);
-		ti_Read(&secondary_cursor_offset, sizeof(secondary_cursor_offset), 1, config_data_slot);
-		ti_Close(config_data_slot);
+		ti_Read(&file_name, FILE_NAME_LEN, 1, slot);
+		ti_Read(&file_type, sizeof(file_type), 1, slot);
+		ti_Read(&primary_cursor_offset, sizeof(primary_cursor_offset), 1, slot);
+		ti_Read(&secondary_cursor_offset, sizeof(secondary_cursor_offset), 1, slot);
+		ti_Close(slot);
 		editor_FileEditor(file_name, file_type, primary_cursor_offset, secondary_cursor_offset);
 	}
 	else if (config_byte == RAM_EDITOR_FLAG)
 	{
-		ti_Read(&primary_cursor_offset, sizeof(primary_cursor_offset), 1, config_data_slot);
-		ti_Read(&secondary_cursor_offset, sizeof(secondary_cursor_offset), 1, config_data_slot);
-		ti_Close(config_data_slot);
+		ti_Read(&primary_cursor_offset, sizeof(primary_cursor_offset), 1, slot);
+		ti_Read(&secondary_cursor_offset, sizeof(secondary_cursor_offset), 1, slot);
+		ti_Close(slot);
 		editor_RAMEditor(primary_cursor_offset, secondary_cursor_offset);
 	}
 	else if (config_byte == ROM_VIEWER_FLAG)
 	{
-		ti_Read(&primary_cursor_offset, sizeof(primary_cursor_offset), 1, config_data_slot);
-		ti_Read(&secondary_cursor_offset, sizeof(secondary_cursor_offset), 1, config_data_slot);
-		ti_Close(config_data_slot);
+		ti_Read(&primary_cursor_offset, sizeof(primary_cursor_offset), 1, slot);
+		ti_Read(&secondary_cursor_offset, sizeof(secondary_cursor_offset), 1, slot);
+		ti_Close(slot);
 		editor_ROMViewer(primary_cursor_offset, secondary_cursor_offset);
-	} else {
-		gui_DrawMessageDialog_Blocking("Unknown editor type");
-		ti_Close(config_data_slot);
+	}
+  else
+  {
+		gui_DrawMessageDialog_Blocking("Fatal: Unknown editor type");
+		ti_Close(slot);
 	};
 	
-	return;
-}
-
-
-void editor_HeadlessStart(void)
-{
-	editor_t *editor;
-	cursor_t *cursor;
-	
-	if (!create_undo_appvar())
-		goto EDITOR_ALLOC_EXIT;
-	
-	editor = malloc(sizeof(editor_t));
-  
-  if (editor == NULL)
-    goto EDITOR_ALLOC_EXIT;
-  
-  cursor = malloc(sizeof(cursor_t));
-	
-  if (cursor == NULL)
-    goto CURSOR_ALLOC_EXIT;
-    
-  run_editor_from_config();
-	
-	free(cursor);
-  
-  CURSOR_ALLOC_EXIT:
-  free(editor);
-  
-  EDITOR_ALLOC_EXIT:
-  ti_Delete(UNDO_APPVAR);
-	ti_Delete(HS_CONFIG_APPVAR);
 	return;
 }

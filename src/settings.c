@@ -40,6 +40,7 @@ bool settings_InitSettingsAppvar(void)
   else if ((slot = ti_Open(HEXA_SETTINGS_APPVAR, "w")))
   {
     ti_Write(&search_range, sizeof(uint24_t), 1, slot);
+    initialized_appvar = true;
   };
   
   ti_CloseAll();

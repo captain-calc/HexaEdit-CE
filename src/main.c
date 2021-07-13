@@ -8,7 +8,6 @@
  *-----------------------------------------
 */
 
-#include "asmutil.h"
 #include "colors.h"
 #include "editor.h"
 #include "gui.h"
@@ -20,7 +19,8 @@
 #include <tice.h>
 #include <graphx.h>
 #include <fileioc.h>
-#include <keypadc.h>
+
+#include <debug.h>
 
 color_theme_config_t color_theme;
 
@@ -55,23 +55,33 @@ static bool headless_start(void)
 
 static bool headless_start(void)
 {
-	ti_var_t config_data_slot;
+	ti_var_t slot;
+  char hs_config_ans_flag[HS_CONFIG_ANS_FLAG_LEN];
+  bool start_headless = false;
 	
-	if ((config_data_slot = ti_OpenVar(ti_Ans, "r", TI_STRING_TYPE)))
+  ti_CloseAll();
+  
+	if ((slot = ti_OpenVar(ti_Ans, "r", TI_STRING_TYPE)))
 	{
-		editor_HeadlessStart();
-    ti_Close(config_data_slot);
-		return true;
+    ti_Read(&hs_config_ans_flag, HS_CONFIG_ANS_FLAG_LEN, 1, slot);
+    
+    if (!strncmp(hs_config_ans_flag, HS_CONFIG_ANS_FLAG, HS_CONFIG_ANS_FLAG_LEN))
+    {
+dbg_sprintf(dbgout, "hs_config_ans_flag = %s\n", hs_config_ans_flag);
+      editor_HeadlessStart();
+      start_headless = true;
+    };
+
+    ti_Close(slot);
 	};
   
-	return false;
+	return start_headless;
 }
 
 int main(void)
 {
 	gfx_Begin();
 	gfx_SetDrawBuffer();
-	ti_CloseAll();
 	
   // Load default color theme BEFORE checking for headless start in case the
   // headless start does not specify a custom color theme.
@@ -81,13 +91,13 @@ int main(void)
   // in case another program modified it.
 	if (settings_InitSettingsAppvar())
   {
-    //if (!headless_start())
+    if (!headless_start())
 		  main_menu();
   }
   else
   {
     gui_DrawMessageDialog_Blocking("Could not create settings appvar. Exiting...");
-  }
+  };
 	
 	gfx_End();
 	return 0;
