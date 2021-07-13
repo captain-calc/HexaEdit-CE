@@ -27,35 +27,41 @@ const char *UNDO_APPVAR_OPEN_FAIL = "Could not open undo appvar";
 const char *UNDO_APPVAR_RESIZE_FAIL = "Could not resize undo appvar";
 
 
-void editact_SpriteViewer(editor_t *editor, cursor_t *cursor)
+void editact_SpriteViewer(uint8_t *ptr, uint8_t *max_address)
 {
+  const uint8_t MAX_SPRITE_HEIGHT    = 245;
+  const uint8_t MAX_SCALE_ONE_WIDTH  = 115;
+  const uint8_t MAX_SCALE_ONE_HEIGHT = 115;
+  
 	gfx_sprite_t *sprite_data;
 	uint8_t sprite_width, sprite_height;
 	uint24_t sprite_size;
 	uint24_t xPos = 0;
 	uint8_t yPos = 0;
 	uint8_t scale = 2;
-		
+	
+  if (ptr == max_address)
+    return;
+  
 	// Get the sprite's size
-	sprite_width = *cursor->primary;
-	sprite_height = *(cursor->secondary + 1);
+	sprite_width = *ptr;
+	sprite_height = *(ptr + 1);
 	sprite_size = sprite_width * sprite_height;
 	
-	if (sprite_size == 0 || sprite_height > 245)
+	if (sprite_size == 0 || sprite_height > MAX_SPRITE_HEIGHT)
 		return;
 	
-	if ((uint24_t)(editor->max_address - cursor->primary) < sprite_size)
+	if ((uint24_t)(max_address - ptr) < sprite_size)
 		return;
 	
-	sprite_data = gfx_MallocSprite(sprite_width, sprite_height);
-	if (sprite_data == NULL)
+	if (!(sprite_data = gfx_MallocSprite(sprite_width, sprite_height)))
 		return;
 	
 	// Set the scale to one if the sprite is very large
-	if (sprite_width > 155 || sprite_height > 115)
+	if (sprite_width > MAX_SCALE_ONE_WIDTH || sprite_height > MAX_SCALE_ONE_HEIGHT)
 		scale = 1;
 	
-	asm_CopyData(cursor->primary + 2, sprite_data->data, sprite_size, 1);
+	asm_CopyData(ptr + 2, sprite_data->data, sprite_size, 1);
 	
 	// Draw rectangle border
 	gfx_SetColor(WHITE);
@@ -753,7 +759,7 @@ uint8_t editact_FindPhraseOccurances(
   // order to avoid variable overflows/underflows.
   if (search_start < search_max - search_range)
   {
- //dbg_sprintf(dbgout, "case 1 executing\n");
+//dbg_sprintf(dbgout, "case 1 executing\n");
     num_phrase_occurances = asm_BFind_All(
       search_start,
       search_start + search_range,

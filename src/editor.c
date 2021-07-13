@@ -733,7 +733,7 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 		
 		if (key == sk_Stat && !cursor->multibyte_selection)
 		{
-			editact_SpriteViewer(editor, cursor);
+			editact_SpriteViewer(cursor->primary, editor->max_address);
 			redraw_top_bar = true;
 			redraw_tool_bar = true;
 		};

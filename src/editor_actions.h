@@ -30,7 +30,7 @@
 // Description: 
 // Pre:         
 // Post:        
-void editact_SpriteViewer(editor_t *editor, cursor_t *cursor);
+void editact_SpriteViewer(uint8_t *ptr, uint8_t *max_address);
 
 
 // Description: 

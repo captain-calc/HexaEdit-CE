@@ -125,7 +125,7 @@ void editorgui_SuperuserEngagedScreen(void)
   gfx_PrintStringXY("Press any key...", 5, 165);
   gfx_BlitBuffer();
   
-  // Prevent long keypresses from triggering fall-throughs.
+  // Prevent long keypress fall-throughs
   delay(500);
   
   do {
