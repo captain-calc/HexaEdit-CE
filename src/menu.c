@@ -910,7 +910,7 @@ void main_menu(void)
 	
 	if (!load_recent_files(recent_file_list, main_file_list))
 	{
-		gui_DrawMessageDialog_Blocking("Could not load Recent Files");
+		gui_DrawMessageDialog_Blocking("Fatal: Could not load Recent Files");
 		free(recent_file_list);
 		free(main_file_list);
 		return;

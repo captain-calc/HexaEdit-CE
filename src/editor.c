@@ -1278,13 +1278,15 @@ void editor_HeadlessStart(void)
   // Read out the editor/color theme configuration byte.
 	ti_Read(&config_byte, sizeof(config_byte), 1, slot);
 	
+/*
 dbg_sprintf(dbgout, "offset = %d\n", ti_Tell(slot));
 dbg_sprintf(dbgout, "config_byte = %2x\n", config_byte);
-	
+*/
+
 	if (config_byte & COLOR_OVERRIDE_FLAG)
 	{
     
-dbg_sprintf(dbgout, "About to load color config\n");
+//dbg_sprintf(dbgout, "About to load color config\n");
 		
 		if (!load_color_override(slot))
     {
@@ -1297,7 +1299,7 @@ dbg_sprintf(dbgout, "About to load color config\n");
 		config_byte ^= COLOR_OVERRIDE_FLAG;
 	};
 	
-dbg_sprintf(dbgout, "offset = %d\n", ti_Tell(slot));
+//dbg_sprintf(dbgout, "offset = %d\n", ti_Tell(slot));
 	
   // IMPORTANT NOTE: If a config byte does not match the rest of the
   // configuration, undefined behavior will result.
