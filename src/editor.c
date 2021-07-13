@@ -1,4 +1,3 @@
-#include "debug.h"
 
 #include "asmutil.h"
 #include "colors.h"
@@ -17,6 +16,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <debug.h>
 
 
 /*-----------------------------

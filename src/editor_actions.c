@@ -1,4 +1,4 @@
-#include "debug.h"
+
 #include "asmutil.h"
 #include "colors.h"
 #include "editor.h"

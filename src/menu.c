@@ -1,6 +1,4 @@
 
-#include "debug.h"
-
 #include "asmutil.h"
 #include "colors.h"
 #include "cutil.h"
@@ -82,6 +80,7 @@ static void free_appvars(file_list_t *file_list)
 	return;
 }
 
+
 static void load_main_appvars(file_list_t *main_file_list)
 {
 	void *detect_str = 0;
@@ -98,6 +97,7 @@ static void load_main_appvars(file_list_t *main_file_list)
 	};
 	return;
 }
+
 
 static file_data_t *get_program_data(const char *name)
 {
@@ -136,6 +136,7 @@ static file_data_t *get_program_data(const char *name)
 	return program_data;
 }
 
+
 static void free_asm_programs(file_list_t *file_list)
 {
 	uint16_t i = 0;
@@ -147,6 +148,7 @@ static void free_asm_programs(file_list_t *file_list)
 	return;
 }
 
+
 static void free_basic_programs(file_list_t *file_list)
 {
 	uint16_t i = 0;
@@ -157,6 +159,7 @@ static void free_basic_programs(file_list_t *file_list)
 	};
 	return;
 }
+
 
 static void load_main_programs(file_list_t *main_file_list, uint8_t ti_type)
 {
@@ -204,6 +207,7 @@ static void load_main_programs(file_list_t *main_file_list, uint8_t ti_type)
 	};
 }
 
+
 static void load_main_files(file_list_t *main_file_list)
 {
 	// Since malloc does not initialize the memory it allocates, these
@@ -218,6 +222,7 @@ static void load_main_files(file_list_t *main_file_list)
 	return;
 }
 
+
 static void free_main_files(file_list_t *file_list)
 {
 	free_appvars(file_list);
@@ -226,6 +231,7 @@ static void free_main_files(file_list_t *file_list)
 	free(file_list);
 	return;
 }
+
 
 static void add_recent_file(recent_file_list_t *list, file_data_t *file)
 {
@@ -276,6 +282,7 @@ static void add_recent_file(recent_file_list_t *list, file_data_t *file)
 	
 	return;
 }
+
 
 static bool load_recent_files(recent_file_list_t *recent_file_list, file_list_t *main_file_list)
 {
@@ -342,6 +349,7 @@ static bool load_recent_files(recent_file_list_t *recent_file_list, file_list_t 
 	return true;
 }
 
+
 static void save_recent_files(recent_file_list_t *recent_file_list)
 {
 	ti_var_t recent_files_appvar;
@@ -364,6 +372,7 @@ static void save_recent_files(recent_file_list_t *recent_file_list)
 	return;
 }
 
+
 static bool create_recent_files_appvar(void)
 {
 	ti_var_t appvar;
@@ -379,6 +388,7 @@ static bool create_recent_files_appvar(void)
 	ti_Close(appvar);
 	return true;
 }
+
 
 static file_data_t *set_selected_file(file_list_t *file_list, recent_file_list_t *recent_file_list, uint8_t table_num, uint8_t selected_file_offset)
 {
@@ -403,6 +413,7 @@ static file_data_t *set_selected_file(file_list_t *file_list, recent_file_list_t
 	return selected_file;
 }
 
+
 void menu_DrawTitleBar(void)
 {
 	gfx_SetColor(color_theme.bar_color);
@@ -415,6 +426,7 @@ void menu_DrawTitleBar(void)
 	//gui_DrawBatteryStatus();
 	return;
 }
+
 
 static void draw_menu_bar(uint8_t table_num)
 {
@@ -435,6 +447,7 @@ static void draw_menu_bar(uint8_t table_num)
 	
 	return;
 }
+
 
 static void draw_file_list_header(uint8_t y, uint8_t table_num)
 {
@@ -461,6 +474,7 @@ static void draw_file_list_header(uint8_t y, uint8_t table_num)
 	return;
 }
 
+
 static void draw_table_header(uint8_t y)
 {
 	uint24_t x = TABLE_LEFT_MARGIN + 1;
@@ -481,6 +495,7 @@ static void draw_table_header(uint8_t y)
 	};
 	return;
 }
+
 
 static void print_file_data(file_data_t *file_data, uint8_t text_fg_color, uint8_t yPos)
 {
@@ -506,6 +521,7 @@ static void print_file_data(file_data_t *file_data, uint8_t text_fg_color, uint8
 	return;
 }
 
+
 static void print_table_entry(file_data_t *file_data, bool print_inverted, uint8_t yPos)
 {
 	uint8_t text_fg_color;
@@ -528,6 +544,7 @@ static void print_table_entry(file_data_t *file_data, bool print_inverted, uint8
 	return;
 }
 
+
 static void erase_table(void)
 {
 	gfx_SetColor(BLACK);
@@ -536,6 +553,7 @@ static void erase_table(void)
 	gfx_FillRectangle_NoClip(TABLE_LEFT_MARGIN - 1, TABLE_FIRST_ROW_Y - 2, TABLE_WIDTH + 2, NUM_FILES_ONSCREEN * TABLE_ROW_HEIGHT);
 	return;
 }
+
 
 static void print_empty_table_message(void)
 {
@@ -547,6 +565,7 @@ static void print_empty_table_message(void)
 	gfx_PrintStringXY(empty_table_message, (LCD_WIDTH / 2) - gfx_GetStringWidth(empty_table_message) / 2, TABLE_FIRST_ROW_Y);
 	return;
 }
+
 
 static void print_recent_files_table(recent_file_list_t *recent_file_list, uint8_t selected_file_offset)
 {
@@ -578,6 +597,7 @@ static void print_recent_files_table(recent_file_list_t *recent_file_list, uint8
 	
 	return;
 }
+
 
 static void print_main_files_table(file_list_t *file_list, uint8_t table_num, uint8_t list_offset, uint8_t selected_file_offset)
 {
@@ -641,6 +661,7 @@ static void print_main_files_table(file_list_t *file_list, uint8_t table_num, ui
 	
 	return;
 }
+
 
 static void search_main_files(file_list_t *file_list, uint8_t *table_num, uint8_t *file_num)
 {
@@ -755,6 +776,7 @@ static void search_main_files(file_list_t *file_list, uint8_t *table_num, uint8_
 	return;
 }
 
+
 static void change_table_num(uint8_t *table_num, uint8_t *selected_file_offset, int8_t key)
 {
   uint8_t local_table_num = *table_num;
@@ -783,6 +805,7 @@ static void change_table_num(uint8_t *table_num, uint8_t *selected_file_offset, 
 	
 	return;
 };
+
 
 static void change_selected_file_offset(uint8_t *table_num, uint8_t *selected_file_offset)
 {
@@ -823,6 +846,7 @@ static void change_selected_file_offset(uint8_t *table_num, uint8_t *selected_fi
 	return;
 }
 
+
 static void update_selected_file_size(file_data_t *selected_file)
 {
 	ti_var_t slot;
@@ -845,6 +869,7 @@ static void update_selected_file_size(file_data_t *selected_file)
 	ti_Close(slot);
 	return;
 }
+
 
 void main_menu(void)
 {
