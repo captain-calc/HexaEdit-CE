@@ -893,9 +893,7 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 			}
 			else if (key == sk_Zoom)
 			{
-        
-        // TODO: Add check for PORTS_EDITOR.
-				if (editor->type == RAM_EDITOR)
+				if (editor->type == RAM_EDITOR || editor->type == PORTS_EDITOR)
 				{
 					// Execute all of the undo actions.
 					gui_DrawMessageDialog("Undoing changes to memory...");
@@ -912,7 +910,8 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
 			redraw_tool_bar = true;
 		};
 		
-    // For small files introduce a delay so the cursor does jump around uncontrollably.
+    // For small files introduce a delay so the cursor does not jump around
+    // uncontrollably.
 		if (editor->max_address - editor->window_address < COLS_ONSCREEN * ROWS_ONSCREEN)
 			delay(100);
 	};
@@ -963,8 +962,8 @@ static bool create_edit_file(const char *orig_file_name, uint8_t orig_file_type)
 		asm_CopyData(ti_GetDataPtr(file), ti_GetDataPtr(edit_file), file_size, 1);
 	};
 	
-	// Debugging
-	//dbg_sprintf(dbgout, "Copied file\n");
+// Debugging
+//dbg_sprintf(dbgout, "Copied file\n");
 
 	ti_CloseAll();
 	return true;
@@ -1110,19 +1109,36 @@ RETURN_LVL1:
 
 void editor_RAMEditor(uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset)
 {
-  editor_MemEditor("RAM Editor", RAM_MIN_ADDRESS, RAM_MAX_ADDRESS, primary_cursor_offset, secondary_cursor_offset);
+  editor_MemEditor(
+    "RAM Editor",
+    RAM_EDITOR,
+    RAM_MIN_ADDRESS,
+    RAM_MAX_ADDRESS,
+    primary_cursor_offset,
+    secondary_cursor_offset
+  );
+  
   return;
 }
 
 void editor_PortsEditor(uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset)
 {
-  editor_MemEditor("Ports Editor", PORTS_MIN_ADDRESS, PORTS_MAX_ADDRESS, primary_cursor_offset, secondary_cursor_offset);
+  editor_MemEditor(
+    "Ports Editor",
+    PORTS_EDITOR,
+    PORTS_MIN_ADDRESS,
+    PORTS_MAX_ADDRESS,
+    primary_cursor_offset,
+    secondary_cursor_offset
+  );
+  
   return;
 }
 
 
 void editor_MemEditor(
   const char *name,
+  uint8_t type,
   uint8_t *min_address,
   uint8_t *max_address,
   uint24_t primary_cursor_offset,
@@ -1166,7 +1182,7 @@ void editor_MemEditor(
 	editor->min_address = min_address;
 	editor->max_address = max_address;
 	editor->window_address = min_address;
-	editor->type = RAM_EDITOR;
+	editor->type = type;
 	editor->num_changes = 0;
   editor->su_mode = false;
 	cursor->high_nibble = true;

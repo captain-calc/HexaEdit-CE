@@ -110,10 +110,11 @@
 #define UNDO_DELETE_BYTES 1
 #define UNDO_WRITE_NIBBLE 2
 
-/* The three kinds of "editors" */
-#define FILE_EDITOR 0
-#define RAM_EDITOR  1
-#define ROM_VIEWER  2
+/* The four kinds of "editors" */
+#define FILE_EDITOR  0
+#define RAM_EDITOR   1
+#define ROM_VIEWER   2
+#define PORTS_EDITOR 3
 
 /* Editor indexing formats */
 #define OFFSET_INDEXING  0
@@ -206,6 +207,7 @@ void editor_RAMEditor(uint24_t primary_cursor_offset, uint24_t secondary_cursor_
 void editor_PortsEditor(uint24_t primary_cursor_offset, uint24_t secondary_cursor_offset);
 void editor_MemEditor(
   const char *name,
+  uint8_t type,
   uint8_t *min_address,
   uint8_t *max_address,
   uint24_t primary_cursor_offset,

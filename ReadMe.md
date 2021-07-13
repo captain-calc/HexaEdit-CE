@@ -28,11 +28,12 @@ HexaEdit CE uses the C libraries from the LLVM toolchain. If you encounter a ver
 
 * Platform: TI-84 Plus CE
 * Language: C
-* Latest Version: 2.1.0
+* Latest Version: 2.2.0
 
 ## Change Log
 | Release Number        | Git Branch   | Description
 | --------------------- |:------------:| -----------
+| v2.2.0                | improve-core | Added "Ports" memory editor. Added faster alpha scrolling alternative in editor. Switched Headless Start configuration from appvar to Ans. Introduced more robust editor setup checks.
 | v2.1.0                | improve-core | Replaced phrase search C algorithm with faster assembly algorithm. Removed user-specified phrase search range because the faster algorithm rendered it superfluous. Added [mode] key functionality to the main menu. Fixed main menu protected program bug.
 | v2.0.2                | improve-core | Simplified editor API and Headless Start configuration.
 | v2.0.1 *(unreleased)* | master       | Fixed Headless Start bug. Added phrase search to editor. Modified input functions.
