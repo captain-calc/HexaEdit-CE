@@ -16,9 +16,9 @@ To find out more about HexaEdit CE, please visit its Cemetech forum thread:
 
 https://www.cemetech.net/forum/viewtopic.php?t=16759
 
-## Branch "improve-core" Information
+## Branch "rewrite-with-offsets" Information
 
-Updates to this branch will focus on improving the abilities and struture of the core editing functions. This is a developmental branch, so code stored here is **not** guaranteed to be stable.
+Commits to this branch will switch the main editor and cursor configurations from pointers to offsets. This is a developmental branch, so code stored here is **not** guaranteed to be stable.
 
 ## Installation
 
@@ -40,7 +40,7 @@ HexaEdit CE uses the C libraries from the LLVM toolchain.
 ## Change Log
 | Release Number        | Git Branch   | Description
 | --------------------- |:------------:| -----------
-| v2.2.0                | improve-core | Added "Ports" memory editor. Added faster alpha scrolling alternative in editor. Switched Headless Start configuration from appvar to Ans. Introduced more robust editor setup checks.
+| v2.2.0 *(unreleased)* | improve-core | Added "Ports" memory editor. Added faster alpha scrolling alternative in editor. Switched Headless Start configuration from appvar to Ans. Introduced more robust editor setup checks.
 | v2.1.0                | improve-core | Replaced phrase search C algorithm with faster assembly algorithm. Removed user-specified phrase search range because the faster algorithm rendered it superfluous. Added [mode] key functionality to the main menu. Fixed main menu protected program bug.
 | v2.0.2                | improve-core | Simplified editor API and Headless Start configuration.
 | v2.0.1 *(unreleased)* | master       | Fixed Headless Start bug. Added phrase search to editor. Modified input functions.
