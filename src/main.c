@@ -33,6 +33,9 @@ color_theme_config_t color_theme;
 static void load_default_color_theme(void);
 static bool headless_start(void);
 
+/*
+While the editor is being rewritten, disable the Headless Start.
+
 
 int main(void)
 {
@@ -54,6 +57,26 @@ int main(void)
   {
     gui_DrawMessageDialog_Blocking("Could not create settings appvar. Exiting...");
   };
+	
+	gfx_End();
+	return 0;
+}
+*/
+
+
+int main(void)
+{
+	gfx_Begin();
+	gfx_SetDrawBuffer();
+	
+  // Load default color theme BEFORE checking for headless start in case the
+  // headless start does not specify a custom color theme.
+	load_default_color_theme();
+	
+	if (settings_InitSettingsAppvar())
+		main_menu();
+  else
+    gui_DrawMessageDialog_Blocking("Could not create settings appvar. Exiting...");
 	
 	gfx_End();
 	return 0;

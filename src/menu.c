@@ -871,6 +871,7 @@ static void update_selected_file_size(file_data_t *selected_file)
 }
 
 
+/*
 void main_menu(void)
 {
 	file_list_t *main_file_list;
@@ -1042,6 +1043,7 @@ void main_menu(void)
       // Prevent keypress fall-throughs.
       delay(100);
     };
+    
 		
 		if (key == sk_Zoom && TABLE_ORDER[table_num] != HEXAEDIT_RECENTS_TYPE)
 		{
@@ -1056,6 +1058,143 @@ void main_menu(void)
 		{
 			break;
 		};
+	};
+  
+	// The Recent Files must be saved before the main_file_list is freed.
+	save_recent_files(recent_file_list);
+	free(recent_file_list);
+	free_main_files(main_file_list);
+	return;
+}
+*/
+
+
+// Strip HexaEdit down to just the RAM editor for rewriting
+void main_menu(void)
+{
+	file_list_t *main_file_list;
+	recent_file_list_t *recent_file_list;
+	file_data_t *selected_file;
+	
+	uint8_t table_num = RECENTS_TABLE_NUM;
+	uint8_t list_offset = 0;
+	uint8_t selected_file_offset = 0;
+	int8_t key;
+	
+	bool redraw_background = true;
+	
+	gfx_FillScreen(WHITE);
+	gui_DrawMessageDialog("Loading files...");
+	
+	if ((main_file_list = malloc(sizeof(file_list_t))) == NULL)
+		return;
+	
+	load_main_files(main_file_list);
+	NUM_FILES_PER_TYPE[APPVAR_TABLE_NUM] = main_file_list->num_appvars;
+	NUM_FILES_PER_TYPE[ASM_PRGM_TABLE_NUM] = main_file_list->num_asm_programs;
+	NUM_FILES_PER_TYPE[BASIC_PRGM_TABLE_NUM] = main_file_list->num_basic_programs;
+	
+/*
+dbg_sprintf(
+  dbgout,
+  "main_file_list = 0x%6x | size = %d\n",
+  main_file_list,
+  (uint24_t)sizeof(file_list_t)
+);
+*/
+	
+	if (ti_Open(RECENT_FILES_APPVAR, "r") == 0)
+	{
+		create_recent_files_appvar();
+	};
+	
+	if ((recent_file_list = malloc(sizeof(recent_file_list_t))) == NULL)
+	{
+		free(main_file_list);
+		return;
+	};
+	
+	if (!load_recent_files(recent_file_list, main_file_list))
+	{
+		gui_DrawMessageDialog_Blocking("Fatal: Could not load Recent Files");
+		free(recent_file_list);
+		free(main_file_list);
+		return;
+	};
+	
+/*
+dbg_sprintf(
+  dbgout,
+  "recent_file_list = 0x%6x | size = %d\n",
+  recent_file_list,
+  (uint24_t)sizeof(recent_file_list_t)
+);
+*/
+	
+	NUM_FILES_PER_TYPE[RECENTS_TABLE_NUM] = recent_file_list->num_files;
+	
+	for (;;)
+	{
+		while (selected_file_offset < list_offset && list_offset > 0)
+			list_offset--;
+		
+		while (selected_file_offset >= list_offset + NUM_FILES_ONSCREEN)
+			list_offset++;
+	
+		selected_file = set_selected_file(main_file_list, recent_file_list, table_num, selected_file_offset);
+		
+		if (redraw_background)
+		{
+			gfx_SetColor(LT_GRAY);
+			gfx_FillRectangle_NoClip(0, 20, LCD_WIDTH, LCD_HEIGHT - 40);
+			menu_DrawTitleBar();
+			draw_menu_bar(table_num);
+			draw_table_header(35);
+      draw_file_list_header(21, table_num);
+		};
+		
+		// draw_file_list_header(21, table_num);
+		erase_table();
+		
+		if (table_num == RECENTS_TABLE_NUM)
+		{
+			print_recent_files_table(recent_file_list, selected_file_offset);
+		} else {
+			print_main_files_table(main_file_list, table_num, list_offset, selected_file_offset);
+      
+      // If only a few file entries are drawn, the editor will respond very
+      // quickly to keypresses, making it hard to manage. Introduce some
+      // delay after short file list rendering.
+      // NOTE: This is inefficient and bloats the main function. Strongly
+      // advise rewriting main_menu() for efficiency improvements.
+      if ((table_num == APPVAR_TABLE_NUM) && (main_file_list->num_appvars < NUM_FILES_ONSCREEN))
+        delay(100);
+      else if ((table_num == ASM_PRGM_TABLE_NUM) && (main_file_list->num_asm_programs < NUM_FILES_ONSCREEN))
+        delay(100);
+      if ((table_num == BASIC_PRGM_TABLE_NUM) && (main_file_list->num_basic_programs < NUM_FILES_ONSCREEN))
+        delay(100);
+		};
+		
+		gfx_BlitBuffer();
+		
+		do {
+			kb_Scan();
+		} while ((key = asm_GetCSC()) == -1);
+		
+		change_selected_file_offset(&table_num, &selected_file_offset);
+		change_table_num(&table_num, &selected_file_offset, key);
+		
+		if (key == sk_Yequ)
+		{
+			editor_RAMEditor(0, 0);
+			redraw_background = true;
+      
+      // Prevent keypress fall-throughs.
+      delay(100);
+		};
+		
+		if (key == sk_Graph || key == sk_Clear)
+			break;
 	};
   
 	// The Recent Files must be saved before the main_file_list is freed.

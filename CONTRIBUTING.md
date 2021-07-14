@@ -22,9 +22,9 @@ Function Types:
 ```
 Description: (A short description of what the function does and any specific advice about using the function)
 
-Pre:          (Preconditions: What should be true before the function executes to ensure a successful execution. This field includes parameter restrictions.)
+Pre:         (Preconditions: What should be true before the function executes to ensure a successful execution. This field includes parameter restrictions.)
 
-Post:          (Postconditions: What is true after the function executes (return values, modified parameters, etc.))
+Post:        (Postconditions: What is true after the function executes (return values, modified parameters, etc.))
 ```
 
 The function declaration should start on the line immediately after the end of the documentation. "Private" functions do not have header file declarations, so their documentation should be put above their definitions.
