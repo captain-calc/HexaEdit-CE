@@ -19,6 +19,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <debug.h>
+
 
 /* Define common error messages as globals. */
 const char *EDIT_FILE_OPEN_FAIL = "Could not open edit file";
@@ -164,12 +166,30 @@ bool editact_DeleteBytes(
 	
 	uint24_t num_bytes_shift = deletion_point - editor->min_address;
 
-/*	
+	
 dbg_sprintf(
-  dbgout, "num_bytes_shift = %d | num_bytes = %d\n", num_bytes_shift, num_bytes
+  dbgout,
+  "\n" \
+  "editact_DeleteBytes()\n" \
+  "------------------------------------\n" \
+  "  num_bytes_shift        = %d\n" \
+  "  num_bytes              = %d\n" \
+  "  deletion_point         = 0x%6x\n"
+  "  editor->min_address    = 0x%6x\n" \
+  "  editor->max_address    = 0x%6x\n" \
+  "  editor->window_address = 0x%6x\n" \
+  "  cursor->primary        = 0x%6x\n" \
+  "  cursor->secondary      = 0x%6x\n",
+  num_bytes_shift,
+  num_bytes,
+  (unsigned int)deletion_point,
+  (unsigned int)editor->min_address,
+  (unsigned int)editor->max_address,
+  (unsigned int)editor->window_address,
+  (unsigned int)cursor->primary,
+  (unsigned int)cursor->secondary
 );
-dbg_sprintf(dbgout, "deletion_point = 0x%6x\n", deletion_point);
-*/
+
 	
 	ti_var_t edit_file;
 	
@@ -178,7 +198,7 @@ dbg_sprintf(dbgout, "deletion_point = 0x%6x\n", deletion_point);
 
 	ti_CloseAll();
 	
-	if ((edit_file = ti_Open(EDIT_FILE, "r")) == 0)
+	if (!(edit_file = ti_Open(EDIT_FILE, "r")))
 	{
 		gui_DrawMessageDialog_Blocking(EDIT_FILE_OPEN_FAIL);
 		return false;
@@ -191,52 +211,35 @@ dbg_sprintf(dbgout, "deletion_point = 0x%6x\n", deletion_point);
     );
   };
 
-/*	
-dbg_sprintf(
-  dbgout,
-  "Before re-assignment\neditor->min_address = 0x%6x\n",
-  editor->min_address
-);
-
-dbg_sprintf(
-  dbgout,
-  "primary = 0x%6x | secondary = 0x%6x\n",
-  cursor->primary,
-  cursor->secondary
-);
-*/
-  
 	if (ti_Resize(ti_GetSize(edit_file) - num_bytes, edit_file) != -1)
 	{
 		editor->min_address = ti_GetDataPtr(edit_file);
+    editor->max_address = editor->min_address + ti_GetSize(edit_file);
+    
+    // If the file size is 0, then max_address should equal to min_address.
+    // If the file size is greater than 0, then the max_address should point to
+    // the last byte of the file.
+		if (ti_GetSize(edit_file))
+			editor->max_address -= 1;
 		
-		//The minus one is very important. If the file size is 0,
-    // max_address == min_address - 1.
-		if (ti_GetSize(edit_file) == 0)
-		{
-			editor->max_address = editor->min_address + ti_GetSize(edit_file);
-		} else {
-			editor->max_address = editor->min_address + ti_GetSize(edit_file) - 1;
-		};
-		
-		cursor->secondary = editor->min_address + num_bytes_shift;
-		cursor->primary = cursor->secondary;
+		cursor->primary = editor->min_address + num_bytes_shift;
 		
 		if (cursor->primary < editor->min_address)
-		{
 			cursor->primary = editor->min_address;
-			cursor->secondary = editor->min_address;
-		};
 		
 		if (cursor->primary > editor->max_address)
-		{
 			cursor->primary = editor->max_address;
-			cursor->secondary = editor->max_address;
-		};
+    
+    cursor->secondary = cursor->primary;
 		
-		if (cursor->primary < editor->window_address)
+    // If the window_address winds up outside of the memory bounds, reassign it
+    // to the start of the line that the cursor is on.
+		if (
+      (editor->window_address < editor->min_address)
+      || (editor->window_address > editor->max_address)
+    )
 		{
-//dbg_sprintf(dbgout, "Re-assigned window_address\n");
+dbg_sprintf(dbgout, "Re-assigned window_address\n");
 			editor->window_address = editor->min_address
         + (((cursor->primary - editor->min_address) / COLS_ONSCREEN)
         * COLS_ONSCREEN);
@@ -252,13 +255,22 @@ dbg_sprintf(
 	if (!ti_GetSize(edit_file))
 		editor->is_file_empty = true;
 
-/*	
+	
 dbg_sprintf(
   dbgout,
-  "After re-assignment\neditor->min_address = 0x%6x\n",
-  editor->min_address
+  "Return values:\n" \
+  "  editor->min_address    = 0x%6x\n" \
+  "  editor->max_address    = 0x%6x\n" \
+  "  editor->window_address = 0x%6x\n" \
+  "  cursor->primary        = 0x%6x\n" \
+  "  cursor->secondary      = 0x%6x\n",
+  (unsigned int)editor->min_address,
+  (unsigned int)editor->max_address,
+  (unsigned int)editor->window_address,
+  (unsigned int)cursor->primary,
+  (unsigned int)cursor->secondary
 );
-*/
+
 	
 	ti_Close(edit_file);
 	return true;
@@ -270,7 +282,6 @@ bool editact_InsertBytes(
 )
 {
 	ti_var_t edit_file;
-	uint24_t i;
 	uint24_t num_bytes_shift = insertion_point - editor->min_address;
 	
 	if (num_bytes == 0)
@@ -290,38 +301,33 @@ bool editact_InsertBytes(
 		goto ERROR;
 	};
 
-/*	
+  // Temporary solution 
+  editor->min_address = ti_GetDataPtr(edit_file);
+
 dbg_sprintf(
   dbgout,
-  "file_data_ptr = 0x%6x | editor->min_address = 0x%6x\n",
-  ti_GetDataPtr(edit_file),
-  editor->min_address
+  "\n" \
+  "editact_InsertBytes()\n" \
+  "------------------------------------\n" \
+  "  num_bytes_shift        = %d\n" \
+  "  num_bytes              = %d\n" \
+  "  insertion_point        = 0x%6x\n" \
+  "  editor->min_address    = 0x%6x\n" \
+  "  editor->max_address    = 0x%6x\n" \
+  "  editor->window_address = 0x%6x\n",
+  num_bytes_shift,
+  num_bytes,
+  (unsigned int)insertion_point,
+  (unsigned int)editor->min_address,
+  (unsigned int)editor->max_address,
+  (unsigned int)editor->window_address
 );
-*/
 
 	if (ti_Rewind(edit_file) == EOF)
 	{
 		gui_DrawMessageDialog_Blocking("Could not rewind edit file");
 		goto ERROR;
 	};
-
-/*	
-dbg_sprintf(dbgout, "num_bytes_shift = %d\n", num_bytes_shift);
-
-dbg_sprintf(
-  dbgout,
-  "editor->min_address = 0x%6x | editor->max_address = 0x%6x\n",
-  editor->min_address,
-  editor->max_address
-);
-
-dbg_sprintf(
-  dbgout,
-  "primary = 0x%6x | secondary = 0x%6x\n",
-  cursor->primary,
-  cursor->secondary
-);
-*/
 
 	if (num_bytes_shift > 0)
 	{
@@ -330,19 +336,33 @@ dbg_sprintf(
     );
 	};
 	
-	for (i = 0; i < num_bytes; i++)
+	for (uint24_t i = 0; i < num_bytes; i++)
 	{
-		*(insertion_point + i) = '\0';
+		*(editor->min_address + num_bytes_shift + i) = '\0';
 	};
 	
 	if (editor->type == FILE_EDITOR && editor->is_file_empty)
 	{
 		editor->is_file_empty = false;
 		editor->max_address += num_bytes - 1;
-	} else {
-		editor->max_address += num_bytes;
 	}
+  else
+  {
+		editor->max_address += num_bytes;
+	};
 	
+dbg_sprintf(
+  dbgout,
+  "Return values (assuming successful insertion):\n" \
+  "  editor->min_address    = 0x%6x\n" \
+  "  editor->max_address    = 0x%6x\n" \
+  "  editor->window_address = 0x%6x\n",
+  (unsigned int)editor->min_address,
+  (unsigned int)editor->max_address,
+  (unsigned int)editor->window_address
+);
+  
+  
 	ti_Close(edit_file);
 	return true;
 	
@@ -356,30 +376,71 @@ bool editact_CreateUndoInsertBytesAction(
   editor_t *editor, cursor_t *cursor, uint24_t num_bytes
 )
 {
+  const uint8_t UNDO_ACTION_SIZE = sizeof(uint8_t) + 3 * sizeof(uint24_t);
+  
 	ti_var_t undo_appvar;
 	uint8_t undo_code = UNDO_INSERT_BYTES;
-	
+  
+  uint24_t window_offset = editor->window_address - editor->min_address;
+  uint24_t cursor_primary_offset = cursor->primary - editor->min_address;
+
+
+dbg_sprintf(
+  dbgout,
+  "\n" \
+  "editact_CreateUndoInsertBytesAction()\n" \
+  "------------------------------------\n" \
+  "  editor->window_address = 0x%6x\n" \
+  "  cursor->primary        = 0x%6x\n" \
+  "  num_bytes              = %d\n" \
+  "  window_offset          = %d\n" \
+  "  cursor_primary_offset  = %d\n",
+  (unsigned int)editor->window_address,
+  (unsigned int)cursor->primary,
+  num_bytes,
+  window_offset,
+  cursor_primary_offset
+);
+
+
 	if (num_bytes == 0)
 		return false;
 
 	ti_CloseAll();
 	
-	if ((undo_appvar = ti_Open(UNDO_APPVAR, "a")) == 0)
+	if (!(undo_appvar = ti_Open(UNDO_APPVAR, "a")))
 	{
 		gui_DrawMessageDialog_Blocking(UNDO_APPVAR_OPEN_FAIL);
 		goto ERROR;
 	};
-	
-	if (ti_Resize(ti_GetSize(undo_appvar) + 10, undo_appvar) == -1)
-	{
-		gui_DrawMessageDialog_Blocking(UNDO_APPVAR_RESIZE_FAIL);
-		goto ERROR;
-	};
-	
-	ti_Write(&undo_code, 1, 1, undo_appvar);
-	ti_Write(&editor->window_address, 3, 1, undo_appvar);
-	ti_Write(&cursor->primary, 3, 1, undo_appvar);
-	ti_Write(&num_bytes, 3, 1, undo_appvar);
+  
+//  if (ti_Resize(ti_GetSize(undo_appvar) + UNDO_ACTION_SIZE, undo_appvar) == -1)
+//  {
+//    gui_DrawMessageDialog_Blocking(UNDO_APPVAR_RESIZE_FAIL);
+//    goto ERROR;
+//  };
+
+  
+dbg_sprintf(
+  dbgout,
+  "Just before writing:\n" \
+  "  editor->window_address = 0x%6x\n" \
+  "  cursor->primary        = 0x%6x\n" \
+  "  num_bytes              = %d\n",
+  (unsigned int)editor->window_address,
+  (unsigned int)cursor->primary,
+  num_bytes
+);
+
+
+  uint24_t test = 0xffffff;
+  ti_Write(&test, 3, 1, undo_appvar);
+
+//  ti_Seek(-UNDO_ACTION_SIZE, SEEK_END, undo_appvar);
+	ti_Write(&undo_code, sizeof(uint8_t), 1, undo_appvar);
+  ti_Write(&window_offset, sizeof(uint24_t), 1, undo_appvar);
+	ti_Write(&cursor_primary_offset, sizeof(uint24_t), 1, undo_appvar);
+	ti_Write(&num_bytes, sizeof(uint24_t), 1, undo_appvar);
 	
 	ti_Close(undo_appvar);
 	return true;
@@ -414,6 +475,23 @@ static uint24_t undo_insert_bytes(
 	ti_Read(&num_bytes, 3, 1, undo_appvar);
 	undo_action_size = ti_Tell(undo_appvar);
 	ti_Close(undo_appvar);
+
+
+dbg_sprintf(
+  dbgout,
+  "\n" \
+  "undo_insert_bytes()\n" \
+  "------------------------------------\n" \
+  "\n" \
+  "After undo action read:\n" \
+  "  editor->window_address = 0x%6x\n" \
+  "  cursor->primary = 0x%6x\n" \
+  "  num_bytes = %d\n",
+  (unsigned int)editor->window_address,
+  (unsigned int)cursor->primary,
+  num_bytes
+);
+
 
 	// This function closes all open slots
 	deleted_bytes = editact_DeleteBytes(
