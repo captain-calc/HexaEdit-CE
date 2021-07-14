@@ -19,11 +19,11 @@ Function Types:
 
 **Function Documentation:** Every "public" function defined in a C or ASM file should have a corresponding function declaration in a header file with the same name as the source file. The only exception is `main.c`. Each function declaration should be documented. The function documentation should follow this template:
 
-`Description: (A short description of what the function does and any specific advice about using the function)
+```Description: (A short description of what the function does and any specific advice about using the function)
 
 Pre:          (Preconditions: What should be true before the function executes to ensure a successful execution. This field includes parameter restrictions.)
 
-Post:          (Postconditions: What is true after the function executes (return values, modified parameters, etc.))`
+Post:          (Postconditions: What is true after the function executes (return values, modified parameters, etc.))```
 
 The function declaration should start on the line immediately after the end of the documentation. "Private" functions do not have header file declarations, so their documentation should be put above their definitions.
 
@@ -37,11 +37,11 @@ The function declaration should start on the line immediately after the end of t
 
 **Header File Include Order:** Header files should be included in the following order:
 
-`Local header files
+```Local header files
 
 CE C library header files
 
-Standard C header files`
+Standard C header files```
 
 The only exception is the `<debug.h>` header file, which can be included where convenient.
 
