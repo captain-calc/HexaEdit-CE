@@ -24,7 +24,7 @@ static void draw_editing_size(editor_t *editor)
 	if (editor->type == FILE_EDITOR && editor->is_file_empty)
 		gfx_PrintUInt(0, 6);
 	else
-		gfx_PrintUInt(editor->max_address - editor->min_address + 1, magnitude);
+		gfx_PrintUInt(editor->mem_size, magnitude);
 	
 	gfx_PrintString(" B");
 	return;
@@ -48,7 +48,6 @@ void editorgui_DrawTopBar(editor_t *editor)
 	
 	gui_PrintFileName(editor->name, color_theme.bar_text_color);
 	
-	// gui_DrawBatteryStatus();
 	return;
 }
 
@@ -76,7 +75,7 @@ void editorgui_DrawToolBar(editor_t *editor)
 }
 
 
-void editorgui_DrawAltToolBar(cursor_t *cursor)
+void editorgui_DrawAltToolBar(uint8_t *min_address, cursor_t *cursor)
 {
 	uint8_t i;
 	uint24_t byte_value = 0;
@@ -95,7 +94,7 @@ void editorgui_DrawAltToolBar(cursor_t *cursor)
 		
 		for (i = 0; i < (cursor->primary - cursor->secondary + 1); i++)
 		{
-			byte_value += (*(cursor->secondary + i) << (8 * i));
+			byte_value += (*(min_address + cursor->secondary + i) << (8 * i));
 		};
 		
 		gfx_PrintUInt(byte_value, log10((double)byte_value + 10));
@@ -142,23 +141,29 @@ void editorgui_DrawMemAddresses(editor_t *editor, uint24_t x, uint8_t y)
 	uint8_t byte;
 	char hex[7] = {'\0'};
 	
+  // Cases to address:
+  //     Case 1: Memory section being edited is more than the window can
+  //             display.
+  //     Case 2: Memory section is smaller than what the window can display.
+  //             This can occur if (a) a file is smaller than the window
+  //             display or if (b) the editor is at the end of the memory
+  //             section and the memory only fills part of the window (a Goto
+  //             jump to the end of the memory section, for instance).
+  //     Case 3: Empty file (editor->mem_size == editor->window == 0)
+  
 	for (;;)
 	{
-// Potential overflow if editor->window_address == 0xfffff0
-//		if (row > ROWS_ONSCREEN || (editor->window_address + (row * COLS_ONSCREEN)) > editor->max_address)
-//			return;
-
-    if (row > ROWS_ONSCREEN || (editor->window_address > editor->max_address - (row * COLS_ONSCREEN)))
+    if (
+      row > ROWS_ONSCREEN
+      || ((editor->mem_size - editor->window_offset) < (row * COLS_ONSCREEN))
+    )
 			return;
 		
-		gfx_SetTextXY(x, y);
-		sprintf(hex, "%6x", (unsigned int)(editor->window_address + (row * COLS_ONSCREEN)));
-		byte = 0;
+    cutil_PtrSprintf(
+      hex, editor->min_address + editor->window_offset + (row * COLS_ONSCREEN)
+    );
 		
-		while (*(hex + byte) == ' ')
-			*(hex + byte++) = '0';
-		
-		gfx_PrintString(hex);
+		gfx_PrintStringXY(hex, x, y);
 		
 		row++;
 		y += ROW_HEIGHT;
@@ -170,19 +175,24 @@ void editorgui_DrawMemAddresses(editor_t *editor, uint24_t x, uint8_t y)
 
 void editorgui_DrawFileOffsets(editor_t *editor, uint24_t x, uint8_t y)
 {
+  const uint8_t FILE_OFFSET_MAGNITUDE = 6;
 	uint8_t row = 0;
 	
 	for (;;)
 	{
-// Potential overflow if editor->window_address == 0xfffff0
-//		if (row > ROWS_ONSCREEN || (editor->window_address + (row * COLS_ONSCREEN)) > editor->max_address)
-//			return;
 
-    if (row > ROWS_ONSCREEN || (editor->window_address > editor->max_address - (row * COLS_ONSCREEN)))
+    if (
+      row > ROWS_ONSCREEN
+      || ((editor->mem_size - editor->window_offset) < (row * COLS_ONSCREEN))
+    )
 			return;
 		
 		gfx_SetTextXY(x, y);
-		gfx_PrintUInt((editor->window_address - editor->min_address) + (row * COLS_ONSCREEN), 6);
+		gfx_PrintUInt(
+      (editor->min_address + editor->window_offset) + (row * COLS_ONSCREEN),
+      FILE_OFFSET_MAGNITUDE
+    );
+    
 		row++;
 		y += ROW_HEIGHT;
 	};
@@ -202,46 +212,67 @@ static void print_hex_value(uint24_t x, uint8_t y, uint8_t value)
 }
 
 
-static bool is_current_byte_selected(cursor_t *cursor, uint8_t *line_ptr, uint8_t byte_num, uint24_t num_bytes_selected)
+static bool is_current_byte_selected(
+  editor_t *editor,
+  cursor_t *cursor,
+  uint8_t *line_ptr,
+  uint8_t byte_num,
+  uint24_t num_bytes_selected
+)
 {
-	if (((line_ptr + byte_num) - cursor->secondary) < (int)num_bytes_selected)
+	if (
+    ((line_ptr + byte_num) - (editor->min_address + cursor->secondary))
+    < (int)num_bytes_selected
+  )
 	{
-		if (((line_ptr + byte_num) - cursor->secondary) >= 0)
+		if (
+      ((line_ptr + byte_num) - (editor->min_address + cursor->secondary)) >= 0
+    )
 			return true;
 	};
+  
 	return false;
 }
 
 
-static void print_hex_line(editor_t *editor, cursor_t *cursor, uint24_t x, uint8_t y, uint8_t *line)
+static void print_hex_line(
+  editor_t *editor, cursor_t *cursor, uint24_t x, uint8_t y, uint8_t *line
+)
 {
 	uint8_t byte_num = 0;
 	uint24_t num_bytes_selected;
 	
-	// If the primary and secondary addresses are the same, num_bytes_selected
-	// will initially be zero.
+	// If the primary and secondary offsets are the same, num_bytes_selected will
+	// initially be zero.
 	num_bytes_selected = cursor->primary - cursor->secondary;
 	num_bytes_selected++;
   
 	for (;;)
 	{
-// Potential overflow if line == 0xffffff
-//		if (byte_num == COLS_ONSCREEN || (line + byte_num) > editor->max_address)
-//			return;
-		if (byte_num == COLS_ONSCREEN || line > (editor->max_address - byte_num))
+		if (
+      byte_num == COLS_ONSCREEN
+      || (line == (editor->min_address + editor->mem_size - byte_num))
+    )
 			return;
 		
-		if (is_current_byte_selected(cursor, line, byte_num, num_bytes_selected))
+		if (
+      is_current_byte_selected(
+        editor, cursor, line, byte_num, num_bytes_selected
+      )
+    )
 		{
 			gfx_SetTextBGColor(color_theme.cursor_color);
 			gfx_SetTextFGColor(color_theme.selected_table_text_color);
 			gfx_SetTextTransparentColor(color_theme.cursor_color);
 			gfx_SetColor(color_theme.cursor_color);
 			gfx_FillRectangle_NoClip(x - 1, y - 1, HEX_COL_WIDTH, ROW_HEIGHT);
+      
 			if ((line + byte_num) == cursor->primary)
 			{
 				gfx_SetColor(color_theme.table_text_color);
-				gfx_HorizLine_NoClip(x - 1 + (9 * !cursor->high_nibble), y + FONT_HEIGHT + 1, 9);
+				gfx_HorizLine_NoClip(
+          x - 1 + (9 * !cursor->high_nibble), y + FONT_HEIGHT + 1, 9
+        );
 			};
 		}
     else
@@ -259,18 +290,29 @@ static void print_hex_line(editor_t *editor, cursor_t *cursor, uint24_t x, uint8
 }
 
 
-void editorgui_DrawHexTable(editor_t *editor, cursor_t *cursor, uint24_t x, uint8_t y)
+void editorgui_DrawHexTable(
+  editor_t *editor, cursor_t *cursor, uint24_t x, uint8_t y
+)
 {
 	uint8_t line = 0;
 	
-	for (;;)
+	while (
+    (line > ROWS_ONSCREEN)
+    || ((editor->mem_size - editor->window_offset) < (line * COLS_ONSCREEN))
+  )
 	{
-		if (line > ROWS_ONSCREEN || (editor->max_address - (line * COLS_ONSCREEN) < editor->window_address))
-			return;
-		
-		print_hex_line(editor, cursor, x, y + (line * ROW_HEIGHT), editor->window_address + (line * COLS_ONSCREEN));
+		print_hex_line(
+      editor,
+      cursor,
+      x,
+      y + (line * ROW_HEIGHT),
+      editor->min_address + editor->window_offset + (line * COLS_ONSCREEN)
+    );
+    
 		line++;
 	};
+  
+  return;
 }
 
 
@@ -285,26 +327,35 @@ static void print_ascii_value(uint24_t x, uint8_t y, uint8_t c)
 }
 
 
-static void print_ascii_line(editor_t *editor, cursor_t *cursor, uint24_t x, uint8_t y, uint8_t *line)
+static void print_ascii_line(
+  editor_t *editor,
+  cursor_t *cursor,
+  uint24_t x,
+  uint8_t y,
+  uint8_t *line
+)
 {
 	uint8_t byte_num = 0;
 	uint24_t num_bytes_selected;
 	
-	// If the primary and secondary addresses are the same, num_bytes_selected
-	// will initially be zero.
+	// If the primary and secondary offsets are the same, num_bytes_selected will
+	// initially be zero.
 	num_bytes_selected = cursor->primary - cursor->secondary;
 	num_bytes_selected++;
 	
 	for (;;)
 	{
-// Potential overflow if line == 0xffffff
-//		if (byte_num == COLS_ONSCREEN || (line + byte_num) > editor->max_address)
-//			return;
-    
-    if (byte_num == COLS_ONSCREEN || line > (editor->max_address - byte_num))
+    if (
+      byte_num == COLS_ONSCREEN
+      || (line == (editor->min_address + editor->mem_size - byte_num))
+    )
 			return;
 		
-		if (is_current_byte_selected(cursor, line, byte_num, num_bytes_selected))
+		if (
+      is_current_byte_selected(
+        editor, cursor, line, byte_num, num_bytes_selected
+      )
+    )
 		{
 			gfx_SetTextBGColor(color_theme.cursor_color);
 			gfx_SetTextFGColor(color_theme.selected_table_text_color);

@@ -640,7 +640,7 @@ static bool save_file(char *name, uint8_t type)
 	return false;
 }
 
-
+/*
 static void run_editor(editor_t *editor, cursor_t *cursor)
 {
   uint8_t can_write_nibble_ret_code;
@@ -860,6 +860,107 @@ static void run_editor(editor_t *editor, cursor_t *cursor)
     // uncontrollably.
 		if (editor->max_address - editor->window_address < COLS_ONSCREEN * ROWS_ONSCREEN)
 			delay(100);
+	};
+}
+*/
+
+
+
+// Strip editor down to only cursor movement
+static void run_editor(editor_t *editor, cursor_t *cursor)
+{
+  uint8_t can_write_nibble_ret_code;
+	int8_t key;
+	uint8_t editor_index_method = ADDRESS_INDEXING;
+	bool redraw_top_bar = true;
+	bool redraw_tool_bar = true;
+	
+//dbg_sprintf(dbgout, "window_address = 0x%6x | min_address = 0x%6x | max_address = 0x%6x\n", editor->window_address, editor->min_address, editor->max_address);
+	
+	if (editor->type == FILE_EDITOR)
+		editor_index_method = OFFSET_INDEXING;
+	
+	for (;;)
+	{
+		editorgui_DrawEditorContents(editor, cursor, editor_index_method);
+		
+		if (redraw_top_bar)
+		{
+			editorgui_DrawTopBar(editor);
+			redraw_top_bar = false;
+		};
+		
+		if (redraw_tool_bar)
+		{
+			editorgui_DrawToolBar(editor);
+			redraw_tool_bar = false;
+		};
+		
+		if (cursor->multibyte_selection)
+		{
+			editorgui_DrawAltToolBar(cursor);
+		};
+		
+		gfx_BlitBuffer();
+		
+		do {
+			kb_Scan();
+		} while ((key = asm_GetCSC()) == -1);
+		
+		if (key == sk_2nd || key == sk_Enter)
+		{
+			if (cursor->multibyte_selection)
+			{
+				cursor->multibyte_selection = false;
+				cursor->secondary = cursor->primary;
+				redraw_tool_bar = true;
+			}
+			else
+			{
+				cursor->multibyte_selection = true;
+			};
+			
+			delay(200);
+		};
+		
+		// If arrow key pressed, move cursor. If two keys are pressed simultaneously,
+		// asm_GetCSC only detects the first one it finds in the key registers, so kb_Data
+		// should be used for simultaneous keypresses.
+		if (kb_Data[7])
+		{
+			if (kb_Data[7] & kb_Up)
+			{
+				move_cursor(editor, cursor, CURSOR_UP, kb_Data[2] & kb_Alpha);
+			}
+			else if (kb_Data[7] & kb_Down)
+			{
+				move_cursor(editor, cursor, CURSOR_DOWN, kb_Data[2] & kb_Alpha);
+			}
+			else if (kb_Data[7] & kb_Left)
+			{
+				if (!cursor->high_nibble)
+					cursor->high_nibble = true;
+				move_cursor(editor, cursor, CURSOR_LEFT, kb_Data[2] & kb_Alpha);
+			}
+			else
+			{
+				move_cursor(editor, cursor, CURSOR_RIGHT, kb_Data[2] & kb_Alpha);
+			};
+			
+			if (!cursor->multibyte_selection)
+				redraw_tool_bar = true;
+		};
+    
+		if (key == sk_Clear || key == sk_Graph)
+		{
+			if (editor->num_changes == 0)
+				return;
+			
+			if (key != sk_Graph)
+				return;
+			
+			redraw_tool_bar = true;
+		};
 	};
 }
 
