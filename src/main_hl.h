@@ -1,6 +1,8 @@
 // Name:    Captain Calc
-// File:    editor.h
-// Purpose: Declares the functions that spawn HexaEdit's GUI editors.
+// File:    main_hl.h
+// Purpose: Declares the API for HexaEdit's Headless Start, a way to spawn a GUI
+//          editor without going through the main menu.
+
 
 /*
 BSD 3-Clause License
@@ -35,25 +37,59 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
-#ifndef EDITOR_H
-#define EDITOR_H
+#ifndef MAIN_HL_H
+#define MAIN_HL_H
 
 
 #include "defines.h"
 
+// HEADER
+// +----------------+-----------------+
+// | Description    | Size (in bytes) |
+// +----------------+-----------------+
+// | Header         | 8               |
+// | Flags          | 1               |
+// +----------------+-----------------+
+//  Total           | 9               |
+//                  +-----------------+
+//
 
-void editor_OpenVarEditor(
-  s_editor* const editor, void* const vatptr, const uint24_t offset
-);
+// After writing the HEADER, you should either write the MEMORY EDITOR block or
+// the VARIABLE EDITOR block, but never both.
 
+// MEMORY EDITOR
+//
+// +----------------+-----------------+
+// | Description    | Size (in bytes) |
+// +----------------+-----------------+
+// | Flag           | 1               |
+// | Cursor offset  | 3               |
+// +----------------+-----------------+
+//  Total           | 4               |
+//                  +-----------------+
+//
 
-void editor_OpenMemEditor(
-  s_editor* const editor,
-  const char* const name,
-  uint8_t* const base_address,
-  const uint24_t size,
-  const uint24_t offset
-);
+// VARIABLE EDITOR
+//
+// +----------------+-----------------+
+// | Description    | Size (in bytes) |
+// +----------------+-----------------+
+// | Name           | 8               |
+// | Name length    | 1               |
+// | Variable type  | 1               |
+// | Cursor offset  | 3               |
+// +----------------+-----------------+
+//  Total           | 13              |
+//                  +-----------------+
+//
+
+void mainhl_SetMemEditor(void);
+
+void mainhl_SetVarEditor(void);
+
+bool mainhl_CheckAns(void);
+
+int mainhl_RunEditor(s_editor* const editor);
 
 
 #endif

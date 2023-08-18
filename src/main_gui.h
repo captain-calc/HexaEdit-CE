@@ -1,3 +1,9 @@
+// Name:    Captain Calc
+// File:    main_gui.h
+// Purpose: Provides the API for starting HexaEdit's main menu.
+
+
+/*
 BSD 3-Clause License
 
 Copyright (c) 2023, Caleb "Captain Calc" Arant
@@ -27,3 +33,13 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+
+#ifndef MAIN_GUI_H
+#define MAIN_GUI_H
+
+
+int maingui_Main(s_editor* const editor);
+
+#endif

@@ -1,3 +1,10 @@
+// Name:    Captain Calc
+// File:    keypad.h
+// Purpose: Provides functions for scanning the keypad and acknowledging
+//          keypresses.
+
+
+/*
 BSD 3-Clause License
 
 Copyright (c) 2023, Caleb "Captain Calc" Arant
@@ -27,3 +34,23 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+
+#ifndef KEYMAP_H
+#define KEYMAP_H
+
+
+#include <keypadc.h>
+
+
+uint8_t keypad_ExclusiveKeymap(
+  const char* const keymap[8], uint8_t* const value
+);
+bool keypad_ExclusiveASCII(uint8_t* const value, const char mode);
+bool keypad_ExclusiveNibble(uint8_t* const value);
+bool keypad_SinglePressExclusive(kb_lkey_t key);
+void keypad_IdleKeypadBlock(void);
+
+
+#endif
