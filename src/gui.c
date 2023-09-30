@@ -763,20 +763,14 @@ void gui_Input(
   
   gfx_SetTextXY(x_pos + 2, y_pos + 2);
   gui_PrintText(buffer, g_color.list_cursor);
-  
+  gfx_FillRectangle_NoClip(
+    x_pos + gfx_GetStringWidth(buffer) + 2, y_pos + 1, 2, G_FONT_HEIGHT + 2
+  );  
   gfx_BlitRectangle(1, x_pos, y_pos, width, G_FONT_HEIGHT + 4);
   gfx_SetColor(g_color.list_cursor);
 
   do {
-    gfx_FillRectangle_NoClip(
-      x_pos + gfx_GetStringWidth(buffer) + 2, y_pos + 1, 2, G_FONT_HEIGHT + 2
-    );
-    gfx_BlitRectangle(
-      1, x_pos + gfx_GetStringWidth(buffer) + 2, y_pos + 1, 2, G_FONT_HEIGHT + 2
-    );
-
     kb_Scan();
-
   } while (!kb_AnyKey());
 
   // The [del] and [clear] key checks must fall through in case the calling
