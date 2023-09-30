@@ -257,7 +257,7 @@ CCDBG_BEGINBLOCK("mainhl_CheckAns");
     ti_Close(handle);
   }
 
-CCDBG_PUTS(g_ans_config);
+CCDBG_DUMP_PTR(g_ans_config);
 CCDBG_DUMP_UINT(retval);
 CCDBG_ENDBLOCK();
 
