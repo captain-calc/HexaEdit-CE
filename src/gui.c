@@ -859,12 +859,6 @@ static void draw_battery_status(void)
   gfx_PrintUInt(percentage, cutil_Log10(percentage));
   gfx_PrintChar('%');
 
-  uint24_t x = 294;
-  uint8_t y = 4;
-  uint24_t width = 19;
-  uint8_t height = 11;
-  uint8_t block_width = ((width - 3) / 4) - 1;
-
   gfx_SetColor(g_color.bar_text);
   gfx_Rectangle(294, 6, 2, 7);
   gfx_Rectangle_NoClip(296, 4, 19, 11);

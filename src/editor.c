@@ -75,6 +75,11 @@ static void find_prompt(s_editor* const editor);
 static bool save_changes_prompt(s_editor* const editor);
 
 
+static void toggle_cursor_selection(
+  s_editor* const editor, bool selection_active
+);
+
+
 // =============================================================================
 // PUBLIC FUNCTION DEFINITIONS
 // =============================================================================
@@ -309,10 +314,7 @@ CCDBG_BEGINBLOCK("run_editor");
       && editor->near_size
     )
     {
-      editor->selection_active = !editor->selection_active;
-
-      if (!editor->selection_active)
-        editor->selection_size = 1;
+      toggle_cursor_selection(editor, !editor->selection_active);
     }
 
     if (
@@ -340,7 +342,9 @@ CCDBG_BEGINBLOCK("run_editor");
 
     if (keypad_SinglePressExclusive(kb_KeyClear))
     {
-      if (editor->num_changes)
+      if (editor->selection_active)
+        toggle_cursor_selection(editor, false);
+      else if (editor->num_changes)
         quit = save_changes_prompt(editor);
       else
         quit = true;
@@ -755,4 +759,17 @@ static bool save_changes_prompt(s_editor* const editor)
   }
   
   return retval;
+}
+
+
+static void toggle_cursor_selection(
+  s_editor* const editor, bool selection_active
+)
+{
+  editor->selection_active = selection_active;
+
+  if (!selection_active)
+    editor->selection_size = 1;
+
+  return;
 }
