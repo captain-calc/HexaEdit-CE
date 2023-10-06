@@ -324,7 +324,6 @@ Aside from the many new features that version 3 introduces, this release finally
 ## Change Log
 | Release Number        | Git Branch   | Description
 | --------------------- |:------------:| -----------
-| v3.0.1                | master       | Blocked address-mode while editing TI-OS variables because it is not helpful.
 | v3.0.0                | master       | Complete rewrite. Reworked GUI. Editor now uses split-buffer design. Edit buffer is allocated once to prevent pointer inconsistencies while opening and closing files. Editor can now open any type of TI-OS variable.
 | v2.2.0 *(unreleased)* | improve-core | Added "Ports" memory editor. Added faster alpha scrolling alternative in editor. Switched Headless Start configuration from appvar to Ans. Introduced more robust editor setup checks.
 | v2.1.0                | improve-core | Replaced phrase search C algorithm with faster assembly algorithm. Removed user-specified phrase search range because the faster algorithm rendered it superfluous. Added [mode] key functionality to the main menu. Fixed main menu protected program bug.
