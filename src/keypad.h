@@ -49,7 +49,19 @@ uint8_t keypad_ExclusiveKeymap(
 );
 bool keypad_ExclusiveASCII(uint8_t* const value, const char mode);
 bool keypad_ExclusiveNibble(uint8_t* const value);
+
+
+// Description: Checks if a key is pressed and if so, blocks until it is
+//              released. If any other key is pressed during the block, the
+//              function will block until all keys are released and not register
+//              any keypress.
+// Pre:         <key> must be a valid long keycode.
+// Post:        Returns true when <key> is released if no other key was pressed
+//              during the time <key> was pressed.
+//              Returns false if <key> was not pressed or if any other key was
+//              pressed while <key> was pressed.
 bool keypad_SinglePressExclusive(kb_lkey_t key);
+
 
 // Description: Determines if a key is pressed or held. The <threshold>
 //              parameter adjusts the delay between the first press and the held
@@ -60,6 +72,7 @@ bool keypad_SinglePressExclusive(kb_lkey_t key);
 //              Returns false if key is not pressed or if the function has been
 //              called between 1 and <threshold> times while the key is held.
 bool keypad_KeyPressedOrHeld(kb_lkey_t key, uint8_t threshold);
+
 
 // Description: Loops until a key is pressed.
 // Pre:         None

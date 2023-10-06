@@ -147,21 +147,39 @@ bool keypad_ExclusiveNibble(uint8_t* const value)
 
 bool keypad_SinglePressExclusive(kb_lkey_t key)
 {
+  bool block_until_idle_keypad = false;
   bool key_pressed = false;
-
-  do {
+  
+  while (true)
+  {
     kb_Scan();
 
-    if (kb_IsDown(key))
-      key_pressed = true;
+    if (!kb_IsDown(key))
+      break;
+      
+    key_pressed = true;
 
     for (uint8_t idx = 1; idx < 8; idx++)
     {
-      if (idx != (key >> 8) && kb_Data[idx])
-        return false;
+      if (idx == (key >> 8))
+      {
+        if (kb_Data[idx] != (uint8_t)key)
+          block_until_idle_keypad = true;
+      }
+      else if (kb_Data[idx])
+      {
+        block_until_idle_keypad = true;
+      }
     }
 
-  } while (kb_IsDown(key));
+    if (block_until_idle_keypad)
+    {
+      while (kb_AnyKey())
+        kb_Scan();
+
+      key_pressed = false;
+    }
+  }
 
   return key_pressed;
 }
