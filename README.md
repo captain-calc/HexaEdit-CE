@@ -10,7 +10,7 @@ It also enables you to view, but not edit, the calculator's ROM.
 
 ![Screenshot showing the main menu.](screenshots/main_menu.png)
 
-The main menu displays a three-column interface that hierarchically categorizes each variable. The rightmost column shows important metadata about each variable, like size, VAT location, and memory location. It also displays the calculator's available RAM and Archive. The bottom toolbar provides easy access to HexaEdit's ROM viewer, RAM editor, and Ports editor.
+![Screenshot showing editor.](screenshots/editor_example.png)
 
 The GUI editor offers a wide array of features, such as:
 
@@ -22,7 +22,6 @@ The GUI editor offers a wide array of features, such as:
 * And, an undo function
 
 To find out more about HexaEdit CE, please visit its [Cemetech forum thread](https://www.cemetech.net/forum/viewtopic.php?t=16759).
-
 
 ## Installation
 
@@ -39,9 +38,17 @@ As it states in the BSD-3 license, the author is not responsible for any damage 
 
 **Make sure you know what you are doing before using this program!**
 
+## Overview of the Main Menu
+
+The main menu displays a three-column interface that hierarchically categorizes each variable. The rightmost column shows important metadata about each variable, like size, VAT location, and memory location. The bottom toolbar provides easy access to HexaEdit's ROM viewer, RAM editor, and Ports editor.
+
+The main menu also shows the amount of free RAM and free ROM on the calculator in the lower right-hand corner. The amount of free RAM does not include what HexaEdit is using at run-time. Above the RAM and ROM fields is one called *EDB*, "**ED**it **B**uffer Size", and it shows the edit buffer's capacity, in bytes. You cannot edit a variable with a greater size than the *EDB*. To increase the *EDB*'s capacity, you can archive or delete other variables on the calculator.
+
+![Screenshot showing EDB error message.](screenshots/EDB_error_message.png)
+
 ## Controls
 
-The keybindings have remained fairly static over all of the editions of HexaEdit, and version 3 is no different. A few keybindings are different (Lack of a dedicated "Exit" button is one. [clear] is now the de facto standard of exiting submenus, editors, and so on), but the rest have remained the same.
+HexaEdit 3 changes a few keybindings from version 2.1.0, but most of them have remain the same. The dedicated "Exit" button on the far right of the tool bar is gone, and [clear] has been extended to make it the de facto standard for exiting submenus, editors, and so on.
 
 ### Main Menu
 
@@ -60,18 +67,12 @@ The keybindings have remained fairly static over all of the editions of HexaEdit
 
 If the list cursor is in the middle-column list, you can press a letter button, and the cursor will jump to the first variable that starts with that letter. For those familiar with the Cesium shell, this is exactly the same feature. It cannot be used in the Recents list because that list is sorted by how recently a variable was opened, not by alphabetical order.
 
-The main menu displays the amount of free RAM and free ROM on the calculator in the lower right-hand corner. The amount of free RAM does not include what HexaEdit is using at run-time. Above the RAM and ROM fields is one called *EDB*, "**ED**it **B**uffer Size", and it shows the edit buffer's capacity, in bytes. You cannot edit a variable with a greater size than the *EDB*. To increase the *EDB*'s capacity, you can archive or delete other variables on the calculator.
-
-![Screenshot showing EDB error message.](screenshots/EDB_error_message.png)
-
 ### Editor/Viewer
 
 ![Screenshot showing editor.](screenshots/editor_example.png)
 
 The top bar of the editor gives the name of memory being edited, the memory's size, the editor's state variables, and the battery status.
-The editor's state variables are, in order: access type, writing mode, the number of selected bytes (the selection size), and the size of the cut-copy buffer.
-
-The access type can be "r" (read-only, for ROM), "w" (read-write, for RAM and Ports), and "i" (read-write-resize, for TI-OS variables).
+The editor's state variables are, in order: writing mode, the number of selected bytes (the selection size), and the size of the cut-copy buffer.
 
 The writing mode can be "x" (hexadecimal), "A" (uppercase letters), "a" (lowercase letters), "0" (digits). In hexadecimal, you can press the hexadecimal characters on the keypad and write nibbles (half-bytes). In the other modes, the ASCII value for uppercase letters, lowercase letters, and digits will be written.
 
@@ -90,7 +91,7 @@ Pressing a function button (the white buttons directly beneath the screen) will 
 | [graph]       | The "wMODE" stands for writing mode. Switches the writing mode.
 | [clear]       | Exits the editor. If changes have been made, a save prompt will appear.
 
-The input fields that appear for tools like Find and Goto have special keybindings
+The input fields that appear for tools like Find and Goto have special keybindings.
 
 | Key     | Description
 | ------- | -----------
