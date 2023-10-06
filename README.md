@@ -52,6 +52,8 @@ HexaEdit 3 changes a few keybindings from version 2.1.0, but most of them have r
 
 ### Main Menu
 
+![Screenshot showing the main menu.](screenshots/main_menu.png)
+
 | Key            | Description
 | -------------- | -----------
 | [up]/[down]    | Change vertical position of the list cursor.
@@ -62,8 +64,6 @@ HexaEdit 3 changes a few keybindings from version 2.1.0, but most of them have r
 | [zoom]         | Open the Ports Editor.
 | [graph]        | Open the About dialog.
 | [clear]        | Exit the program.
-
-![Screenshot showing the main menu.](screenshots/main_menu.png)
 
 If the list cursor is in the middle-column list, you can press a letter button, and the cursor will jump to the first variable that starts with that letter. For those familiar with the Cesium shell, this is exactly the same feature. It cannot be used in the Recents list because that list is sorted by how recently a variable was opened, not by alphabetical order.
 
