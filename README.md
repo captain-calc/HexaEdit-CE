@@ -8,7 +8,7 @@ HexaEdit CE is a powerful on-calc hex editor for the TI-84 Plus CE. It allows yo
 
 It also enables you to view, but not edit, the calculator's ROM.
 
-![screenshot](https://u.cubeupload.com/torontobay/hexaedit3readmemainm.png)
+![Screenshot showing the main menu.](screenshots/main_menu.png)
 
 The main menu displays a three-column interface that hierarchically categorizes each variable. The rightmost column shows important metadata about each variable, like size, VAT location, and memory location. It also displays the calculator's available RAM and Archive. The bottom toolbar provides easy access to HexaEdit's ROM viewer, RAM editor, and Ports editor.
 
@@ -56,11 +56,17 @@ The keybindings have remained fairly static over all of the editions of HexaEdit
 | [graph]        | Open the About dialog.
 | [clear]        | Exit the program.
 
+![Screenshot showing the main menu.](screenshots/main_menu.png)
+
 If the list cursor is in the middle-column list, you can press a letter button, and the cursor will jump to the first variable that starts with that letter. For those familiar with the Cesium shell, this is exactly the same feature. It cannot be used in the Recents list because that list is sorted by how recently a variable was opened, not by alphabetical order.
+
+The main menu displays the amount of free RAM and free ROM on the calculator in the lower right-hand corner. The amount of free RAM does not include what HexaEdit is using at run-time. Above the RAM and ROM fields is one called *EDB*, "**ED**it **B**uffer Size", and it shows the edit buffer's capacity, in bytes. You cannot edit a variable with a greater size than the *EDB*. To increase the *EDB*'s capacity, you can archive or delete other variables on the calculator.
+
+![Screenshot showing EDB error message.](screenshots/EDB_error_message.png)
 
 ### Editor/Viewer
 
-![screenshot](https://u.cubeupload.com/torontobay/hexaedit3betapic1.png)
+![Screenshot showing editor.](screenshots/editor_example.png)
 
 The top bar of the editor gives the name of memory being edited, the memory's size, the editor's state variables, and the battery status.
 The editor's state variables are, in order: access type, writing mode, the number of selected bytes (the selection size), and the size of the cut-copy buffer.

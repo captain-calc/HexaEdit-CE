@@ -81,7 +81,7 @@ void gui_EraseHEVATEntryInfo(void);
 
 void gui_DrawHEVATEntryInfo(void* vatptr);
 
-void gui_DrawMemoryAmounts(void);
+void gui_DrawMemoryAmounts(const s_editor* const editor);
 
 void gui_DrawMainMenuTopBar(uint24_t num_list_items);
 

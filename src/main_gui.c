@@ -132,7 +132,7 @@ CCDBG_ENDBLOCK();
       gfx_FillScreen(g_color.background);
       gui_DrawMainMenuTopBar(list->num_items);
       gui_DrawMainMenuListDividers();
-      gui_DrawMemoryAmounts();
+      gui_DrawMemoryAmounts(editor);
       gui_DrawMainMenuBottomBar();
     }
 

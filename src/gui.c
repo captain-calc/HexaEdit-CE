@@ -377,12 +377,16 @@ CCDBG_ENDBLOCK();
 }
 
 
-void gui_DrawMemoryAmounts(void)
+void gui_DrawMemoryAmounts(const s_editor* const editor)
 {
   void** free = NULL;
   uint24_t free_ram = os_MemChk(free);
 
   gui_SetTextColor(g_color.background, g_color.list_text_normal);
+  gfx_SetTextXY(216, 189);
+  gfx_PrintString("EDB: ");
+  gfx_PrintUInt(editor->buffer_size, cutil_Log10(editor->buffer_size));
+
   gfx_SetTextXY(216, 200);
   gfx_PrintString("RAM: ");
   gfx_PrintUInt(free_ram, cutil_Log10(free_ram));

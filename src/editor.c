@@ -129,6 +129,14 @@ CCDBG_BEGINBLOCK("editor_OpenVarEditor");
     tool_InitUndoStack();
     run_editor(editor);
   }
+  else
+  {
+    gui_ErrorWindow(
+      "You do not have enough$free RAM to edit this$variable. Archive or" \
+      "delete$variables to free more RAM.$Make sure the EDB is$greater than" \
+      "the variable's$size."
+    );
+  }
 
 CCDBG_ENDBLOCK();
 
