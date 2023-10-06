@@ -112,17 +112,7 @@ CCDBG_BEGINBLOCK("maingui_Main");
     {
       void* vatptr = hevat_Ptr(hevat_group_idx, gui_ListAbsOffset(list));
       hevat_AddRecent(vatptr);
-      hevat_SaveRecents();
       editor_OpenVarEditor(editor, vatptr, 0);
-
-      if (!hevat_Load())
-      {
-CCDBG_ENDBLOCK();
-
-        gui_ErrorWindow("Cannot reload HEVAT.$Program will close.");
-        return 1;
-      }
-
       redraw_all = true;
       open_variable = false;
     }

@@ -173,11 +173,7 @@ bool hevat_SaveRecents(void)
 CCDBG_BEGINBLOCK("tool_SaveRecents");
 
   s_calc_var var;
-  void** free_ram = NULL;
   uint8_t handle;
-
-  if (os_MemChk(free_ram) < 2 * G_RECENTS_APPVAR_SIZE)
-    return false;
 
   if (!(handle = ti_Open(G_RECENTS_APPVAR_NAME, "r+")))
   {
