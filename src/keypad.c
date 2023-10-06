@@ -37,9 +37,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include <assert.h>
+#include <string.h>
 
+#include "ccdbg/ccdbg.h"
 #include "defines.h"
 #include "keypad.h"
+
+
+// File global. Do NOT use this variable outside of this file.
+// 7 key groups * 8 possible keys per group = 56. Some of the bytes in this
+// array are never used because they do not have keys associated with them.
+uint8_t key_counters[56] = { 0 };
 
 
 // https://www.eevblog.com/forum/beginners/from-bit-position-to-array-index/
@@ -159,8 +167,48 @@ bool keypad_SinglePressExclusive(kb_lkey_t key)
 }
 
 
+bool keypad_KeyPressedOrHeld(kb_lkey_t key, uint8_t threshold)
+{
+  // kb_lkey_t is an uint16_t.
+  // Casting <key> to an uint8_t discards the upper byte, which is desired.
+  uint8_t index = (8 * ((key >> 8) - 1)) + bit_to_idx((uint8_t)key);
+
+  assert(index < sizeof key_counters);
+
+  if (kb_IsDown(key))
+  {
+    if (key_counters[index] < 255)
+      key_counters[index]++;
+  }
+  else
+  {
+    key_counters[index] = 0;
+  }
+
+  if (key_counters[index] == 1 || key_counters[index] >= threshold)
+    return true;
+
+  return false;
+}
+
+
 void keypad_IdleKeypadBlock(void)
 {
-  do { kb_Scan(); } while (!kb_AnyKey());
+  bool reset_key_counters = false;
+  
+  while (true)
+  {
+    kb_Scan();
+
+    if (kb_AnyKey())
+      break;
+
+    if (!reset_key_counters)
+    {
+      memset(key_counters, '\0', sizeof key_counters);
+      reset_key_counters = true;
+    }
+  }
+
   return;
 }

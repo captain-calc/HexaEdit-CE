@@ -73,6 +73,7 @@ int maingui_Main(s_editor* const editor)
 {
 CCDBG_BEGINBLOCK("maingui_Main");
 
+  const uint8_t KEYPRESS_DELAY_THRESHOLD = 8;
   s_list* list;
   bool quit = false;
   bool redraw_all = true;
@@ -234,10 +235,10 @@ CCDBG_ENDBLOCK();
         open_variable = true;
     }
 
-    if (kb_IsDown(kb_KeyUp))
+    if (keypad_KeyPressedOrHeld(kb_KeyUp, KEYPRESS_DELAY_THRESHOLD))
       gui_DecrementListOffset(list);
 
-    if (kb_IsDown(kb_KeyDown))
+    if (keypad_KeyPressedOrHeld(kb_KeyDown, KEYPRESS_DELAY_THRESHOLD))
       gui_IncrementListOffset(list);
   }
 

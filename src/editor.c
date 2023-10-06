@@ -186,6 +186,8 @@ CCDBG_ENDBLOCK();
 static void run_editor(s_editor* const editor)
 {
 CCDBG_BEGINBLOCK("run_editor");
+
+  const uint8_t KEYPRESS_DELAY_THRESHOLD = 7;
   bool quit = false;
   bool redraw_location_col = true;  // Draw the column for initialization.
   bool blit = true;
@@ -339,20 +341,20 @@ CCDBG_BEGINBLOCK("run_editor");
     else
       accel_cursor = false;
 
-    if (kb_IsDown(kb_KeyLeft))
+    if (keypad_KeyPressedOrHeld(kb_KeyLeft, KEYPRESS_DELAY_THRESHOLD))
       tool_MoveCursor(editor, 0, 1);
 
-    if (kb_IsDown(kb_KeyRight))
+    if (keypad_KeyPressedOrHeld(kb_KeyRight, KEYPRESS_DELAY_THRESHOLD))
       tool_MoveCursor(editor, 1, 1);
 
-    if (kb_IsDown(kb_KeyUp))
+    if (keypad_KeyPressedOrHeld(kb_KeyUp, KEYPRESS_DELAY_THRESHOLD))
     {
       tool_MoveCursor(
         editor, 0, (accel_cursor ? G_NUM_BYTES_ONSCREEN : G_COLS_ONSCREEN)
       );
     }
 
-    if (kb_IsDown(kb_KeyDown))
+    if (keypad_KeyPressedOrHeld(kb_KeyDown, KEYPRESS_DELAY_THRESHOLD))
     {
       tool_MoveCursor(
         editor, 1, (accel_cursor ? G_NUM_BYTES_ONSCREEN : G_COLS_ONSCREEN)
@@ -529,6 +531,7 @@ static void find_viewer(
   s_editor* const editor, uint24_t matches[], uint8_t num_matches
 )
 {
+  const uint8_t KEYPRESS_DELAY_THRESHOLD = 8;
   uint8_t prev_idx = 0;
   uint8_t idx = 0;
 
@@ -568,9 +571,9 @@ static void find_viewer(
 
     prev_idx = idx;
 
-    if (kb_IsDown(kb_KeyUp))
+    if (keypad_KeyPressedOrHeld(kb_KeyUp, KEYPRESS_DELAY_THRESHOLD))
       idx = (idx ? idx - 1 : num_matches - 1);
-    else if (kb_IsDown(kb_KeyDown))
+    else if (keypad_KeyPressedOrHeld(kb_KeyDown, KEYPRESS_DELAY_THRESHOLD))
       idx = (idx + 1) % num_matches;
   }
 
