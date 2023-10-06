@@ -215,6 +215,8 @@ CCDBG_BEGINBLOCK("run_editor");
     gfx_VertLine_NoClip(230, 20, 200);
     gfx_VertLine_NoClip(231, 20, 200);
 
+    // gui_DrawTitleBar() must be called every iteration because the battery
+    // status updates on a timer.
     gui_DrawTitleBar(editor);
     gui_DrawToolBar(editor);
     gui_PrintData(editor);

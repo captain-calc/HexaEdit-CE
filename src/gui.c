@@ -579,18 +579,23 @@ void gui_DrawTitleBar(const s_editor* const editor)
 
   gui_PrintText(name, g_color.bar_text);
 
-  gfx_SetTextXY(100, 6);
+  gfx_SetTextXY(90, 6);
   gfx_PrintUInt(editor->data_size, cutil_Log10(editor->data_size));
   gfx_PrintString(" B");
 
-  gfx_SetTextXY(190, 6);
-  gfx_PrintChar(editor->access_type);
-  gfx_PrintString(" | ");
+  gfx_SetTextXY(184, 6);
+  gfx_PrintUInt(editor->selection_size, 3);
+  gfx_PrintString("  (");
+  gfx_PrintUInt(cutcopy_buffer_size, 3);
+  gfx_PrintChar(')');
+
+  gfx_SetColor(g_color.bar_text);
+  gfx_FillRectangle_NoClip(
+    169, 4, gfx_GetCharWidth(editor->writing_mode) + 1, G_FONT_HEIGHT + 4
+  );
+  gfx_SetTextXY(170, 6);
+  gui_SetTextColor(g_color.bar_text, g_color.bar);
   gfx_PrintChar(editor->writing_mode);
-  gfx_PrintString(" | ");
-  gfx_PrintUInt(cutcopy_buffer_size, cutil_Log10(cutcopy_buffer_size));
-  gfx_PrintString(" | ");
-  gfx_PrintUInt(editor->selection_size, cutil_Log10(editor->selection_size));
 
   draw_battery_status();
   return;
@@ -824,14 +829,14 @@ static void print_hex(uint8_t value, uint24_t xpos, uint8_t ypos)
   return;
 }
 
-
 static void draw_battery_status(void)
 {
   const double FIVE_MIN_IN_SEC = 300;
 
   static uint8_t charging = 0;
-  static uint8_t percentage = 0;
+  static uint8_t battery_status = 0;
   static double prev_clock = 0;
+  uint8_t percentage;
   double curr_clock = clock();
 
   if (
@@ -839,21 +844,51 @@ static void draw_battery_status(void)
     || ((curr_clock - prev_clock) / CLOCKS_PER_SEC) > FIVE_MIN_IN_SEC)
   {
     prev_clock = curr_clock;
-    percentage = 25 * boot_GetBatteryStatus();
+    battery_status = boot_GetBatteryStatus();
     charging = boot_BatteryCharging();
   }
 
+  percentage = battery_status * 25;
+
   gfx_SetTextXY(
-    315 - gfx_GetCharWidth('%')
-    - (cutil_Log10(percentage) * gfx_GetCharWidth('0'))
-    - (charging ? gfx_GetStringWidth(" CHR") : 0),
+    290 - gfx_GetCharWidth('%')
+    - (cutil_Log10(percentage) * gfx_GetCharWidth('0')),
     6
   );
+  gui_SetTextColor(g_color.bar, g_color.bar_text);
   gfx_PrintUInt(percentage, cutil_Log10(percentage));
-  gfx_PrintString("% ");
+  gfx_PrintChar('%');
+
+  uint24_t x = 294;
+  uint8_t y = 4;
+  uint24_t width = 19;
+  uint8_t height = 11;
+  uint8_t block_width = ((width - 3) / 4) - 1;
+
+  gfx_SetColor(g_color.bar_text);
+  gfx_Rectangle(294, 6, 2, 7);
+  gfx_Rectangle_NoClip(296, 4, 19, 11);
 
   if (charging)
-    gfx_PrintString("CHR");
+  {
+    for (
+      uint8_t idx = 0;
+      idx < (battery_status == 4 ? 4 : battery_status + 1);
+      idx++
+    )
+    {
+      gfx_FillRectangle_NoClip(
+        310 - (idx * 4), 6 + (idx * 2), 3, 7 - (idx * 2)
+      );
+    }
+  }
+  else
+  {
+    for (uint8_t idx = 0; idx < battery_status; idx++)
+    {
+      gfx_FillRectangle_NoClip(310 - (idx * 4), 6, 3, 7);
+    }
+  }
 
   return;
 }

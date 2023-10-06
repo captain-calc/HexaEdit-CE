@@ -130,7 +130,6 @@ CCDBG_ENDBLOCK();
     if (redraw_all)
     {
       gfx_FillScreen(g_color.background);
-      gui_DrawMainMenuTopBar(list->num_items);
       gui_DrawMainMenuListDividers();
       gui_DrawMemoryAmounts(editor);
       gui_DrawMainMenuBottomBar();
@@ -141,6 +140,7 @@ CCDBG_ENDBLOCK();
     gui_DrawList(&master_list, HEVAT__GROUP_NAMES);
     gui_DrawHEVATList(&sub_list, hevat_group_idx);
     gui_DrawSelectedListIndicator(list == &master_list);
+    gui_DrawMainMenuTopBar(list->num_items);
 
     if (list == &sub_list)
     {
