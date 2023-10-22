@@ -149,15 +149,20 @@ bool keypad_SinglePressExclusive(kb_lkey_t key)
 {
   bool block_until_idle_keypad = false;
   bool key_pressed = false;
-  
+
+  // If the key is not pressed, terminate early so that the function does not
+  // update the keypad data registers.
+  if (!kb_IsDown(key))
+    return key_pressed;
+
+  key_pressed = true;
+
   while (true)
   {
     kb_Scan();
 
     if (!kb_IsDown(key))
       break;
-      
-    key_pressed = true;
 
     for (uint8_t idx = 1; idx < 8; idx++)
     {
