@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "defines.h"
 
 
-void editor_OpenVarEditor(
+bool editor_OpenVarEditor(
   s_editor* const editor, void* const vatptr, const uint24_t offset
 );
 

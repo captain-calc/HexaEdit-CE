@@ -111,8 +111,10 @@ CCDBG_BEGINBLOCK("maingui_Main");
     if (open_variable)
     {
       void* vatptr = hevat_Ptr(hevat_group_idx, gui_ListAbsOffset(list));
-      hevat_AddRecent(vatptr);
-      editor_OpenVarEditor(editor, vatptr, 0);
+
+      if (editor_OpenVarEditor(editor, vatptr, 0))
+        hevat_AddRecent(vatptr);
+
       redraw_all = true;
       open_variable = false;
     }

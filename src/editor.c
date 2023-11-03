@@ -93,7 +93,7 @@ static void toggle_cursor_selection(
 // =============================================================================
 
 
-void editor_OpenVarEditor(
+bool editor_OpenVarEditor(
   s_editor* const editor, void* const vatptr, const uint24_t offset
 )
 {
@@ -101,6 +101,7 @@ CCDBG_BEGINBLOCK("editor_OpenVarEditor");
 
   s_calc_var var;
   uint24_t var_data_size;
+  bool retval = true;
   uint8_t* var_data;
 
   var.vatptr = vatptr;
@@ -149,11 +150,13 @@ CCDBG_BEGINBLOCK("editor_OpenVarEditor");
       "delete$variables to free more RAM.$Make sure the EDB is$greater than" \
       "the variable's$size."
     );
+
+    retval = false;
   }
 
 CCDBG_ENDBLOCK();
 
-  return;
+  return retval;
 }
 
 
