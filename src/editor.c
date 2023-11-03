@@ -559,6 +559,8 @@ static void find_viewer(
   const uint8_t phrase_length
 )
 {
+CCDBG_BEGINBLOCK("find_viewer");
+
   const uint8_t KEYPRESS_DELAY_THRESHOLD = 8;
   uint8_t prev_idx = 0;
   uint8_t idx = 0;
@@ -567,6 +569,10 @@ static void find_viewer(
 
   while (true)
   {
+
+CCDBG_DUMP_UINT(idx);
+CCDBG_DUMP_UINT(matches[idx]);
+  
     // This section massages the window offset using selective goto actions to
     // make the entire selected phrase appear onscreen.
     // ==================
@@ -609,6 +615,8 @@ static void find_viewer(
 
   editor->selection_active = false;
   editor->selection_size = 1;
+
+CCDBG_ENDBLOCK();
 
   return;
 }

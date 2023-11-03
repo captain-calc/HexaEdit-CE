@@ -230,7 +230,7 @@ _asmutil_FindPhrase:
   pop   bc
   push  hl
 
-; If bfind does not return a match, exit
+; If _find_phrase does not return a match, exit
   sbc   hl,hl           ; If carry flag is reset, this will not set it again
   jr    nc,.finish
 

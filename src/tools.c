@@ -531,7 +531,7 @@ void tool_MoveCursor(
   if (direction == 0)
   {
     // editor->near_size is guaranteed to be at least one IF the edit buffer
-    // has in it.
+    // has data in it.
     if (editor->data_size)
       copy_size = min(editor->near_size - 1, copy_size);
     else
@@ -812,6 +812,9 @@ void tool_FindPhrase(
   uint8_t* const num_matches
 )
 {
+CCDBG_BEGINBLOCK("tool_FindPhrase");
+CCDBG_DUMP_UINT(editor->near_size);
+
   assert(!editor->selection_active);
   assert(editor->data_size > G_NUM_BYTES_ONSCREEN);
   assert(length < editor->data_size);
@@ -827,18 +830,21 @@ void tool_FindPhrase(
   // If the very last byte of the near buffer is the start of the phrase, we
   // need add <length> - 1 bytes from the start of the far buffer to the end of
   // the near buffer to catch that phrase occurrance.
-  tool_MoveCursor(editor, length - 1, 1);
+  tool_MoveCursor(editor, 1, length - 1);
 
   if (
     !memcmp(editor->base_address + editor->near_size - length, phrase, length)
   )
   {
-    matches[0] = editor->near_size - length;
+    // Add the base address because the first convert for-loop expects it.
+    matches[0] = (uint24_t)editor->base_address + editor->near_size - length;
     num_matches_far_buffer = 1;
   }
 
   // Move the cursor back to its original position.
-  tool_MoveCursor(editor, length - 1, 0);
+  tool_MoveCursor(editor, 0, length - 1);
+
+  CCDBG_DUMP_UINT(editor->near_size);
 
   far_start_address = (
     editor->base_address + editor->buffer_size - editor->far_size
@@ -855,9 +861,9 @@ void tool_FindPhrase(
 
   // Convert the physical memory addresses into offsets relative to the edit
   // buffer's base address.
-  for (uint8_t idx = 0; idx < num_matches_near_buffer; idx++)
+  for (uint8_t idx = 0; idx < num_matches_far_buffer; idx++)
   {
-    matches[idx] -= (uint24_t)far_start_address + editor->near_size - 1;
+    matches[idx] -= (uint24_t)far_start_address + editor->near_size - 2;
   }
 
   num_matches_near_buffer = asmutil_FindPhrase(
@@ -881,6 +887,23 @@ void tool_FindPhrase(
   }
 
   *num_matches = num_matches_near_buffer + num_matches_far_buffer;
+
+#if USE_CCDBG
+CCDBG_DUMP_UINT(*num_matches);
+CCDBG_DUMP_UINT(num_matches_far_buffer);
+CCDBG_DUMP_UINT(num_matches_near_buffer);
+CCDBG_DUMP_PTR(editor->base_address);
+CCDBG_DUMP_UINT(editor->near_size);
+CCDBG_DUMP_PTR(editor->base_address + editor->near_size - 1);
+
+for (uint8_t idx = 0; idx < *num_matches; idx++)
+{
+  CCDBG_DUMP_UINT(matches[idx]);
+}
+#endif
+
+CCDBG_ENDBLOCK();
+  
   return;
 }
 
