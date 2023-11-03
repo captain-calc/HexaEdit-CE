@@ -780,16 +780,14 @@ void gui_Input(
   gfx_BlitRectangle(1, x_pos, y_pos, width, G_FONT_HEIGHT + 4);
   gfx_SetColor(g_color.list_cursor);
 
-  do {
-    kb_Scan();
-  } while (!kb_AnyKey());
+  keypad_IdleKeypadBlock();
 
-  // The [del] and [clear] key checks must fall through in case the calling
-  // function redefines the purpose of those keys.
+  // The [del] is not a single-press-exclusive because the user should be able
+  // to hold the [del] key to remove multiple characters from the buffer.
   if (kb_IsDown(kb_KeyDel) && offset)
     buffer[--offset] = '\0';
 
-  if (kb_IsDown(kb_KeyClear))
+  if (strlen(buffer) && keypad_SinglePressExclusive(kb_KeyClear))
     memset(buffer, '\0', buffer_size);
 
   if (!keypad_ExclusiveKeymap(keymap, &value) && offset < buffer_size)
