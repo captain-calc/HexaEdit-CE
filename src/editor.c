@@ -69,6 +69,14 @@ static void goto_prompt(s_editor* const editor);
 static void insert_bytes_prompt(s_editor* const editor);
 
 
+static void find_viewer(
+  s_editor* const editor,
+  const uint24_t matches[],
+  const uint8_t num_matches,
+  const uint8_t phrase_length
+);
+
+
 static void find_prompt(s_editor* const editor);
 
 
@@ -542,12 +550,17 @@ static void ascii_to_nibble(char* ascii_buffer, char* nibble_buffer)
 
 
 static void find_viewer(
-  s_editor* const editor, uint24_t matches[], uint8_t num_matches
+  s_editor* const editor,
+  const uint24_t matches[],
+  const uint8_t num_matches,
+  const uint8_t phrase_length
 )
 {
   const uint8_t KEYPRESS_DELAY_THRESHOLD = 8;
   uint8_t prev_idx = 0;
   uint8_t idx = 0;
+
+  editor->selection_size = phrase_length;
 
   while (true)
   {
@@ -681,7 +694,7 @@ static void find_prompt(s_editor* const editor)
         );
 
         if (num_matches)
-          find_viewer(editor, matches, num_matches);
+          find_viewer(editor, matches, num_matches, phrase_length);
         else
         {
           gui_DrawFindPromptMessage("0 matches");

@@ -43,6 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ccdbg/ccdbg.h"
 #include "asmutil.h"
+#include "defines.h"
 #include "hevat.h"
 #include "tools.h"
 
@@ -487,8 +488,12 @@ bool tool_IsAvailable(const s_editor* const editor, void* const tool_func_ptr)
       break;
 
     case 8: // tool_FindPhrase
-      if (!editor->selection_active)
+      if (
+        !editor->selection_active && editor->data_size >= G_NUM_BYTES_ONSCREEN
+      )
+      {
         available = true;
+      }
       break;
 
     case 9: // tool_SwitchWritingMode
@@ -804,12 +809,11 @@ void tool_FindPhrase(
   const uint8_t phrase[],
   const uint8_t length,
   uint24_t matches[],
-  uint8_t* num_matches
+  uint8_t* const num_matches
 )
 {
-CCDBG_BEGINBLOCK("tool_FindPhrase");
-
   assert(!editor->selection_active);
+  assert(editor->data_size > G_NUM_BYTES_ONSCREEN);
   assert(length < editor->data_size);
   assert(*num_matches == 0);
   assert(length > 1);
@@ -818,109 +822,65 @@ CCDBG_BEGINBLOCK("tool_FindPhrase");
 
   uint8_t num_matches_near_buffer = 0;
   uint8_t num_matches_far_buffer = 0;
-  uint8_t* end_address;
-  uint8_t* far_start_address = (
-    editor->base_address + editor->buffer_size - (editor->far_size + 1)
-  );
+  uint8_t* far_start_address;
 
-  if (editor->far_size)
+  // If the very last byte of the near buffer is the start of the phrase, we
+  // need add <length> - 1 bytes from the start of the far buffer to the end of
+  // the near buffer to catch that phrase occurrance.
+  tool_MoveCursor(editor, length - 1, 1);
+
+  if (
+    !memcmp(editor->base_address + editor->near_size - length, phrase, length)
+  )
   {
-    // Copy last byte of near buffer to the byte before the start of the far
-    // buffer.
-    *far_start_address = *(editor->base_address + editor->near_size - 1);
-
-CCDBG_DUMP_PTR(far_start_address);
-CCDBG_DUMP_PTR(editor->base_address + editor->buffer_size);
-
-    num_matches_near_buffer = asmutil_FindPhrase(
-      far_start_address,
-      editor->base_address + editor->buffer_size - 1,
-      phrase,
-      length,
-      matches,
-      MAX_NUM_MATCHES
-    );
-
-    // Convert the physical memory addresses into offsets relative to the edit
-    // buffer's base address.
-    for (uint8_t idx = 0; idx < num_matches_near_buffer; idx++)
-    {
-      matches[idx] -= (uint24_t)far_start_address + editor->near_size - 1;
-    }
+    matches[0] = editor->near_size - length;
+    num_matches_far_buffer = 1;
   }
 
-  if (num_matches_near_buffer < MAX_NUM_MATCHES && editor->near_size > 1)
+  // Move the cursor back to its original position.
+  tool_MoveCursor(editor, length - 1, 0);
+
+  far_start_address = (
+    editor->base_address + editor->buffer_size - editor->far_size
+  );
+
+  num_matches_far_buffer += asmutil_FindPhrase(
+    far_start_address,
+    editor->base_address + editor->buffer_size - 1,
+    phrase,
+    length,
+    matches + num_matches_far_buffer,
+    MAX_NUM_MATCHES
+  );
+
+  // Convert the physical memory addresses into offsets relative to the edit
+  // buffer's base address.
+  for (uint8_t idx = 0; idx < num_matches_near_buffer; idx++)
   {
-    // Copy <length> - 1 bytes from the start of the far buffer to the end of
-    // the near buffer.
-    if (editor->is_tios_var)
-    {
-      asmutil_CopyData(
-        far_start_address + 1,
-        editor->base_address + editor->near_size,
-        length - 1,
-        1
-      );
-    }
+    matches[idx] -= (uint24_t)far_start_address + editor->near_size - 1;
+  }
 
-    // Special case for the Ports area.
-    if (
-      (uint24_t)editor->base_address
-      > (0xffffff - editor->near_size - length + 1))
-    {
-      end_address = (uint8_t*)0xffffff;
-    }
-    else
-    {
-      end_address = editor->base_address + editor->near_size + length - 1;
-    }
+  num_matches_near_buffer = asmutil_FindPhrase(
+    editor->base_address,
+    editor->base_address + editor->near_size - 1,
+    phrase,
+    length,
+    matches + num_matches_far_buffer,
+    MAX_NUM_MATCHES - num_matches_far_buffer
+  );
 
-    num_matches_far_buffer = asmutil_FindPhrase(
-      editor->base_address,
-      end_address,
-      phrase,
-      length,
-      matches + num_matches_near_buffer,
-      MAX_NUM_MATCHES - num_matches_near_buffer
-    );
-
-    // Copy the <length> - 1 bytes back to their original position. If the edit
-    // buffer's scrap space between the near and far buffers is less than
-    // <length>, the previous copy overwrote a few bytes of the far buffer.
-    if (editor->is_tios_var)
-    {
-      asmutil_CopyData(
-        editor->base_address + editor->near_size,
-        far_start_address + 1,
-        length - 1,
-        1
-      );
-    }
-
-    // Convert the physical memory addresses into offsets relative to the edit
-    // buffer's base address.
-    for (
-      uint8_t idx = num_matches_near_buffer;
-      idx < num_matches_near_buffer + num_matches_far_buffer;
-      idx++
-    )
-    {
-      matches[idx] -= (uint24_t)editor->base_address;
-    }
+  // Convert the physical memory addresses into offsets relative to the edit
+  // buffer's base address.
+  for (
+    uint8_t idx = num_matches_far_buffer;
+    idx < num_matches_near_buffer + num_matches_far_buffer;
+    idx++
+  )
+  {
+    matches[idx] -= (uint24_t)editor->base_address;
   }
 
   *num_matches = num_matches_near_buffer + num_matches_far_buffer;
-
-  if (*num_matches)
-  {
-    editor->selection_active = true;
-    editor->selection_size = length;
-  }
-
-CCDBG_DUMP_PTR(matches);
-CCDBG_DUMP_UINT(*num_matches);
-CCDBG_ENDBLOCK();
-
   return;
 }
 

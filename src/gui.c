@@ -678,8 +678,10 @@ void gui_DrawFindPromptMessage(const char* const message)
 {
   uint24_t width = gfx_GetStringWidth(message);
 
+  gfx_SetColor(g_color.bar);
+  gfx_FillRectangle_NoClip(220, 226, LCD_WIDTH - 220, G_FONT_HEIGHT);
+
   gui_SetTextColor(g_color.bar, g_color.bar_text);
-  gfx_FillRectangle_NoClip(315 - width, 226, G_FONT_HEIGHT, width);
   gfx_PrintStringXY(message, 315 - width, 226);
   gfx_BlitRectangle(1, 0, 220, LCD_WIDTH, 20);
   return;

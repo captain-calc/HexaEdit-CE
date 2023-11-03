@@ -101,7 +101,7 @@ The input fields that appear for tools like Find and Goto have special keybindin
 
 The keymap indicator, shown at the far right of the field uses the same characters as the writing mode indicator, i.e. "x" (hexadecimal), "A" (uppercase letters), "a" (lowercase letters), and "0" (digits).
 
-The Find input field expects at least four characters in hexadecimal mode and at least two characters in any other mode.
+The Find function will not be available for variables/memory areas that have less than a screens-worth of data in them. The Find input field expects at least four characters in hexadecimal mode and at least two characters in any other mode. **Note:** When doing searches in RAM, a particular phrase may exist at the time the find function searches the memory, but it may not exist by the time the viewer starts. This is because HexaEdit runs in RAM, so it will alter memory contents as it executes.
 
 ## Headless Start
 
