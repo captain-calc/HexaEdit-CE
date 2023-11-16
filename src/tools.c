@@ -995,8 +995,13 @@ CCDBG_DUMP_UINT(*(uint24_t*)g_undo_sp);
       tool_Goto(editor, *(uint24_t*)g_undo_sp + g_cutcopy_buffer_size - 1);
       g_undo_sp += sizeof(uint24_t);
       asmutil_CopyData(g_undo_sp, g_cutcopy_buffer, g_cutcopy_buffer_size, 1);
-      editor->selection_active = true;
-      editor->selection_size = g_cutcopy_buffer_size;
+
+      if (g_cutcopy_buffer_size > 1)
+      {
+        editor->selection_active = true;
+        editor->selection_size = g_cutcopy_buffer_size;
+      }
+      
       tool_PasteBytes(editor);
       g_undo_sp += g_cutcopy_buffer_size - 1;
       g_cutcopy_buffer_size = 0;  // Destroy the cut/copy buffer.
@@ -1284,10 +1289,14 @@ static void addundo_delete_or_cut_or_paste_bytes(
   if (!undo_buffer_has_room(sizeof data))
     return;
 
-  asmutil_CopyData(editor->base_address + offset, data.data, data.num_bytes, 1);
-
-  g_undo_sp -= ((sizeof data) - 1);
-  *(s_data*)g_undo_sp = data;
+  g_undo_sp -= data.num_bytes - 1;
+  asmutil_CopyData(editor->base_address + offset, g_undo_sp, data.num_bytes, 1);
+  g_undo_sp -= sizeof data.offset;
+  *(uint24_t*)g_undo_sp = data.offset;
+  g_undo_sp -= sizeof data.num_bytes;
+  *g_undo_sp = data.num_bytes;
+  g_undo_sp -= sizeof data.code;
+  *g_undo_sp = data.code;
   g_undo_sp--;
   editor->num_changes++;
   return;

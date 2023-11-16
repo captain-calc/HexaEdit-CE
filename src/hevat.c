@@ -248,11 +248,11 @@ void hevat_Name(
   const uint24_t offset
 )
 {
-  void** data = NULL;
+  void* data = NULL;
   uint24_t type = 0;
 
   os_NextSymEntry(
-    hevat_Ptr(hevat_group_idx, offset), &type, name_length, name, data
+    hevat_Ptr(hevat_group_idx, offset), &type, name_length, name, &data
   );
 
   return;
@@ -573,12 +573,12 @@ bool hevat_GetVarInfoByNameAndType(
   uint24_t vat_type = 0;
   uint24_t vat_name_length = 0;
   char vat_name[9];
-  void** data = NULL;
+  void* data = NULL;
 
   while (last_entry != NULL)
   {
     entry = os_NextSymEntry(
-      last_entry, &vat_type, &vat_name_length, vat_name, data
+      last_entry, &vat_type, &vat_name_length, vat_name, &data
     );
     var->vatptr = last_entry;
     hevat_GetVarInfoByVAT(var);
