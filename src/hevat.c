@@ -687,15 +687,17 @@ CCDBG_ENDBLOCK();
 
 static void count_vatptrs()
 {
+CCDBG_BEGINBLOCK("count_vatptrs()");
+
   void* entry = os_GetSymTablePtr();
   uint24_t os_var_type = 0;
   uint24_t name_length = 0;
   char name[9];
-  void** data = NULL;
+  void* data = NULL;
 
   while (entry != NULL)
   {
-    entry = os_NextSymEntry(entry, &os_var_type, &name_length, name, data);
+    entry = os_NextSymEntry(entry, &os_var_type, &name_length, name, &data);
     g_num_entries[hevat_group_index(os_var_type)]++;
     g_num_vatptrs++;
   };
@@ -704,6 +706,8 @@ static void count_vatptrs()
   // by one because we are not counting HexaEdit's edit buffer appvar.
   g_num_vatptrs--;
   g_num_entries[HEVAT__APPVAR]--;
+
+CCDBG_ENDBLOCK();
 
   return;
 }
@@ -734,7 +738,7 @@ CCDBG_BEGINBLOCK("load_vatptr_entries");
   uint24_t os_var_type = 0;
   uint24_t name_length = 0;
   char name[9];
-  void** data = NULL;
+  void* data = NULL;
 
   uint24_t curr_num_entries[MAX_NUM_HEVAT_ENTRIES] = { 0 };
   uint8_t hevat_group_idx;
@@ -744,7 +748,7 @@ CCDBG_BEGINBLOCK("load_vatptr_entries");
   while (entry != NULL && num_loaded < MAX_NUM_HEVAT_ENTRIES)
   {
     last_entry = entry;
-    entry = os_NextSymEntry(entry, &os_var_type, &name_length, name, data);
+    entry = os_NextSymEntry(entry, &os_var_type, &name_length, name, &data);
 
     // Do not load the VAT entry for HexaEdit's edit buffer appvar.
     if (
@@ -782,11 +786,11 @@ static int8_t entry_name_cmp(void* vatptr_one, void* vatptr_two)
   char src_name_two[9] = { '\0' };
   char name_one[20] = { '\0' };
   char name_two[20] = { '\0' };
-  void** data = NULL;
+  void* data = NULL;
   bool named = false;
 
-  os_NextSymEntry(vatptr_one, &type_one, &name_one_len, src_name_one, data);
-  os_NextSymEntry(vatptr_two, &type_two, &name_two_len, src_name_two, data);
+  os_NextSymEntry(vatptr_one, &type_one, &name_one_len, src_name_one, &data);
+  os_NextSymEntry(vatptr_two, &type_two, &name_two_len, src_name_two, &data);
 
   assert(type_one == type_two);
 
@@ -813,6 +817,8 @@ static int8_t entry_name_cmp(void* vatptr_one, void* vatptr_two)
 
 static void sort_hevat()
 {
+CCDBG_BEGINBLOCK("sort_hevat()");
+
   for (
     uint8_t group_idx = HEVAT__APPVAR;
     group_idx < HEVAT__NUM_GROUPS;
@@ -840,6 +846,8 @@ static void sort_hevat()
       g_hevat[offset + idx_two + 1] = key;
     }
   }
-  
+
+CCDBG_ENDBLOCK();
+
   return;
 }
