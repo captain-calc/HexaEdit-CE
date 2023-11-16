@@ -406,9 +406,9 @@ void gui_DrawMainMenuTopBar(uint24_t num_list_items)
   gfx_FillRectangle_NoClip(0, 0, LCD_WIDTH, 20);
   
   gui_SetTextColor(g_color.bar, g_color.list_text_normal);
-  gfx_PrintStringXY("HexaEdit 3.1", 4, 5);
+  gfx_PrintStringXY(STRING_PREPEND("HexaEdit ", PROGRAM_VERSION), 4, 5);
   gfx_SetTextFGColor(g_color.bar_text);
-  gfx_PrintStringXY("HexaEdit 3.1", 5, 6);
+  gfx_PrintStringXY(STRING_PREPEND("HexaEdit ", PROGRAM_VERSION), 5, 6);
 
   gfx_SetTextXY(130, 6);
   gfx_SetTextFGColor(g_color.bar_text);

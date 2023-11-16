@@ -44,6 +44,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 
 
+#define STRING_PREPEND(head, tail) head tail
+
 // These are not defined in the toolchain.
 #define OS_TYPE_PICT  (0x07)
 #define OS_TYPE_GDB   (0x08)

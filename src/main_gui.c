@@ -181,7 +181,8 @@ CCDBG_BEGINBLOCK("maingui_Main");
     {
       gui_MessageWindowBlocking(
         "About",
-        "Version: 3.1.0$Author:$  Caleb \"Captain Calc\" Arant$$This program can damage$your calculator if used$incautiously.$Read the README."
+        "Author:$  Caleb \"Captain Calc\" Arant$$This program can damage" \
+        "$your calculator if used$incautiously.$$Read the README."
       );
       redraw_all = true;
     }
