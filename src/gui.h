@@ -41,20 +41,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include "defines.h"
+#include "list.h"
 
 
-typedef struct
-{
-  uint24_t num_items;
-  uint24_t xpos;
-  uint8_t ypos;
-  uint8_t width;
-  uint8_t section_length;
-  uint24_t base_offset;
-  uint24_t section_offset;
-} s_list;
-
-
+// TODO: Rename
 void gui_SetTextColor(uint8_t bg_color, uint8_t fg_color);
 
 void gui_PrintText(const char* const text, const uint8_t text_color);
@@ -63,19 +53,9 @@ void gui_MessageWindowBlocking(const char* const title, const char* const msg);
 
 void gui_ErrorWindow(const char* const msg);
 
-uint24_t gui_ListAbsOffset(const s_list* const list);
+void gui_DrawActiveList(const list* const list);
 
-void gui_ResetListOffset(s_list* const list);
-
-void gui_DecrementListOffset(s_list* const list);
-
-void gui_IncrementListOffset(s_list* const list);
-
-void gui_DrawList(s_list* const list, const char** item_names);
-
-void gui_DrawHEVATList(s_list* const list, const uint8_t hevat_group_idx);
-
-void gui_DrawSelectedListIndicator(const bool master_list);
+void gui_DrawDormantList(const list* const list);
 
 void gui_EraseHEVATEntryInfo(void);
 

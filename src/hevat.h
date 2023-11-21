@@ -188,6 +188,9 @@ void hevat_AddRecent(void* vatptr);
 bool hevat_GetVarInfoByVAT(s_calc_var* const var);
 
 
+void hevat_VarNameToASCII(char buffer[20], const uint8_t name[8], bool named);
+
+
 bool hevat_GetVarInfoByNameAndType(
   s_calc_var* const var,
   const char name[8],
@@ -195,8 +198,37 @@ bool hevat_GetVarInfoByNameAndType(
   const uint8_t var_type
 );
 
+void hevat_GetHEVATGroupNames(char buffer[20], uint24_t index);
 
-void hevat_VarNameToASCII(char buffer[20], const uint8_t name[8], bool named);
+void hevat_GetRecentsVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetAppvarVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetProtProgramVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetProgramVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetRealVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetListVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetMatrixVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetEquationVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetStringVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetPictureVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetGDBVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetComplexVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetComplexListVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetGroupVariableName(char buffer[20], uint24_t index);
+
+void hevat_GetOtherVariableName(char buffer[20], uint24_t index);
 
 
 #endif

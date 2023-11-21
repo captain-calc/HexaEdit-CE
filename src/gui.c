@@ -88,6 +88,14 @@ static uint8_t get_num_bytes_onscreen(const s_editor* const editor);
 static void print_text_wrap(const char* const text);
 
 
+static void draw_list_background(const list* const list, uint8_t color);
+
+
+static void draw_list(
+  const list* const list, const list_color_palette* const color_palette
+);
+
+
 // =============================================================================
 // PUBLIC FUNCTION DEFINITIONS
 // =============================================================================
@@ -156,7 +164,7 @@ void gui_MessageWindowBlocking(const char* const title, const char* const msg)
   do {
     keypad_IdleKeypadBlock();
   } while (!keypad_SinglePressExclusive(kb_KeyClear));
-  
+
   return;
 }
 
@@ -167,135 +175,30 @@ void gui_ErrorWindow(const char* const msg)
 }
 
 
-uint24_t gui_ListAbsOffset(const s_list* const list)
+void gui_DrawActiveList(const list* const list)
 {
-  return list->base_offset + list->section_offset;
-}
+  list_color_palette color_palette = {
+    .background = g_color.background,
+    .cursor = g_color.list_cursor,
+    .cursor_text = g_color.list_text_selected,
+    .normal_text = g_color.list_text_normal
+  };
 
-
-void gui_ResetListOffset(s_list* const list)
-{
-  list->base_offset = 0;
-  list->section_offset = 0;
+  draw_list(list, &color_palette);
   return;
 }
 
 
-void gui_DecrementListOffset(s_list* const list)
+void gui_DrawDormantList(const list* const list)
 {
-  if (list->section_offset)
-    list->section_offset--;
-  else if (list->base_offset)
-    list->base_offset--;
+  list_color_palette color_palette = {
+    .background = g_color.editor_side_panel,
+    .cursor = g_color.bar,
+    .cursor_text = g_color.list_text_selected,
+    .normal_text = g_color.list_text_normal
+  };
 
-  return;
-}
-
-
-void gui_IncrementListOffset(s_list* const list)
-{
-  uint24_t section_end = (
-    list->num_items > list->section_length
-    ? list->section_length
-    : list->num_items
-  );
-
-  if (list->section_offset + 1 < section_end)
-  {
-    list->section_offset++;
-  }
-  else if (gui_ListAbsOffset(list) + 1 < list->num_items)
-  {
-    list->base_offset++;
-  }
-
-  return;
-}
-
-
-static uint8_t draw_list_item_bg(
-  s_list* const list, const bool highlight, uint8_t* const ypos
-)
-{
-  uint8_t text_color;
-
-  if (highlight)
-  {
-    gfx_SetColor(g_color.list_cursor);
-    gui_SetTextColor(g_color.list_cursor, g_color.list_text_selected);
-    text_color = g_color.list_text_selected;
-  }
-  else
-  {
-    gfx_SetColor(g_color.background);
-    gui_SetTextColor(g_color.background, g_color.list_text_normal);
-    text_color = g_color.list_text_normal;
-  }
-
-  gfx_FillRectangle_NoClip(list->xpos, *ypos, list->width, LIST_ITEM_PXL_HEIGHT);
-  gfx_SetTextXY(list->xpos + 1, *ypos + 1);
-  *ypos += LIST_ITEM_PXL_HEIGHT;
-
-  return text_color;
-}
-
-
-void gui_DrawList(s_list* const list, const char** item_names)
-{
-  uint8_t ypos = list->ypos;
-  uint24_t abs_offset = gui_ListAbsOffset(list);
-  uint24_t end = list->base_offset + (
-    list->num_items > list->section_length
-    ? list->section_length
-    : list->num_items
-  );
-
-  gfx_SetColor(g_color.background);
-  gfx_FillRectangle_NoClip(list->xpos, list->ypos, list->width, 198);
-
-  for (uint8_t idx = list->base_offset; idx < end; idx++)
-  {
-    draw_list_item_bg(list, abs_offset == idx, &ypos);
-    gfx_PrintString(item_names[idx]);
-  }
-
-  return;
-}
-
-
-void gui_DrawHEVATList(s_list* const list, const uint8_t hevat_group_idx)
-{
-  s_calc_var var;
-  char print_name[20] = { '\0' };
-  uint8_t text_color;
-  uint8_t ypos = list->ypos;
-  uint24_t abs_offset = gui_ListAbsOffset(list);
-  uint24_t end = list->base_offset + (
-    list->num_items > list->section_length
-    ? list->section_length
-    : list->num_items
-  );
-
-  gfx_SetColor(g_color.background);
-  gfx_FillRectangle_NoClip(list->xpos, list->ypos, list->width, 198);
-
-  for (uint8_t idx = list->base_offset; idx < end; idx++)
-  {
-    var.vatptr = hevat_Ptr(hevat_group_idx, idx);
-    hevat_GetVarInfoByVAT(&var);
-    hevat_VarNameToASCII(print_name, (const uint8_t*)var.name, var.named);
-    text_color = draw_list_item_bg(list, abs_offset == idx, &ypos);
-    gui_PrintText(print_name, text_color);
-  }
-  
-  return;
-}
-
-
-void gui_DrawSelectedListIndicator(const bool master_list)
-{
-  gfx_SetColor(g_color.bar);
-  gfx_FillRectangle_NoClip((master_list ? 2 : 109), 214, 101, 4);
+  draw_list(list, &color_palette);
   return;
 }
 
@@ -303,7 +206,7 @@ void gui_DrawSelectedListIndicator(const bool master_list)
 void gui_EraseHEVATEntryInfo(void)
 {
   gfx_SetColor(g_color.background);
-  gfx_FillRectangle_NoClip(216, 22, 104, 150);
+  gfx_FillRectangle_NoClip(214, 20, 106, 152);
   return;
 }
 
@@ -404,7 +307,7 @@ void gui_DrawMainMenuTopBar(uint24_t num_list_items)
 {
   gfx_SetColor(g_color.bar);
   gfx_FillRectangle_NoClip(0, 0, LCD_WIDTH, 20);
-  
+
   gui_SetTextColor(g_color.bar, g_color.list_text_normal);
   gfx_PrintStringXY(STRING_PREPEND("HexaEdit ", PROGRAM_VERSION), 4, 5);
   gfx_SetTextFGColor(g_color.bar_text);
@@ -655,7 +558,7 @@ void gui_DrawToolBar(const s_editor* const editor)
           ) << (8 * idx)
         );
       }
-      
+
       gfx_PrintUInt(decimal, cutil_Log10(decimal));
     }
   }
@@ -725,21 +628,21 @@ void gui_DrawInputPrompt(
 )
 {
   uint24_t x = gfx_GetStringWidth(prompt) + 10;
-  
+
   gfx_SetColor(g_color.bar);
   gfx_FillRectangle_NoClip(0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-  
+
   gui_SetTextColor(g_color.bar, g_color.bar_text);
   gfx_PrintStringXY(prompt, 5, 226);
-  
+
   gfx_SetColor(g_color.list_text_normal);
   gfx_FillRectangle_NoClip(x, 223, input_field_width, G_FONT_HEIGHT + 6);
-  
+
   gfx_SetColor(g_color.background);
   gfx_FillRectangle_NoClip(
     x + 1, 224, input_field_width - 2, G_FONT_HEIGHT + 4
   );
-  
+
   return;
 }
 
@@ -752,7 +655,7 @@ void gui_DrawKeymapIndicator(
   gfx_FillRectangle_NoClip(
     x_pos, y_pos, gfx_GetCharWidth(indicator) + 3, G_FONT_HEIGHT + 6
   );
-  
+
   gui_SetTextColor(g_color.list_cursor, g_color.list_text_selected);
   gfx_SetTextXY(x_pos + 2, y_pos + 3);
   gfx_PrintChar(indicator);
@@ -771,12 +674,12 @@ void gui_Input(
 {
   uint8_t value;
   uint8_t offset = strlen(buffer);
-  
+
   gfx_SetTextXY(x_pos + 2, y_pos + 2);
   gui_PrintText(buffer, g_color.list_cursor);
   gfx_FillRectangle_NoClip(
     x_pos + gfx_GetStringWidth(buffer) + 2, y_pos + 1, 2, G_FONT_HEIGHT + 2
-  );  
+  );
   gfx_BlitRectangle(1, x_pos, y_pos, width, G_FONT_HEIGHT + 4);
   gfx_SetColor(g_color.list_cursor);
 
@@ -913,6 +816,73 @@ static void print_text_wrap(const char* const text)
 
     c++;
   }
+
+  return;
+}
+
+
+static void draw_list_background(const list* const list, uint8_t color)
+{
+  uint8_t xpos = list->xpos - 2;
+  uint24_t ypos = list->ypos - 2;
+  uint24_t width = list->width + 4;
+  uint24_t height = 200;
+
+  gfx_SetColor(color);
+  gfx_FillRectangle_NoClip(xpos, ypos, width, height);
+  return;
+}
+
+
+static void draw_list(
+  const list* const list, const list_color_palette* const color_palette
+)
+{
+CCDBG_BEGINBLOCK("draw_list");
+
+  char print_name[20] = { '\0' };
+  uint8_t text_foreground_color;
+  uint8_t ypos = list->ypos;
+  uint24_t last_visible_item_index = list->window_offset + (
+    list->total_item_count > list->visible_item_count
+    ? list->visible_item_count
+    : list->total_item_count
+  );
+
+  draw_list_background(list, color_palette->background);
+
+CCDBG_PUTS("After draw_list_background");
+
+  for (uint8_t idx = list->window_offset; idx < last_visible_item_index; idx++)
+  {
+    if (idx == list_GetCursorIndex(list))
+    {
+
+CCDBG_PUTS("Highlighting item");
+
+      gfx_SetColor(color_palette->cursor);
+      gfx_FillRectangle_NoClip(
+        list->xpos, ypos, list->width, LIST_ITEM_HEIGHT_IN_PIXELS
+      );
+      gui_SetTextColor(color_palette->cursor, color_palette->cursor_text);
+      text_foreground_color = color_palette->cursor_text;
+    }
+    else
+    {
+
+CCDBG_PUTS("Not highlighting item");
+
+      gui_SetTextColor(color_palette->background, color_palette->normal_text);
+      text_foreground_color = color_palette->normal_text;
+    }
+
+    gfx_SetTextXY(list->xpos + 1, ypos + 1);
+    list->get_item_name(print_name, idx);
+    gui_PrintText(print_name, text_foreground_color);
+    ypos += LIST_ITEM_HEIGHT_IN_PIXELS;
+  }
+
+CCDBG_ENDBLOCK();
 
   return;
 }

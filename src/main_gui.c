@@ -48,6 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gui.h"
 #include "hevat.h"
 #include "keypad.h"
+#include "list.h"
 #include "main_gui.h"
 #include "tools.h"
 
@@ -57,10 +58,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // =============================================================================
 
 
-void binary_search(
-  s_list* list,
-  const uint8_t hevat_group_idx,
-  const uint8_t letter
+static void set_routine_to_get_item_names_for_variables_list(
+  list* const list, const uint8_t hevat_group_idx
 );
 
 
@@ -74,43 +73,39 @@ int maingui_Main(s_editor* const editor)
 CCDBG_BEGINBLOCK("maingui_Main");
 
   const uint8_t KEYPRESS_DELAY_THRESHOLD = 8;
-  s_list* list;
+
+  list hevat_groups_list;
+  list variables_list;
+  void* vatptr;
+  list* active_list = &hevat_groups_list;
   bool quit = false;
   bool redraw_all = true;
   bool open_variable = false;
   uint8_t hevat_group_idx = HEVAT__RECENTS;
   uint8_t letter;
 
-  s_list master_list = {
-    .num_items = HEVAT__NUM_GROUPS,
-    .xpos = 2,
-    .ypos = 22,
-    .width = 101,
-    .section_length = 19,
-    .base_offset = 0,
-    .section_offset = 0
-  };
-
-  s_list sub_list = {
-  .num_items = 0,
-  .xpos = 109,
-  .ypos = 22,
-  .width = 101,
-  .section_length = 19,
-  .base_offset = 0,
-  .section_offset = 0
-  };
-
   if (!hevat_Load())
     return 1;
 
-  list = &master_list;
+  list_Initialize(&hevat_groups_list);
+  list_SetPosition(&hevat_groups_list, 2, 22);
+  list_SetTotalItemCount(&hevat_groups_list, HEVAT__NUM_GROUPS);
+  list_SetRoutineToGetItemNames(
+    &hevat_groups_list, &hevat_GetHEVATGroupNames
+  );
+
+  list_Initialize(&variables_list);
+  list_SetPosition(&variables_list, 109, 22);
+
+CCDBG_PUTS("After initialization");
 
   while (!quit)
   {
     if (open_variable)
     {
-      void* vatptr = hevat_Ptr(hevat_group_idx, gui_ListAbsOffset(list));
+      vatptr = hevat_Ptr(
+        hevat_group_idx, list_GetCursorIndex(&variables_list)
+      );
 
       if (editor_OpenVarEditor(editor, vatptr, 0))
         hevat_AddRecent(vatptr);
@@ -127,24 +122,36 @@ CCDBG_BEGINBLOCK("maingui_Main");
       gui_DrawMainMenuBottomBar();
     }
 
-    hevat_group_idx = gui_ListAbsOffset(&master_list);
-    sub_list.num_items = hevat_NumEntries(hevat_group_idx);
-    gui_DrawList(&master_list, HEVAT__GROUP_NAMES);
-    gui_DrawHEVATList(&sub_list, hevat_group_idx);
-    gui_DrawSelectedListIndicator(list == &master_list);
-    gui_DrawMainMenuTopBar(list->num_items);
+    gui_DrawMainMenuTopBar(list_GetTotalItemCount(active_list));
 
-    if (list == &sub_list)
+CCDBG_PUTS("Before HEVAT group wrangling.");
+
+    if (list_GetCursorIndex(&hevat_groups_list) != hevat_group_idx)
+      list_MoveCursorIndexToStart(&variables_list);
+
+    hevat_group_idx = list_GetCursorIndex(&hevat_groups_list);
+    list_SetTotalItemCount(&variables_list, hevat_NumEntries(hevat_group_idx));
+    set_routine_to_get_item_names_for_variables_list(
+      &variables_list, hevat_group_idx
+    );
+
+    if (active_list == &hevat_groups_list)
     {
-      gui_EraseHEVATEntryInfo();
-      gui_DrawHEVATEntryInfo(
-        hevat_Ptr(hevat_group_idx, gui_ListAbsOffset(&sub_list))
-      );
+      gui_DrawActiveList(&hevat_groups_list);
+      gui_DrawDormantList(&variables_list);
+
+      // Slow down the cursor movement speed.
+      delay(30);
     }
     else
     {
-      // Slow down the cursor.
-      delay(30);
+      gui_DrawDormantList(&hevat_groups_list);
+      gui_DrawActiveList(&variables_list);
+
+      gui_EraseHEVATEntryInfo();
+      gui_DrawHEVATEntryInfo(
+        hevat_Ptr(hevat_group_idx, list_GetCursorIndex(&variables_list))
+      );
     }
 
     if (redraw_all)
@@ -162,7 +169,7 @@ CCDBG_BEGINBLOCK("maingui_Main");
       editor_OpenMemEditor(editor, "ROM", G_ROM_BASE_ADDRESS, G_ROM_SIZE, 0);
       redraw_all = true;
     }
-    
+
     if (keypad_SinglePressExclusive(kb_KeyWindow))
     {
       editor_OpenMemEditor(editor, "RAM", G_RAM_BASE_ADDRESS, G_RAM_SIZE, 0);
@@ -190,11 +197,27 @@ CCDBG_BEGINBLOCK("maingui_Main");
     if (keypad_SinglePressExclusive(kb_KeyClear))
       quit = true;
 
-    if (list == &sub_list)
+    if (keypad_KeyPressedOrHeld(kb_KeyUp, KEYPRESS_DELAY_THRESHOLD))
+      list_DecrementCursorIndex(active_list);
+
+    if (keypad_KeyPressedOrHeld(kb_KeyDown, KEYPRESS_DELAY_THRESHOLD))
+      list_IncrementCursorIndex(active_list);
+
+    if (active_list == &hevat_groups_list)
+    {
+      if (
+        keypad_SinglePressExclusive(kb_KeyRight)
+        && list_GetTotalItemCount(&variables_list) > 0)
+      {
+        active_list = &variables_list;
+      }
+    }
+    else
     {
       if (
         keypad_SinglePressExclusive(kb_Key2nd)
         || keypad_SinglePressExclusive(kb_KeyEnter)
+        || keypad_SinglePressExclusive(kb_KeyRight)
       )
       {
         open_variable = true;
@@ -202,9 +225,7 @@ CCDBG_BEGINBLOCK("maingui_Main");
 
       if (keypad_SinglePressExclusive(kb_KeyLeft))
       {
-        gui_ResetListOffset(list);
-        gui_EraseHEVATEntryInfo();
-        list = &master_list;
+        active_list = &hevat_groups_list;
         redraw_all = true;
       }
 
@@ -213,26 +234,9 @@ CCDBG_BEGINBLOCK("maingui_Main");
         && keypad_ExclusiveASCII(&letter, 'A')
       )
       {
-        binary_search(list, hevat_group_idx, letter);
+        list_JumpToItemWhoseNameStartsWithLetter(&variables_list, letter);
       }
     }
-
-    if (keypad_SinglePressExclusive(kb_KeyRight))
-    {
-      if (list == &master_list && sub_list.num_items)
-      {
-        list = &sub_list;
-        redraw_all = true;
-      }
-      else if (list == &sub_list)
-        open_variable = true;
-    }
-
-    if (keypad_KeyPressedOrHeld(kb_KeyUp, KEYPRESS_DELAY_THRESHOLD))
-      gui_DecrementListOffset(list);
-
-    if (keypad_KeyPressedOrHeld(kb_KeyDown, KEYPRESS_DELAY_THRESHOLD))
-      gui_IncrementListOffset(list);
   }
 
   if (!hevat_SaveRecents())
@@ -252,70 +256,30 @@ CCDBG_ENDBLOCK();
 // =============================================================================
 
 
-void binary_search(
-  s_list* list,
-  const uint8_t hevat_group_idx,
-  const uint8_t letter
+static void set_routine_to_get_item_names_for_variables_list(
+  list* const list, const uint8_t hevat_group_idx
 )
 {
-CCDBG_BEGINBLOCK("binary_search");
-CCDBG_DUMP_UINT(letter);
+  assert(hevat_group_idx < HEVAT__NUM_GROUPS);
 
-  char print_name[20] = { '\0' };
-  s_calc_var var;
-  uint24_t left = 0;
-  uint24_t right = list->num_items;
-  uint24_t middle;
-  bool var_found;
-  bool less_than;
+  void (*routine_list[HEVAT__NUM_GROUPS])(char*, uint24_t) = {
+    &hevat_GetRecentsVariableName,
+    &hevat_GetAppvarVariableName,
+    &hevat_GetProtProgramVariableName,
+    &hevat_GetProgramVariableName,
+    &hevat_GetRealVariableName,
+    &hevat_GetListVariableName,
+    &hevat_GetMatrixVariableName,
+    &hevat_GetEquationVariableName,
+    &hevat_GetStringVariableName,
+    &hevat_GetPictureVariableName,
+    &hevat_GetGDBVariableName,
+    &hevat_GetComplexVariableName,
+    &hevat_GetComplexListVariableName,
+    &hevat_GetGroupVariableName,
+    &hevat_GetOtherVariableName
+  };
 
-  while (left < right)
-  {    
-    middle = (left + right) / 2;
-
-CCDBG_DUMP_UINT(middle);
-CCDBG_DUMP_PTR(hevat_Ptr(hevat_group_idx, middle));
-
-    var.vatptr = hevat_Ptr(hevat_group_idx, middle);
-    var_found = hevat_GetVarInfoByVAT(&var);
-
-    if (!var_found)
-    {
-
-CCDBG_PUTS("Variable not found.");
-
-      break;
-    }
-
-    memset(print_name, '\0', 20);
-    hevat_VarNameToASCII(print_name, (const uint8_t*)var.name, var.named);
-
-CCDBG_PUTS("Variable found.");
-
-    
-    if (print_name[0] >= 'a')
-      less_than = ((print_name[0] - 'a' + 'A') < letter);
-    else
-      less_than = (print_name[0] < letter);
-
-    if (less_than)
-      left = middle + 1;
-    else
-      right = middle;
-  }
-
-CCDBG_DUMP_UINT(left);
-
-  if (var_found)
-  {
-    while (gui_ListAbsOffset(list) < left - (left == list->num_items ? 1 : 0))
-      gui_IncrementListOffset(list);
-
-    while (gui_ListAbsOffset(list) > left)
-      gui_DecrementListOffset(list);
-  }
-
-CCDBG_ENDBLOCK();
-
+  list_SetRoutineToGetItemNames(list, routine_list[hevat_group_idx]);
   return;
 }

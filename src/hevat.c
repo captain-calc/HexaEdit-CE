@@ -119,6 +119,11 @@ static int8_t entry_name_cmp(void* vatptr_one, void* vatptr_two);
 static void sort_hevat(void);
 
 
+static void get_variable_name(
+  char* const buffer, uint8_t hevat_group_idx, uint24_t index
+);
+
+
 static char hex_char(uint8_t nibble)
 {
   nibble &= 0x0F;
@@ -582,7 +587,7 @@ bool hevat_GetVarInfoByNameAndType(
     );
     var->vatptr = last_entry;
     hevat_GetVarInfoByVAT(var);
-    
+
     if (
       var->type == var_type
       && var->name_length == name_length
@@ -596,6 +601,109 @@ bool hevat_GetVarInfoByNameAndType(
   };
 
   return false;
+}
+
+
+void hevat_GetHEVATGroupNames(char buffer[20], uint24_t index)
+{
+  assert(index < HEVAT__NUM_GROUPS);
+
+  const char* group_name = HEVAT__GROUP_NAMES[index];
+
+  memcpy(buffer, group_name, strlen(group_name));
+  buffer[strlen(group_name)] = '\0';
+  return;
+}
+
+
+void hevat_GetRecentsVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__RECENTS, index);
+  return;
+}
+
+void hevat_GetAppvarVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__APPVAR, index);
+  return;
+}
+
+void hevat_GetProtProgramVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__PROT_PROGRAM, index);
+  return;
+}
+
+void hevat_GetProgramVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__PROGRAM, index);
+  return;
+}
+
+void hevat_GetRealVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__REAL, index);
+  return;
+}
+
+void hevat_GetListVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__LIST, index);
+  return;
+}
+
+void hevat_GetMatrixVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__MATRIX, index);
+  return;
+}
+
+void hevat_GetEquationVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__EQUATION, index);
+  return;
+}
+
+void hevat_GetStringVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__STRING, index);
+  return;
+}
+
+void hevat_GetPictureVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__PICTURE, index);
+  return;
+}
+
+void hevat_GetGDBVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__GDB, index);
+  return;
+}
+
+void hevat_GetComplexVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__COMPLEX, index);
+  return;
+}
+
+void hevat_GetComplexListVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__COMPLEX_LIST, index);
+  return;
+}
+
+void hevat_GetGroupVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__GROUP, index);
+  return;
+}
+
+void hevat_GetOtherVariableName(char buffer[20], uint24_t index)
+{
+  get_variable_name(buffer, HEVAT__OTHER, index);
+  return;
 }
 
 
@@ -846,6 +954,31 @@ CCDBG_BEGINBLOCK("sort_hevat()");
       g_hevat[offset + idx_two + 1] = key;
     }
   }
+
+CCDBG_ENDBLOCK();
+
+  return;
+}
+
+
+static void get_variable_name(
+  char* const buffer, uint8_t hevat_group_idx, uint24_t index
+)
+{
+CCDBG_BEGINBLOCK("get_variable_name");
+
+  s_calc_var var;
+  bool var_found = false;
+
+  var.vatptr = hevat_Ptr(hevat_group_idx, index);
+  var_found = hevat_GetVarInfoByVAT(&var);
+
+  // Since the HEVAT is built from the TI-OS VAT, <var_found> should always be
+  // true. If it is not, the HEVAT has been corrupted.
+  if (var_found)
+    hevat_VarNameToASCII(buffer, (const uint8_t*)var.name, var.named);
+  else
+    assert(false);
 
 CCDBG_ENDBLOCK();
 
