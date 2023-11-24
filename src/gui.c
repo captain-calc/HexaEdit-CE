@@ -846,10 +846,8 @@ CCDBG_BEGINBLOCK("draw_list");
 
   char print_name[20] = { '\0' };
   uint8_t ypos = list->ypos;
-  uint24_t last_visible_item_index = list->window_offset + (
-    list->total_item_count > list->visible_item_count
-    ? list->visible_item_count
-    : list->total_item_count
+  uint24_t last_visible_item_index = list->window_offset + min(
+    list->total_item_count, list->visible_item_count
   );
 
   draw_list_background(list, color_palette->background);

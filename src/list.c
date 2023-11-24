@@ -109,10 +109,8 @@ void list_MoveCursorIndexToStart(list* const list)
 
 void list_IncrementCursorIndex(list* const list)
 {
-  uint24_t last_visible_item_offset = (
-    list->total_item_count > list->visible_item_count
-    ? list->visible_item_count
-    : list->total_item_count
+  uint24_t last_visible_item_offset = min(
+    list->total_item_count, list->visible_item_count
   );
 
   if ((list->cursor_offset + 1) < last_visible_item_offset)
