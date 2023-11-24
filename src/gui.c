@@ -110,26 +110,30 @@ void gui_SetTextColor(uint8_t bg_color, uint8_t fg_color)
 }
 
 
-void gui_PrintText(const char* const text, const uint8_t text_color)
+void gui_PrintText(const char* const text)
 {
+  // Ensure we are within the character index limit imposed by
+  // gfx_SetCharData() when using the default font.
+  assert(G_HEXAEDIT_THETA <= 127);
+
+  static const uint8_t LETTER_o_CHARACTER_DATA[8] = {
+    0x7C, 0xC6, 0xC6, 0xC6, 0xC6, 0xC6, 0x7C, 0x00
+  };
+  static const uint8_t THETA_CHARACTER_DATA[8] = {
+    0x7C, 0xC6, 0xFE, 0xFE, 0xC6, 0xC6, 0x7C, 0x00
+  };
+
 	const char* character = text;
 
-	gfx_SetColor(text_color);
+	gfx_SetCharData(G_HEXAEDIT_THETA, THETA_CHARACTER_DATA);
 
 	while (*character != '\0')
 	{
-		if (*character == G_HEXAEDIT_THETA)
-		{
-			gfx_PrintChar('O');
-			gfx_HorizLine(gfx_GetTextX() - 6, gfx_GetTextY() + 3, 3);
-		}
-		else
-		{
-			gfx_PrintChar(*character);
-		};
-
+		gfx_PrintChar(*character);
 		character++;
 	};
+
+	gfx_SetCharData(G_HEXAEDIT_THETA, LETTER_o_CHARACTER_DATA);
 
 	return;
 }
@@ -480,7 +484,7 @@ void gui_DrawTitleBar(const s_editor* const editor)
   else
     strncpy(name, editor->name, editor->name_length);
 
-  gui_PrintText(name, g_color.bar_text);
+  gui_PrintText(name);
 
   gfx_SetTextXY(90, 6);
   gfx_PrintUInt(editor->data_size, cutil_Log10(editor->data_size));
@@ -676,7 +680,7 @@ void gui_Input(
   uint8_t offset = strlen(buffer);
 
   gfx_SetTextXY(x_pos + 2, y_pos + 2);
-  gui_PrintText(buffer, g_color.list_cursor);
+  gui_PrintText(buffer);
   gfx_FillRectangle_NoClip(
     x_pos + gfx_GetStringWidth(buffer) + 2, y_pos + 1, 2, G_FONT_HEIGHT + 2
   );
@@ -841,7 +845,6 @@ static void draw_list(
 CCDBG_BEGINBLOCK("draw_list");
 
   char print_name[20] = { '\0' };
-  uint8_t text_foreground_color;
   uint8_t ypos = list->ypos;
   uint24_t last_visible_item_index = list->window_offset + (
     list->total_item_count > list->visible_item_count
@@ -865,7 +868,6 @@ CCDBG_PUTS("Highlighting item");
         list->xpos, ypos, LIST_WIDTH_IN_PIXELS, LIST_ITEM_HEIGHT_IN_PIXELS
       );
       gui_SetTextColor(color_palette->cursor, color_palette->cursor_text);
-      text_foreground_color = color_palette->cursor_text;
     }
     else
     {
@@ -873,12 +875,11 @@ CCDBG_PUTS("Highlighting item");
 CCDBG_PUTS("Not highlighting item");
 
       gui_SetTextColor(color_palette->background, color_palette->normal_text);
-      text_foreground_color = color_palette->normal_text;
     }
 
     gfx_SetTextXY(list->xpos + 1, ypos + 1);
     list->get_item_name(print_name, idx);
-    gui_PrintText(print_name, text_foreground_color);
+    gui_PrintText(print_name);
     ypos += LIST_ITEM_HEIGHT_IN_PIXELS;
   }
 

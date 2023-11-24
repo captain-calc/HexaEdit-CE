@@ -47,7 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // TODO: Rename
 void gui_SetTextColor(uint8_t bg_color, uint8_t fg_color);
 
-void gui_PrintText(const char* const text, const uint8_t text_color);
+void gui_PrintText(const char* const text);
 
 void gui_MessageWindowBlocking(const char* const title, const char* const msg);
 

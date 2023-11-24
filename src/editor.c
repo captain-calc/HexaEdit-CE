@@ -431,7 +431,7 @@ static void goto_prompt(s_editor* const editor)
   uint8_t buffer_size;
   uint24_t offset;
   uint24_t address;
-  
+
   if (editor->location_col_mode == 'o')
   {
     keymap = G_DIGITS_KEYMAP;
@@ -456,10 +456,10 @@ static void goto_prompt(s_editor* const editor)
     gui_SetTextColor(g_color.background, g_color.list_text_normal);
     gui_Input(buffer, buffer_size, 44, 224, 99, keymap);
     gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-    
+
     if (keypad_SinglePressExclusive(kb_KeyClear))
       return;
-    
+
     if (
       keypad_SinglePressExclusive(kb_Key2nd)
       || keypad_SinglePressExclusive(kb_KeyEnter)
@@ -506,10 +506,10 @@ static void insert_bytes_prompt(s_editor* const editor)
     gui_SetTextColor(g_color.background, g_color.list_text_normal);
     gui_Input(buffer, 6, 60, 224, 99, G_DIGITS_KEYMAP);
     gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-    
+
     if (keypad_SinglePressExclusive(kb_KeyClear))
       return;
-    
+
     if (
       keypad_SinglePressExclusive(kb_Key2nd)
       || keypad_SinglePressExclusive(kb_KeyEnter)
@@ -572,7 +572,7 @@ CCDBG_BEGINBLOCK("find_viewer");
 
 CCDBG_DUMP_UINT(idx);
 CCDBG_DUMP_UINT(matches[idx]);
-  
+
     // This section massages the window offset using selective goto actions to
     // make the entire selected phrase appear onscreen.
     // ==================
@@ -586,7 +586,7 @@ CCDBG_DUMP_UINT(matches[idx]);
 
     if (prev_idx <= idx)
       tool_UpdateWindowOffset(editor);
-    
+
     editor->selection_active = true;
     // ==================
 
@@ -666,7 +666,7 @@ static void find_prompt(s_editor* const editor)
       else
         buffer_size = 8;
     }
-    
+
     if (
       keypad_SinglePressExclusive(kb_Key2nd)
       || keypad_SinglePressExclusive(kb_KeyEnter)
@@ -699,7 +699,7 @@ static void find_prompt(s_editor* const editor)
       if (find_phrase)
       {
         gui_DrawFindPromptMessage("Searching...");
-        
+
         tool_FindPhrase(
           editor, (const uint8_t*)phrase, phrase_length, matches, &num_matches
         );
@@ -745,7 +745,7 @@ static bool save_changes_prompt(s_editor* const editor)
 
     if (keypad_SinglePressExclusive(kb_KeyZoom))
       quit = true;
-    
+
     if (keypad_SinglePressExclusive(kb_KeyTrace))
     {
       if (!editor->is_tios_var)
@@ -781,7 +781,7 @@ static bool save_changes_prompt(s_editor* const editor)
       quit = true;
     }
   }
-  
+
   return retval;
 }
 
