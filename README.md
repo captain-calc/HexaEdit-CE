@@ -99,9 +99,11 @@ The input fields that appear for tools like Find and Goto have special keybindin
 | [alpha] | Switches the keymap.
 | [clear] | Press once to clear all input. Press twice to exit the field.
 
-The keymap indicator, shown at the far right of the field uses the same characters as the writing mode indicator, i.e. "x" (hexadecimal), "A" (uppercase letters), "a" (lowercase letters), and "0" (digits).
+The keymap indicator, shown at the far right of the field uses the same characters as the writing mode indicator, i.e. "x" (hexadecimal), "A" (uppercase letters), "a" (lowercase letters), and "0" (digits). You cannot mix hexadecimal characters with any of the other three character sets. For instance, if you enter a character from the hexadecimal keymap, HexaEdit will not allow you to switch to any other keymap. If you enter an uppercase letter, a lowercase letter, or a number, HexaEdit will remove the hexadecimal keymap from the list of options. However, you can mix uppercase letters, lowercase letters, and numbers.
 
 The Find function will not be available for variables/memory areas that have less than a screens-worth of data in them. The Find input field expects at least four characters in hexadecimal mode and at least two characters in any other mode. **Note:** When doing searches in RAM, a particular phrase may exist at the time the find function searches the memory, but it may not exist by the time the viewer starts. This is because HexaEdit runs in RAM, so it will alter memory contents as it executes.
+
+If you delete a selection of multiple bytes and press "Undo," HexaEdit will highlight the selection of undeleted bytes and put the program into multi-byte selection mode. To execute another undo, you must press `[2nd]` or `[enter]` to leave multi-byte selection mode before pressing "Undo" again. However, if you delete a single byte and press "Undo," you will not be put into multi-byte selection mode. This allows you to undo single byte deletes more quickly.
 
 ## Headless Start
 
