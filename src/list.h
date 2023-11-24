@@ -49,7 +49,6 @@ typedef struct
   uint8_t visible_item_count;
   uint24_t xpos;
   uint8_t ypos;
-  uint8_t width;
   uint24_t window_offset;
   uint24_t cursor_offset;
 } list;

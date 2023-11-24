@@ -49,7 +49,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void list_Initialize(list* const list)
 {
   list->visible_item_count = VISIBLE_ITEM_COUNT;
-  list->width = LIST_WIDTH_IN_PIXELS;
   list_MoveCursorIndexToStart(list);
   return;
 }

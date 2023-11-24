@@ -825,7 +825,7 @@ static void draw_list_background(const list* const list, uint8_t color)
 {
   uint8_t xpos = list->xpos - 2;
   uint24_t ypos = list->ypos - 2;
-  uint24_t width = list->width + 4;
+  uint24_t width = LIST_WIDTH_IN_PIXELS + 4;
   uint24_t height = 200;
 
   gfx_SetColor(color);
@@ -862,7 +862,7 @@ CCDBG_PUTS("Highlighting item");
 
       gfx_SetColor(color_palette->cursor);
       gfx_FillRectangle_NoClip(
-        list->xpos, ypos, list->width, LIST_ITEM_HEIGHT_IN_PIXELS
+        list->xpos, ypos, LIST_WIDTH_IN_PIXELS, LIST_ITEM_HEIGHT_IN_PIXELS
       );
       gui_SetTextColor(color_palette->cursor, color_palette->cursor_text);
       text_foreground_color = color_palette->cursor_text;
