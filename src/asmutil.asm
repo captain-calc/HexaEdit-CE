@@ -123,11 +123,11 @@ _find_phrase:
 ;   A, BC, DE, IY
 
 
-	ld	  iy,0
-	add	  iy,sp
-	ld	  bc,(iy + 3)
-	ld	  hl,(iy + 6)
-	push	hl
+  ld	  iy,0
+  add	  iy,sp
+  ld	  bc,(iy + 3)
+  ld	  hl,(iy + 6)
+  push	hl
 
 ; If start > end, exit
   push  hl
@@ -159,10 +159,10 @@ _find_phrase:
   xor   a,a
   sbc   hl,bc
   jr    z,.exitFast     ; Carry flag is still reset if Z is set
-  
+
   inc   bc              ; Increment current address
   jr    .compare
-  
+
 .match:
   inc   e               ; Increment phrase offset counter
   ld    a,(iy + 12)
@@ -193,7 +193,7 @@ _asmutil_FindPhrase:
 ; Returns:
 ;   A == number of matches found
 ; Destroys:
-;   BC, DE, HL
+;   BC, DE, HL, IY
 
 
   ld    iy,0
@@ -204,7 +204,7 @@ _asmutil_FindPhrase:
   push  hl
   ld    hl,(iy + 6)
   push  hl
-  
+
   ld    hl,(iy + 15)    ; HL -> match pointer array
   ld    bc,0
 .lastMatchInArray:=$-3
@@ -221,7 +221,7 @@ _asmutil_FindPhrase:
 .numMatchesFound:=$-1
   xor   a,a
   ld    (.numMatchesFound),a
-  
+
   ld  hl,(iy + 3)
 
 .compare:
