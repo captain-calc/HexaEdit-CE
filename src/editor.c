@@ -444,18 +444,14 @@ static void goto_prompt(s_editor* const editor)
     buffer_size = 6;
   }
 
-  gui_DrawInputPrompt("Goto:", 102);
-  gui_DrawKeymapIndicator(keymap_indicator, 135, 223);
-  gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-
   while (true)
   {
     kb_Scan();
     gui_DrawInputPrompt("Goto:", 102);
     gui_DrawKeymapIndicator(keymap_indicator, 135, 223);
     gui_SetTextColor(g_color.background, g_color.list_text_normal);
-    gui_Input(buffer, buffer_size, 44, 224, 99, keymap);
     gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
+    gui_Input(buffer, buffer_size, 44, 224, 99, keymap);
 
     if (keypad_SinglePressExclusive(kb_KeyClear))
       return;
@@ -494,18 +490,14 @@ static void insert_bytes_prompt(s_editor* const editor)
 {
   char buffer[7] = { '\0' };
 
-  gui_DrawInputPrompt("Insert:", 102);
-  gui_DrawKeymapIndicator('0', 151, 223);
-  gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-
   while (true)
   {
     kb_Scan();
     gui_DrawInputPrompt("Insert:", 102);
     gui_DrawKeymapIndicator('0', 151, 223);
     gui_SetTextColor(g_color.background, g_color.list_text_normal);
-    gui_Input(buffer, 6, 60, 224, 99, G_DIGITS_KEYMAP);
     gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
+    gui_Input(buffer, 6, 60, 224, 99, G_DIGITS_KEYMAP);
 
     if (keypad_SinglePressExclusive(kb_KeyClear))
       return;
@@ -638,18 +630,14 @@ static void find_prompt(s_editor* const editor)
   uint8_t buffer_size = 16;
   bool find_phrase = false;
 
-  gui_DrawInputPrompt("Find:", 152);
-  gui_DrawKeymapIndicator(keymap_indicators[keymap_idx], 182, 223);
-  gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
-
   while (true)
   {
     kb_Scan();
     gui_DrawInputPrompt("Find:", 152);
     gui_DrawKeymapIndicator(keymap_indicators[keymap_idx], 182, 223);
     gui_SetTextColor(g_color.background, g_color.list_text_normal);
-    gui_Input(buffer, buffer_size, 42, 224, 149, keymaps[keymap_idx]);
     gfx_BlitRectangle(1, 0, LCD_HEIGHT - 20, LCD_WIDTH, 20);
+    gui_Input(buffer, buffer_size, 42, 224, 149, keymaps[keymap_idx]);
 
     if (keypad_SinglePressExclusive(kb_KeyClear) && !strlen(buffer))
       break;
