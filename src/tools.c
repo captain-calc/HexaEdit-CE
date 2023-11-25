@@ -70,7 +70,7 @@ static uint8_t* g_undo_sp = g_undo_stack + (sizeof g_undo_stack) - 1;
 
 
 // =============================================================================
-// STATIC FUNCTION DEFINITIONS
+// STATIC FUNCTION DECLARATIONS
 // =============================================================================
 
 
@@ -366,7 +366,7 @@ void tool_DeleteEditBuffer(void)
 #endif
 
   int deleted; (void)deleted;
-  
+
   deleted = ti_Delete(G_EDIT_BUFFER_APPVAR_NAME);
 
   // If this assert() fires, the delete failed.
@@ -665,7 +665,7 @@ CCDBG_DUMP_UINT(diff);
   tool_MoveCursor(editor, direction, diff);
 
 CCDBG_ENDBLOCK();
-  
+
   // We could get away with just the middle assert(), but the other two provide
   // valuable debugging info.
   assert(editor->near_size);
@@ -903,7 +903,7 @@ for (uint8_t idx = 0; idx < *num_matches; idx++)
 #endif
 
 CCDBG_ENDBLOCK();
-  
+
   return;
 }
 
@@ -919,13 +919,7 @@ void tool_SwitchWritingMode(s_editor* const editor)
   {
     if (editor->writing_mode == WRITING_MODES[idx])
     {
-      // Move to the next writing mode and wrap around the array.
-      editor->writing_mode = (
-        idx == NUM_WRITING_MODES - 1
-        ? WRITING_MODES[0]
-        : WRITING_MODES[idx + 1]
-      );
-
+      editor->writing_mode = WRITING_MODES[(idx + 1) % NUM_WRITING_MODES];
       return;
     }
   }
@@ -1001,7 +995,7 @@ CCDBG_DUMP_UINT(*(uint24_t*)g_undo_sp);
         editor->selection_active = true;
         editor->selection_size = g_cutcopy_buffer_size;
       }
-      
+
       tool_PasteBytes(editor);
       g_undo_sp += g_cutcopy_buffer_size - 1;
       g_cutcopy_buffer_size = 0;  // Destroy the cut/copy buffer.
