@@ -165,7 +165,7 @@ bool tool_CreateEditBuffer(s_editor* const editor)
 {
 CCDBG_BEGINBLOCK("create_edit_buffer");
 
-  void** free = NULL;
+  void* free = NULL;
   uint8_t handle;
   size_t free_ram;
 
@@ -176,7 +176,7 @@ CCDBG_ENDBLOCK();
     return false;
   }
 
-  free_ram = os_MemChk(free);
+  free_ram = os_MemChk(&free);
   editor->buffer_size = min(MAX_VAR_DATA_SIZE, free_ram);
 
   if (ti_Resize(editor->buffer_size, handle) <= 0)
@@ -213,9 +213,9 @@ void* tool_EditBufferPtr(uint24_t* size)
 
 bool tool_CheckFreeRAM(const uint24_t amt)
 {
-  void** free_ram = NULL;
+  void* free = NULL;
 
-  return (os_MemChk(free_ram) > amt);
+  return (os_MemChk(free) > amt);
 }
 
 

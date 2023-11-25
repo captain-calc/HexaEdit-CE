@@ -286,8 +286,8 @@ CCDBG_ENDBLOCK();
 
 void gui_DrawMemoryAmounts(const s_editor* const editor)
 {
-  void** free = NULL;
-  uint24_t free_ram = os_MemChk(free);
+  void* free = NULL;
+  uint24_t free_ram = os_MemChk(&free);
 
   gui_SetTextColor(g_color.background, g_color.list_text_normal);
   gfx_SetTextXY(216, 189);
