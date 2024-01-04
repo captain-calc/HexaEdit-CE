@@ -536,7 +536,7 @@ void hevat_VarNameToASCII(char buffer[20], const uint8_t name[8], bool named)
         }
 
         for (
-          idx = 0;
+          ;
           idx < 8 && (
             (name[idx] >= 'A' && name[idx] <= 'Z' + 1)
             || (name[idx] >= 'a' && name[idx] <= 'z')

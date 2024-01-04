@@ -3,14 +3,15 @@
 # ----------------------------
 
 NAME = HEXAEDIT
+VERSION = "3.1.2"
 ICON = icon.png
-DESCRIPTION = "HexaEdit CE v3.1.1"
-COMPRESSED = NO#YES
+DESCRIPTION = "HexaEdit CE v"$(VERSION)
+COMPRESSED = YES
 COMPRESSED_MODE = zx0
 ARCHIVED = YES
 
-CFLAGS = -Wall -Wextra -Oz -DPROGRAM_VERSION=\"3.1.1\"
-CXXFLAGS = -Wall -Wextra -Oz -DPROGRAM_VERSION=\"3.1.1\"
+CFLAGS = -Wall -Wextra -Oz -DPROGRAM_VERSION=\"$(VERSION)\"
+CXXFLAGS = -Wall -Wextra -Oz -DPROGRAM_VERSION=\"$(VERSION)\"
 
 HAS_PRINTF = NO
 
