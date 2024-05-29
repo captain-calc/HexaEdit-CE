@@ -7,7 +7,7 @@
 /*
 BSD 3-Clause License
 
-Copyright (c) 2023, Caleb "Captain Calc" Arant
+Copyright (c) 2024, Caleb "Captain Calc" Arant
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -304,7 +304,6 @@ bool hevat_GetVarInfoByVAT(s_calc_var* const var)
 
   uint8_t* orig_vatptr = var->vatptr;
   uint24_t data = 0;
-  uint16_t size = 0;
   uint8_t idx;
 
   assert(var->vatptr);
@@ -347,7 +346,6 @@ bool hevat_GetVarInfoByVAT(s_calc_var* const var)
     return false;
 
   var->type = (calc_var_type_t)(var->type_one & 0x3F);
-  size = *((uint16_t*)var->data);
 
   switch(var->type)
   {
@@ -360,11 +358,11 @@ bool hevat_GetVarInfoByVAT(s_calc_var* const var)
       break;
 
     case CALC_VAR_TYPE_REAL_LIST:
-      var->size = 2 + size * 9;
+      var->size = 2 + (*(uint16_t*)var->data) * 9;
       break;
 
     case CALC_VAR_TYPE_MATRIX:
-      var->size = 2 + size * size * 9;
+      var->size = 2 + (*(uint8_t*)var->data) * (*(uint8_t*)(var->data + 1)) * 9;
       break;
 
     case CALC_VAR_TYPE_CPLX:
@@ -376,11 +374,11 @@ bool hevat_GetVarInfoByVAT(s_calc_var* const var)
       break;
 
     case CALC_VAR_TYPE_CPLX_LIST:
-      var->size = 2 + size * 18;
+      var->size = 2 + (*(uint16_t*)var->data) * 18;
       break;
 
     default:
-      var->size = 2 + size;
+      var->size = 2 + (*(uint16_t*)var->data);
       break;
   }
 

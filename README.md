@@ -330,11 +330,12 @@ Aside from the many new features that version 3 introduces, this release finally
     * TI-84 Plus CE (tested on TI-OS 5.3.0, TI-OS 5.8.0)
     * TI-83 Premium CE (untested)
 * Language: C and eZ80 assembly
-* Latest Version: 3.1.2
+* Latest Version: 3.1.3
 
 ## Change Log
 | Release Number        | Git Branch   | Description
 | --------------------- |:------------:| -----------
+| v3.1.3                | master       | Patched a bug that miscalculated the size of TI-OS matrices.
 | v3.1.2                | master       | Altered the look of the main menu. Patched a bug in the name parsing of hidden variables.
 | v3.1.1                | master       | Made HexaEdit compatible with TI-OS 5.8.0. Patched a bug in the undo function.
 | v3.1.0                | master       | Improved key debouncing and user experience in low RAM scenarios. Rewrote Find function.

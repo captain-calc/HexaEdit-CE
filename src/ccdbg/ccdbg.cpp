@@ -7,7 +7,7 @@
 /*
 BSD 3-Clause License
 
-Copyright (c) 2023, Caleb "Captain Calc" Arant
+Copyright (c) 2024, Caleb "Captain Calc" Arant
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

@@ -3,7 +3,7 @@
 # ----------------------------
 
 NAME = HEXAEDIT
-VERSION = "3.1.2"
+VERSION = "3.1.3"
 ICON = icon.png
 DESCRIPTION = "HexaEdit CE v"$(VERSION)
 COMPRESSED = YES
